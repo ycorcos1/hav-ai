@@ -52,7 +52,8 @@ Phase 0: Repository preparation — complete
 Task 1.1: Expo application scaffold — complete
 Task 1.2: Minimal havAI shell — complete
 Task 1.3: Strict TypeScript and source alias — complete
-Next: Task 1.4 — Configure Linting
+Task 1.4: Expo-compatible linting — complete
+Next: Task 1.5 — Configure Test Runner
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
