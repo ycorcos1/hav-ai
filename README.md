@@ -65,7 +65,8 @@ Task 2.3: Feature-level placeholder screens — complete
 Task 2.4: Route guard skeleton — complete
 Task 3.1: Theme tokens — complete
 Task 3.2: Typography system — complete
-Next: Task 3.3 — Create Button Components
+Task 3.3: Button components — complete
+Next: Task 3.4 — Create Form/UI Primitives
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
