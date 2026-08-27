@@ -11,7 +11,10 @@ import {
 describe('theme tokens', () => {
   it('exports the approved color palette', () => {
     expect(colors).toEqual({
-      background: { primary: '#111315' },
+      background: {
+        primary: '#111315',
+        backdrop: 'rgba(17, 19, 21, 0.72)',
+      },
       surface: { primary: '#191C1F', elevated: '#22262A' },
       border: { default: '#30353A' },
       accent: {

@@ -1,6 +1,7 @@
 export const colors = {
   background: {
     primary: '#111315',
+    backdrop: 'rgba(17, 19, 21, 0.72)',
   },
   surface: {
     primary: '#191C1F',

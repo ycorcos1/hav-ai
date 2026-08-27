@@ -68,7 +68,8 @@ Task 3.2: Typography system — complete
 Task 3.3: Button components — complete
 Task 3.4: Form/UI primitives — complete
 Task 3.5: Status components — complete
-Next: Task 3.6 — Create Bottom Sheet Foundation
+Task 3.6: Bottom sheet foundation — complete; physical-device verification deferred
+Next: Task 4.1 — Create Common Contracts
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
