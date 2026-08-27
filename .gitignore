@@ -8,3 +8,26 @@ coverage/
 .DS_Store
 __MACOSX/
 ._*
+
+# Expo
+.expo/
+web-build/
+expo-env.d.ts
+
+# Native build output
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# TypeScript
+*.tsbuildinfo
+
+# Generated native projects
+/ios
+/android

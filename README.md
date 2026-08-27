@@ -4,7 +4,7 @@ havAI is a local-first mobile workout progression tracker for iOS and Android. I
 
 ## Project Status
 
-Pre-implementation. Product and technical specifications are complete. Phase 0 repository preparation is complete.
+The Expo application foundation is scaffolded. Product functionality has not been implemented yet.
 
 ## Documentation Location
 
@@ -32,18 +32,25 @@ Implementation tasks are defined in `docs/MASTER_TASK_LIST.md`. Cursor behavior 
 
 ## Prerequisites
 
-For the current repository state:
-
 - Git
-- A text editor or IDE (Cursor recommended for task-based implementation)
+- A React Native-supported Node.js release (Node.js 22 LTS recommended) and npm
+- Expo Go or a supported simulator for device testing
 
-Full development prerequisites (Node.js, Expo CLI, Supabase CLI, and related tooling) apply once the Expo application is scaffolded. See `docs/DEPLOYMENT.md` for the complete environment specification.
+Install dependencies and start the Expo development server:
+
+```sh
+npm install
+npm start
+```
+
+Use `npm run ios`, `npm run android`, or `npm run web` for a specific platform. See `docs/DEPLOYMENT.md` for the complete environment specification.
 
 ## Current Development Stage
 
 ```text
 Phase 0: Repository preparation — complete
-Next:     Task 1.1 — Scaffold Expo Application
+Task 1.1: Expo application scaffold — complete
+Next: Task 1.2 — Remove Starter Boilerplate
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
