@@ -184,6 +184,7 @@ profiles
 
 exercises
 exercise_secondary_muscles
+user_exercise_preferences
 
 workout_templates
 workout_template_exercises
@@ -200,7 +201,7 @@ personal_records
 Total:
 
 ```text
-10 tables
+11 tables
 ```
 
 ---
@@ -218,6 +219,7 @@ local_workout_exercises
 local_sets
 
 local_exercises
+local_user_exercise_preferences
 
 local_progression_recommendations
 
@@ -227,6 +229,8 @@ sync_queue
 
 local_schema_metadata
 ```
+
+Total: 11 local tables.
 
 A future implementation may split `local_exercises` into system-cache and custom-authoritative tables, but V1 can safely use one table with explicit ownership and sync metadata.
 
@@ -455,6 +459,7 @@ weight_unit text not null
 primary_goal text not null
 rpe_preference text not null
 progression_style text not null
+default_rest_duration_seconds integer not null default 120
 
 onboarding_completed boolean not null default false
 
@@ -521,6 +526,8 @@ conservative
 balanced
 aggressive
 ```
+
+New profiles use `rpe_preference = 'optional'` and `progression_style = 'balanced'`. `default_rest_duration_seconds` must be positive and is editable under Training Preferences.
 
 ---
 
@@ -758,6 +765,28 @@ Archived custom exercises:
 - hidden from normal picker
 - visible in history
 - restorable later
+
+---
+
+# 25A. User Exercise Preferences Table
+
+`user_exercise_preferences` stores user-owned state for a system or accessible custom exercise without mutating the exercise definition.
+
+```sql
+user_exercise_preferences
+-------------------------
+id uuid primary key
+user_id uuid not null
+exercise_id uuid not null
+is_favorite boolean not null default false
+notes text null
+rest_duration_seconds integer null
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+unique (user_id, exercise_id)
+```
+
+`id` is a client-generated UUID used by the sync queue; `(user_id, exercise_id)` remains unique. The user and exercise foreign keys use `ON DELETE CASCADE`. A rest override, when present, must be positive. RLS permits only the owning user and verifies the exercise is system-owned or owned by that user. The whole row synchronizes as one preference entity.
 
 ---
 
@@ -1177,6 +1206,7 @@ set_type text not null
 weight_kg numeric null
 reps integer not null
 rpe numeric null
+notes text null
 
 completed_at timestamptz not null
 
@@ -1882,6 +1912,7 @@ workout_exercises(user_id, exercise_id)
 sets(workout_id)
 sets(workout_exercise_id, position)
 sets(user_id, exercise_id, completed_at desc)
+user_exercise_preferences(user_id, is_favorite, updated_at desc)
 
 progression_recommendations(user_id, exercise_id, status)
 
@@ -1908,6 +1939,18 @@ ON DELETE CASCADE
 
 ```text
 exercise_secondary_muscles.exercise_id
+→ exercises.id
+ON DELETE CASCADE
+```
+
+```text
+user_exercise_preferences.user_id
+→ auth.users.id
+ON DELETE CASCADE
+```
+
+```text
+user_exercise_preferences.exercise_id
 → exercises.id
 ON DELETE CASCADE
 ```
@@ -2054,6 +2097,7 @@ Enable RLS on:
 profiles
 exercises
 exercise_secondary_muscles
+user_exercise_preferences
 workout_templates
 workout_template_exercises
 workouts
@@ -2182,6 +2226,7 @@ local_workouts
 local_workout_exercises
 local_sets
 local_exercises
+local_user_exercise_preferences
 local_progression_recommendations
 ```
 
@@ -2463,6 +2508,7 @@ set_type text not null
 weight_kg real null
 reps integer not null
 rpe real null
+notes text null
 
 completed_at text not null
 
@@ -2535,6 +2581,29 @@ pending_create / pending_update / pending_delete
 ```
 
 as appropriate.
+
+---
+
+# 87A. Local User Exercise Preferences Table
+
+```sql
+local_user_exercise_preferences
+-------------------------------
+id text primary key
+user_id text not null
+exercise_id text not null
+is_favorite integer not null default 0
+notes text null
+rest_duration_seconds integer null
+sync_status text not null
+deleted_at text null
+created_at text not null
+updated_at text not null
+server_updated_at text null
+unique (user_id, exercise_id)
+```
+
+This locally authoritative table makes favorites, persistent exercise notes, and per-exercise rest overrides available offline. Previously synchronized rows may be tombstoned for deletion.
 
 ---
 
@@ -2803,6 +2872,7 @@ workout_exercise
 set
 
 progression_recommendation
+user_exercise_preference
 ```
 
 Do not include:
@@ -2940,6 +3010,8 @@ insert set
 enqueue set upsert
 ```
 
+An immediate Undo runs another local transaction. For a never-synced set it removes the set plus pending upsert; for a cloud-known set it tombstones the set and queues the normal delete/update path. The rest timer starts only after the completion transaction commits and is not part of this transaction.
+
 ---
 
 ## Finish Workout
@@ -2987,6 +3059,8 @@ set
       ↓
 progression recommendation
 ```
+
+`user_exercise_preference` depends on its referenced custom/system exercise being available remotely, but does not gate workout or set synchronization.
 
 Recommendations should not sync before their source workout records.
 
@@ -3230,16 +3304,19 @@ Only confirmed structured workout data is stored.
 
 # 117. Notes
 
-V1 may store:
+V1 stores optional notes in their owning records:
 
 ```text
 workouts.notes
 workout_templates.notes
 workout_template_exercises.notes
 workout_exercises.notes
+sets.notes
+user_exercise_preferences.notes
 ```
 
 Do not create a generic polymorphic notes system.
+Workout and set notes synchronize with their parent entities. Persistent exercise notes synchronize with the user exercise preference entity. All are user-authored subjective text and are not deterministic progression inputs.
 
 ---
 
@@ -3540,6 +3617,10 @@ Not V1.
 │ exercise_secondary_muscles │
 └────────────────────────────┘
 
+┌─────────────────────────────┐
+│ user_exercise_preferences   │
+└─────────────────────────────┘
+
 
 ┌────────────────────┐
 │ workout_templates  │
@@ -3600,6 +3681,10 @@ LOCAL SQLITE
 │ local_exercises  │
 └──────────────────┘
 
+┌───────────────────────────────────┐
+│ local_user_exercise_preferences   │
+└───────────────────────────────────┘
+
 
 ┌──────────────────┐
 │ local_workouts   │
@@ -3648,6 +3733,9 @@ local_workout_template_exercises
 
 local_exercises (custom only)
 → exercises
+
+local_user_exercise_preferences
+→ user_exercise_preferences
 
 local_workouts
 → workouts
@@ -3803,6 +3891,10 @@ RECOMMENDATION
 PR STATE
 ≠
 AI EXPLANATION
+
+USER-AUTHORED NOTES
+≠
+STRUCTURED WORKOUT FACTS
 ```
 
 Each has a different role.
@@ -3815,6 +3907,8 @@ The V1 database layer is complete when:
 
 - every authenticated user has an isolated profile
 - system exercises are readable but immutable to normal users
+- user exercise preferences isolate favorites, persistent notes, and rest overrides without mutating system exercises
+- workout and set notes exist on their owning raw entities locally and remotely
 - custom exercises are private and archivable
 - templates can be created locally before cloud sync
 - template exercises preserve order and targets

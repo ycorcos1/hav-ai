@@ -352,6 +352,18 @@ Do not defer it unless the specifications are changed.
 
 ---
 
+# 13A. Approved V1 Product Guardrails
+
+First-run onboarding is one compact screen with only weight unit and primary goal, followed by `Start Training`. Do not add required questions, tutorial carousels, feature tours, RPE setup, or progression-style setup. Apply `rpePreference = optional` and `progressionStyle = balanced`; edit them later under Profile → Training Preferences.
+
+V1 includes the automatic rest timer, last-workout comparison, quick weight/rep controls, brief set-completion Undo, user exercise preferences/favorites/notes, workout notes, set notes, exercise discovery categories, and the optional user-revealed e1RM graph as specified.
+
+Do not create dedicated Swap Exercise or Skip Exercise workflows. Users manually add/reorder/remove exercises, may leave planned work incomplete, and may finish regardless.
+
+Never treat free-form notes as deterministic progression input. AI may receive only relevant minimized notes, explicitly labeled as subjective and subordinate to structured facts.
+
+---
+
 # 14. Approved Technology Stack
 
 Use:
@@ -917,6 +929,8 @@ Complete Set
 ```
 
 must not visually complete before SQLite transaction success.
+
+For a working set, start the rest timer only after that success. Timer state and failures are isolated from workout persistence, sync, and permission to log another set. Undo must preserve the same local-first and idempotent sync guarantees.
 
 ---
 
@@ -1890,6 +1904,8 @@ lock
 in a few seconds.
 
 Do not add extra confirmation screens to normal set completion.
+
+When suggested values are already correct, `Complete Set` should ideally be the only required action. Prefer prefilled values, compact +/- weight and rep controls, one-handed large targets, minimal keyboard use, and immediate local feedback. Do not introduce multi-step logging, modal-heavy interaction, network-dependent UI, or training-time configuration.
 
 ---
 

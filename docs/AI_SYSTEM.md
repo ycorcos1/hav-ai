@@ -380,6 +380,9 @@ recent sessions
 current recommendation
 progression reason codes
 derived metrics
+relevant persistent exercise note
+relevant workout note
+relevant set notes
 ```
 
 Each endpoint chooses only what is relevant.
@@ -415,6 +418,8 @@ Examples:
 ```
 
 These come from the user and may be subjective.
+
+Persisted exercise, workout, and set notes remain in this user-statement category even though havAI stores them. They are not promoted to authoritative workout facts merely by persistence.
 
 ## AI Inference
 
@@ -503,7 +508,11 @@ type ActiveWorkoutAIContext = {
     weightKg?: number;
     reps: number;
     rpe?: number;
+    notes?: string;
   }[];
+
+  workoutNotes?: string;
+  exercisePreferenceNotes?: string;
 };
 ```
 
@@ -1283,6 +1292,7 @@ current incline target
 today's incline sets
 recent incline sessions
 relevant preferences
+only notes relevant to this exercise/session/question
 ```
 
 Do not send:
@@ -1291,6 +1301,7 @@ Do not send:
 leg day history
 account email
 every exercise ever performed
+all notes by default
 ```
 
 ---
@@ -1542,6 +1553,8 @@ It should:
 - normalize units
 - select recent sessions
 - include deterministic metrics
+- label selected notes as user-authored subjective context
+- preserve structured facts as higher authority than notes
 - omit unnecessary fields
 - enforce size limits
 - return typed context
@@ -1705,6 +1718,8 @@ havAI currently has your last logged set as 185 × 8. If that record is wrong, e
 
 Temporary user-reported facts can still inform the conversation.
 
+Explicitly saved persistent exercise notes, workout notes, and set notes may also inform the conversation when relevant. The AI may interpret them conversationally, but must distinguish them from structured sets, targets, and history. Notes cannot override structured history and are never sent to or used by the deterministic progression engine in V1.
+
 Example:
 
 ```text
@@ -1717,7 +1732,7 @@ AI may say:
 That could contribute to a weaker session today.
 ```
 
-But it should not permanently save that fact unless a future product feature explicitly supports it.
+But it should not permanently save a conversational statement automatically. Persistence happens only through the explicit note fields or another normal confirmed data-entry flow.
 
 ---
 

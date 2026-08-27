@@ -166,6 +166,7 @@ must synchronize without loss.
 workout_template
 workout_template_exercise
 custom_exercise
+user_exercise_preference
 ```
 
 also synchronizes because these records may be created offline.
@@ -234,6 +235,10 @@ The following must work without connectivity when required local data exists:
 - log warm-up sets
 - edit completed sets
 - delete completed sets
+- undo a just-completed set
+- create and edit workout notes and set notes
+- favorite exercises and edit persistent exercise notes/rest overrides
+- operate the rest timer after local set persistence
 - add extra sets
 - switch exercises
 - reorder exercises during the current session
@@ -444,6 +449,8 @@ transaction rolls back
 ```
 
 The app should not show the set as safely completed unless required durable local state exists.
+
+After commit, a working-set completion may start the isolated rest timer and display Undo. Neither belongs inside the data transaction. Timer failure has no effect on the set or queue.
 
 ---
 
@@ -722,6 +729,8 @@ After server confirms:
 remove local tombstone
 remove queue item
 ```
+
+Immediate set-completion Undo applies these same rules without the ordinary destructive confirmation: remove the never-synced local set and pending upsert, or tombstone/queue a safe delete when the set is already cloud-known. Repeating an Undo-related sync operation remains idempotent.
 
 ---
 
@@ -1454,6 +1463,7 @@ Flow:
 
 ```text
 Enter weight/reps/RPE
+and optional set note
 ↓
 Complete Set
 ↓
@@ -1465,6 +1475,8 @@ sync_queue
 ↓
 UI completes instantly
 ```
+
+Workout notes synchronize as part of the workout row. Set notes synchronize as part of the set row. Favorites, persistent exercise notes, and per-exercise rest overrides synchronize together as `user_exercise_preference`; this mutation depends on the referenced exercise but does not block workout logging.
 
 ---
 

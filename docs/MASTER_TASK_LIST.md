@@ -1235,6 +1235,18 @@ Basic CRUD integration tests pass.
 
 ---
 
+## Task 5.10: Add Local Preference and Note Fields
+
+Create the local user-exercise-preferences table and repository for favorites, persistent exercise notes, and rest overrides. Add set-note persistence and mapping to `local_sets`.
+
+### Acceptance Criteria
+
+- fields match `DATABASE.md` and `API_CONTRACTS.md`
+- data survives SQLite reopen
+- all user-owned queries are scoped by user ID
+
+---
+
 # PHASE 6: MINIMAL SUPABASE, AUTHENTICATION, AND PROFILES
 
 This phase intentionally creates only the cloud infrastructure needed for identity and onboarding.
@@ -1461,76 +1473,52 @@ Routing survives app relaunch.
 
 ---
 
+## Task 6.13: Add Default Rest Duration Profile Setting
+
+Add the positive `default_rest_duration_seconds` profile field, default it to 120, map it through profile contracts/repositories, and preserve the onboarding RPE/progression defaults.
+
+---
+
 # PHASE 7: ONBOARDING
 
-## Task 7.1: Create Onboarding Routes
+## Task 7.1: Create Compact Onboarding Route
 
 Create:
 
 ```text
-units.tsx
-goal.tsx
-rpe.tsx
-progression.tsx
+setup.tsx
 ```
+
+Remove any planned multi-screen units, goal, RPE, and progression-style routes.
 
 ---
 
-## Task 7.2: Implement Units Screen
+## Task 7.2: Build Compact Setup Screen
 
-Values:
+Include only:
 
 ```text
-lb
-kg
+Weight Unit: Pounds / Kilograms
+Primary Goal: Build Muscle / Get Stronger / Both
+Start Training
 ```
+
+### Acceptance Criteria
+
+No tutorial, tour, advanced preference, or additional required question appears.
 
 ---
 
-## Task 7.3: Implement Goal Screen
-
-Values:
-
-```text
-strength
-hypertrophy
-hybrid
-```
-
----
-
-## Task 7.4: Implement RPE Preference Screen
-
-Values:
-
-```text
-hidden
-optional
-preferred
-```
-
----
-
-## Task 7.5: Implement Progression Style Screen
-
-Values:
-
-```text
-conservative
-balanced
-aggressive
-```
-
----
-
-## Task 7.6: Persist Onboarding Profile
+## Task 7.3: Persist Compact Onboarding Profile
 
 ### Subtasks
 
-After final onboarding screen:
+After `Start Training`:
 
-- validate collected values
+- validate weight unit and primary goal
 - update `profiles`
+- set `rpe_preference = optional`
+- set `progression_style = balanced`
 - set:
 
 ```text
@@ -1545,7 +1533,7 @@ onboarding_completed = true
 
 ---
 
-## Task 7.7: Implement Onboarding Resume
+## Task 7.4: Implement Compact Onboarding Resume
 
 ### Goal
 
@@ -1553,7 +1541,7 @@ Handle app termination during onboarding.
 
 ### Acceptance Criteria
 
-User can restart onboarding safely without corrupting profile state.
+User returns to the compact setup safely without corrupting profile state or being routed through removed screens.
 
 ---
 
@@ -1684,6 +1672,30 @@ Only user-created exercises editable.
 
 - archived exercise hidden from normal picker
 - existing workout references remain valid
+
+---
+
+## Task 8.9: Build Exercise Discovery Sections
+
+Expose Popular, Favorites, Muscle Groups, and Search in the shared exercise picker. Use curated/deterministic Popular ordering and the canonical muscle taxonomy.
+
+---
+
+## Task 8.10: Implement Exercise Favorites
+
+Toggle favorites for system or custom exercises through local user exercise preferences. The picker must update immediately offline.
+
+---
+
+## Task 8.11: Implement Persistent Exercise Notes
+
+Create/edit a user-owned note without updating the global/system exercise definition. Verify the note survives restart and is available to workout screens.
+
+---
+
+## Task 8.12: Implement Per-Exercise Rest Override
+
+Create/edit/clear a positive rest-duration override with fallback to the profile default.
 
 ---
 
@@ -1988,6 +2000,24 @@ previous
 
 ---
 
+## Task 10.9: Render Last Comparable Workout Beside Target
+
+Replace the placeholder with real locally available comparable performance. Show the prior sets next to today's target and optionally compute a truthful total-rep delta. Render an explicit no-history state instead of fabricated data.
+
+---
+
+## Task 10.10: Surface Persistent Exercise Note During Training
+
+Load the current user's exercise preference and show its note near the active exercise context without presenting it as a structured target or global instruction.
+
+---
+
+## Task 10.11: Add Active Workout Note Editing
+
+Add optional free-form workout note editing through the local workout repository and queue the workout upsert. The note must survive restart without network access.
+
+---
+
 # PHASE 11: SET LOGGING
 
 ## Task 11.1: Implement Local Set Repository
@@ -2124,6 +2154,48 @@ weight = previous weight
 Reps blank.
 
 RPE blank.
+
+---
+
+## Task 11.10: Add Quick Weight Adjustment Controls
+
+Support ±5/±10/±25/±45 for pounds and ±2.5/±5/±10/±20 for kilograms in a compact control. Preserve manual numeric input and convert only at the canonical-kilogram boundary.
+
+---
+
+## Task 11.11: Add Quick Rep Adjustment Controls
+
+Add large one-handed `[-] reps [+]` controls with valid boundaries while retaining manual numeric entry.
+
+---
+
+## Task 11.12: Add Set Notes
+
+Add optional note entry/editing to set drafts, `completeSet()`, completed-set editing, local persistence, and set display. Keep the field progressively disclosed.
+
+---
+
+## Task 11.13: Implement Immediate Set Completion Undo
+
+Expose a brief non-modal Undo after local success. Restore the exact pre-completion draft and transactionally remove/coalesce an unsynced mutation or queue the safe cloud-known delete/update path. Do not show destructive confirmation.
+
+---
+
+## Task 11.14: Build Isolated Rest Timer State Machine
+
+Implement timestamp-derived start, pause, resume, reset, add-time, dismiss, and completion states. Timer state must not depend on foreground ticks or write workout data.
+
+---
+
+## Task 11.15: Start Rest Timer After Working-Set Commit
+
+Trigger the resolved profile/per-exercise duration only after `completeSet()` commits. Keep all workout interaction enabled and isolate timer failures from the saved set and queue.
+
+---
+
+## Task 11.16: Add Rest Timer Completion Feedback
+
+Provide appropriate haptic/sound/notification feedback across foreground, background, and lock states, respecting platform capability and permissions without making notification permission a workout requirement.
 
 ---
 
@@ -2406,6 +2478,12 @@ Verify cross-user parent-reference attacks fail.
 
 ---
 
+## Task 13.11: Add Cloud Exercise Preferences and Note Fields
+
+Create `user_exercise_preferences` exactly as specified, add `sets.notes`, and verify existing `workouts.notes`. Add constraints, indexes, ownership/reference RLS, and generated types.
+
+---
+
 # PHASE 14: CLOUD REPOSITORIES AND SYNCHRONIZATION
 
 ## Task 14.1: Create Supabase Exercise Repository
@@ -2502,6 +2580,14 @@ Recommendation dependency:
 source workout / workout exercise
    ↓
 progression recommendation
+```
+
+Exercise preference dependency:
+
+```text
+accessible custom/system exercise
+   ↓
+user_exercise_preference
 ```
 
 No offline personal-record sync.
@@ -2655,6 +2741,12 @@ Expected:
 ```text
 one cloud row
 ```
+
+---
+
+## Task 14.19: Synchronize User Exercise Preferences and Notes
+
+Push/pull favorites, persistent exercise notes, and rest overrides through `user_exercise_preference` after the referenced exercise exists. Include workout notes in workout payloads and set notes in set payloads. Cover offline create/edit/delete, queue coalescing, tombstones, RLS, and idempotent retry.
 
 ---
 
@@ -3179,6 +3271,12 @@ Older noncached history may require internet.
 
 ---
 
+## Task 18.7: Display Workout and Set Notes in History
+
+Show the optional workout note in workout detail and set notes on their corresponding sets where present. Keep absent notes visually silent and preserve historical edit behavior.
+
+---
+
 # PHASE 19: PROGRESS ANALYTICS
 
 ## Task 19.1: Create Exercise History Service
@@ -3234,7 +3332,7 @@ Handle insufficient data.
 
 Use one canonical e1RM series.
 
-Keep chart visually minimal.
+Keep the chart visually minimal and hidden until the user selects `Show Graph`. Plot only real history points, never invent continuity, and label incomplete offline history as limited.
 
 ---
 
@@ -3374,6 +3472,12 @@ context error
 ## Task 20.11: Add AI Backend Tests
 
 Cover auth, ownership, malformed output, provider failure, and successful contracts.
+
+---
+
+## Task 20.12: Add Minimized Note Context
+
+Select only relevant persistent exercise, workout, and set notes; bound their size; label them user-authored subjective context; and keep structured workout facts authoritative. Add tests proving notes do not enter deterministic progression and unrelated notes are omitted.
 
 ---
 
@@ -3523,7 +3627,13 @@ Historical raw data remains unchanged.
 
 ---
 
-## Task 22.6: Implement Safe Logout
+## Task 22.6: Implement Rest Timer Training Preference
+
+Add a positive configurable default duration under Profile → Training Preferences and map it through the profile repository. Existing onboarding remains unchanged and does not ask for this value.
+
+---
+
+## Task 22.7: Implement Safe Logout
 
 Before logout, inspect pending unsynced data.
 
@@ -3544,6 +3654,8 @@ Do not silently orphan pending workout data.
 
 Warn, but allow completion.
 
+Do not create a Skip Exercise state or require every planned set/exercise to complete.
+
 ---
 
 ## Task 23.2: Add Exercise During Active Workout
@@ -3552,6 +3664,8 @@ Warn, but allow completion.
 
 - session only
 - template unchanged unless user later explicitly edits template
+- exercise comes from the normal picker
+- no dedicated Swap Exercise workflow exists
 
 ---
 
@@ -3785,6 +3899,30 @@ resume
 ## Task 24.10: Add Full Offline Scenario
 
 Automate where possible, otherwise maintain mandatory manual procedure.
+
+---
+
+## Task 24.11: Test Compact Onboarding and Discovery
+
+Cover the two-field single screen, advanced defaults, interruption, picker categories, deterministic Popular ordering, favorite isolation, canonical muscle browsing, and absence of Swap/Skip flows.
+
+---
+
+## Task 24.12: Test Fast Logging, Rest Timer, and Undo
+
+Cover unit-specific weight increments, rep controls, one-action prefilled completion, commit-before-timer ordering, all timer controls/background correction, timer failure isolation, both Undo sync paths, and rapid interaction.
+
+---
+
+## Task 24.13: Test Notes Across Persistence and AI Boundaries
+
+Cover offline/reopen/sync/history for exercise, workout, and set notes; exercise-definition immutability; RLS; AI minimization/authority; and deterministic progression invariance when note text changes.
+
+---
+
+## Task 24.14: Test Optional Progress Graph
+
+Cover Show Graph disclosure, real-history-only points, no fake continuity, insufficient data, and incomplete offline-history labeling.
 
 ---
 

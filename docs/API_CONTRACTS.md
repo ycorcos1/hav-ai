@@ -452,6 +452,8 @@ type UserProfile = {
 
   progressionStyle: ProgressionStyle;
 
+  defaultRestDurationSeconds: number;
+
   onboardingCompleted: boolean;
 
   createdAt: ISODateTime;
@@ -462,6 +464,8 @@ type UserProfile = {
 `createdAt` and `updatedAt` in the domain model reflect persisted metadata after mapping.
 
 They are not necessarily client-written cloud fields.
+
+First-run setup accepts only `weightUnit` and `primaryGoal`; the application sets `rpePreference: "optional"`, `progressionStyle: "balanced"`, and the default rest duration. No advanced preference is a required onboarding input.
 
 ---
 
@@ -555,6 +559,25 @@ Custom exercise:
 isSystem = false
 ownerUserId = current user
 ```
+
+---
+
+# 27A. User Exercise Preference Contract
+
+```ts
+type UserExercisePreference = {
+  id: UUID;
+  userId: UUID;
+  exerciseId: UUID;
+  isFavorite: boolean;
+  notes?: string;
+  restDurationSeconds?: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+};
+```
+
+`restDurationSeconds`, when present, is a positive per-exercise override. The preference belongs to the user and never mutates the `Exercise` contract.
 
 ---
 
@@ -755,6 +778,8 @@ type WorkoutSet = {
 
   rpe?: RPE;
 
+  notes?: string;
+
   completedAt: ISODateTime;
 
   createdAt: ISODateTime;
@@ -781,6 +806,8 @@ type CompleteSetInput = {
   reps: number;
 
   rpe?: RPE;
+
+  notes?: string;
 };
 ```
 
@@ -833,6 +860,8 @@ type EditSetInput = {
   reps: number;
 
   rpe?: RPE;
+
+  notes?: string;
 };
 ```
 
@@ -843,6 +872,40 @@ workout ID
 exercise ID
 user ID
 ```
+
+---
+
+# 39A. Undo Set Completion Contract
+
+```ts
+type UndoSetCompletionInput = {
+  setId: UUID;
+};
+
+type UndoSetCompletionResult = {
+  restoredDraft: {
+    weightKg?: number;
+    reps: number;
+    rpe?: RPE;
+    notes?: string;
+  };
+};
+```
+
+The use case is valid only during the brief UI undo window. It transactionally reverts the local completion and coalesces the queue when unsynced, or creates the safe remote delete/update mutation when cloud-known. It does not use the later destructive-delete confirmation.
+
+---
+
+# 39B. Workout Note Input
+
+```ts
+type UpdateWorkoutNoteInput = {
+  workoutId: UUID;
+  notes?: string;
+};
+```
+
+This is a normal local-first workout update and uses the workout sync contract.
 
 ---
 
@@ -1428,6 +1491,17 @@ interface LocalExerciseRepository {
 }
 ```
 
+The picker service built on this repository exposes Popular, Favorites, Muscle Groups, and Search. Popular ordering is curated/deterministic; no social analytics contract exists.
+
+```ts
+interface LocalUserExercisePreferenceRepository {
+  get(userId: UUID, exerciseId: UUID): Promise<UserExercisePreference | null>;
+  listFavorites(userId: UUID): Promise<UserExercisePreference[]>;
+  upsert(preference: UserExercisePreference): Promise<void>;
+  deleteOrTombstone(id: UUID): Promise<void>;
+}
+```
+
 ---
 
 # 65. Local Recommendation Repository
@@ -1531,6 +1605,7 @@ type SyncEntityType =
   | "workout"
   | "workout_exercise"
   | "set"
+  | "user_exercise_preference"
   | "progression_recommendation";
 ```
 
@@ -1634,6 +1709,10 @@ interface RemoteSyncAdapter {
 
   upsertCustomExercise(exercise: Exercise): Promise<RemoteMutationResult>;
 
+  upsertUserExercisePreference(
+    preference: UserExercisePreference,
+  ): Promise<RemoteMutationResult>;
+
   upsertWorkout(workout: Workout): Promise<RemoteMutationResult>;
 
   upsertWorkoutExercise(
@@ -1643,6 +1722,8 @@ interface RemoteSyncAdapter {
   upsertSet(set: WorkoutSet): Promise<RemoteMutationResult>;
 
   deleteSet(id: UUID): Promise<void>;
+
+  deleteUserExercisePreference(id: UUID): Promise<void>;
 
   upsertProgressionRecommendation(
     recommendation: ProgressionRecommendation,
@@ -1748,6 +1829,8 @@ type LocalSetRow = {
 
   rpe: number | null;
 
+  notes: string | null;
+
   completed_at: string;
 
   sync_status: string;
@@ -1790,6 +1873,8 @@ type SetRow = {
 
   rpe: number | null;
 
+  notes: string | null;
+
   completed_at: string;
 
   created_at: string;
@@ -1817,6 +1902,7 @@ function mapSetRowToDomain(row: SetRow): WorkoutSet {
     weightKg: row.weight_kg ?? undefined,
     reps: row.reps,
     rpe: row.rpe as RPE | undefined,
+    notes: row.notes ?? undefined,
     completedAt: row.completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -2073,7 +2159,13 @@ type CoachRequestV1 = {
         reps: number;
 
         rpe?: RPE;
+
+        notes?: string;
       }[];
+
+      workoutNotes?: string;
+
+      exercisePreferenceNotes?: string;
     };
   };
 
@@ -2098,6 +2190,7 @@ message non-empty
 message bounded length
 conversation bounded
 completedSets bounded
+notes bounded individually and in aggregate
 UUIDs valid
 RPE valid
 weights valid
@@ -2155,6 +2248,12 @@ type CoachResponseV1 = {
     exerciseId?: UUID;
 
     recentSessionsUsed: number;
+
+    subjectiveNotesUsed: {
+      exercisePreference: boolean;
+      workout: boolean;
+      setCount: number;
+    };
   };
 
   meta: {
@@ -2697,10 +2796,24 @@ set_type
 weight_kg
 reps
 rpe
+notes
 completed_at
 ```
 
 Do not upload local sync metadata.
+
+User exercise preference cloud-writable fields are exactly:
+
+```text
+id
+user_id
+exercise_id
+is_favorite
+notes
+rest_duration_seconds
+```
+
+The referenced exercise must be remotely available first.
 
 ---
 
@@ -2755,6 +2868,8 @@ type PullUpdatesResult = {
   templates: WorkoutTemplate[];
 
   exercises: Exercise[];
+
+  userExercisePreferences: UserExercisePreference[];
 
   recommendations: ProgressionRecommendation[];
 
@@ -3258,6 +3373,8 @@ The V1 contract layer is complete when:
 - raw cloud rows map through dedicated mappers
 - SQLite rows map through dedicated mappers
 - local sync metadata does not leak into domain types
+- user exercise preferences, workout notes, and set notes agree with database and sync contracts
+- set-completion Undo has an explicit local-first contract
 - template contracts support authoritative offline storage
 - custom exercises can exist before cloud sync
 - workout mutations have defined inputs/results

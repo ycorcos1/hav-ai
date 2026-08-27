@@ -350,7 +350,7 @@ onboarding completion
 
 # 14. Onboarding
 
-Initial onboarding collects:
+First-run onboarding is one compact setup screen containing only:
 
 ## Weight Unit
 
@@ -369,25 +369,20 @@ hypertrophy
 hybrid
 ```
 
----
-
-## RPE Preference
+The single primary action is:
 
 ```text
-hidden
-optional
-preferred
+Start Training
 ```
 
----
-
-## Progression Style
+Advanced training preferences are not required during onboarding. New profiles use:
 
 ```text
-conservative
-balanced
-aggressive
+rpe_preference = optional
+progression_style = balanced
 ```
+
+Both remain editable under `Profile → Training Preferences`.
 
 ---
 
@@ -396,11 +391,13 @@ aggressive
 Onboarding should be:
 
 - short
-- sequential
+- contained on one compact setup screen
 - easy to understand
 - resumable if interrupted
+- limited to weight unit and primary goal
 
 Do not ask for unnecessary personal information in V1.
+Do not add tutorial carousels, feature tours, advanced preferences, or additional required setup questions.
 
 ---
 
@@ -495,7 +492,18 @@ Results should update quickly.
 
 # 22. Exercise Filtering
 
-V1 should support filtering by primary muscle group.
+The exercise picker for manually adding an exercise supports:
+
+```text
+Popular
+Favorites
+Muscle Groups
+Search
+```
+
+Popular is system-curated or deterministically ordered; it does not use social popularity analytics. Favorites are user-specific, may reference system or custom exercises, work offline after local persistence, and synchronize later.
+
+Muscle-group browsing uses the canonical taxonomy and makes Chest, Back, Shoulders, Biceps, Triceps, Quads, Hamstrings, Glutes, Calves, and Core immediately accessible.
 
 Equipment filtering may be added if useful and low complexity.
 
@@ -751,6 +759,7 @@ Last time
 ```
 
 The user should not need to open a history page while training.
+The previous comparable performance must appear immediately alongside today's target. If useful, show a concise real comparison such as `Target: +1 total rep vs last time`. If no comparable performance exists, say so and never fabricate it.
 
 ---
 
@@ -786,7 +795,17 @@ Normal working-set entry supports:
 weight
 reps
 RPE optional
+set note optional
 ```
+
+Weight entry includes compact quick adjustments while preserving manual numeric entry:
+
+```text
+lb: ±5, ±10, ±25, ±45
+kg: ±2.5, ±5, ±10, ±20
+```
+
+Rep entry includes fast `[-] reps [+]` controls; manual numeric entry may remain available. All stored weight remains canonical kilograms.
 
 ---
 
@@ -801,6 +820,8 @@ Complete Set
 Logging should feel immediate.
 
 No network spinner.
+
+After the local SQLite transaction for a working set commits successfully, automatically start the non-blocking rest timer. Timer failure must not alter the saved set or prevent continued workout interaction.
 
 ---
 
@@ -868,6 +889,7 @@ Editable:
 weight
 reps
 RPE
+note
 ```
 
 ---
@@ -877,6 +899,8 @@ RPE
 Completed sets can be deleted with confirmation.
 
 Offline/cloud behavior follows the sync specification.
+
+After ordinary set completion, show a brief `Undo` action. Undo restores the pre-completion state without destructive-delete confirmation. An unsynced set removes/reverts its pending mutation; an already synchronized set follows the safe update/delete synchronization path. Durability and idempotency remain mandatory.
 
 ---
 
@@ -909,6 +933,26 @@ add sets
 ```
 
 These changes apply only to the active workout unless the user explicitly edits the template later.
+
+There is no dedicated Swap Exercise or Skip Exercise workflow in V1. A user who wants another movement manually adds it; an unperformed planned exercise may remain incomplete. Finishing a workout never requires every planned exercise or set to be complete.
+
+---
+
+# 48A. Workout and Exercise Notes
+
+A workout has an optional free-form note that persists offline, synchronizes normally, and appears in workout history/detail.
+
+Each user may also store a persistent personal note for an exercise, such as machine setup, bench position, cable height, or grip. This note belongs to the user, never mutates the global exercise definition, persists offline, synchronizes later, and appears when the exercise is performed.
+
+Each set may have an optional free-form note. It is persisted and synchronized with the set, editable with the set, and shown in history where appropriate.
+
+---
+
+# 48B. Active Workout Interaction Principle
+
+During an active workout, the common case should require as few interactions as reasonably possible. When suggested weight and reps are already correct, completing the set should ideally require only `Complete Set`.
+
+Prefer prefilled values, +/- controls, one-handed interaction, large touch targets, minimal keyboard use, and immediate local feedback. Avoid unnecessary confirmations, multi-step logging, modal-heavy interaction, network-dependent UI, and excessive configuration during training.
 
 ---
 
@@ -1413,7 +1457,7 @@ recent trend
 
 # 83. Strength Trend Chart
 
-V1 may include a simple:
+The Exercise Progress screen includes an optional, user-revealed graph:
 
 ```text
 estimated 1RM over time
@@ -1421,11 +1465,17 @@ estimated 1RM over time
 
 chart.
 
+The initial V1 graph is hidden behind `Show Graph` and must not dominate the screen.
+
 It should be:
 
 - readable
 - minimal
 - not overloaded with analytics
+- based only on real workout history
+- free of invented points or fake continuity
+
+When offline history is incomplete, the UI must not imply that the graph represents complete lifetime history.
 
 ---
 
@@ -2167,11 +2217,11 @@ machine-learning progression
 
 # 131. Rest Timer
 
-A dedicated configurable rest timer is not required for V1.
+A configurable automatic rest timer is included in V1. It starts only after a working set is durably committed to local SQLite.
 
-The workout elapsed timer is required.
+It supports start, pause, resume, reset, add time, and dismiss. It remains non-blocking, never determines whether another set may be performed, and uses timestamps to remain approximately correct through phone lock/backgrounding. It provides haptic, sound, or notification feedback at completion where appropriate. Timer failure is isolated from workout persistence and requires no AI.
 
-A rest timer can be considered later if real gym testing shows meaningful need.
+The user configures a default duration under Training Preferences. A user-specific exercise preference may override that duration for one exercise. The workout elapsed timer remains a separate required feature.
 
 ---
 
@@ -2291,7 +2341,7 @@ These must remain conceptually separate.
 
 ## Onboarding
 
-> As a user, I want to choose pounds or kilograms so the app matches how I train.
+> As a user, I want to choose my weight unit and primary goal on one compact screen so I can start training immediately.
 
 ---
 
@@ -2604,7 +2654,6 @@ This is future analytics, not V1 adaptive ML.
 Potential later versions may add:
 
 ```text
-rest timers
 supersets
 advanced set types
 program blocks
@@ -2628,7 +2677,7 @@ havAI V1 is complete when a user can:
 ```text
 Create Account
 ↓
-Complete Onboarding
+Complete Compact Onboarding
 ↓
 Create Custom Exercise
 ↓
@@ -2642,7 +2691,13 @@ See Current Target
 ↓
 Log Working and Warm-Up Sets
 ↓
+Use Quick Weight/Rep Controls and Automatic Rest Timer
+↓
+Undo an Accidental Completion
+↓
 Edit/Delete Sets
+↓
+Save Exercise, Workout, and Set Notes
 ↓
 Train Offline
 ↓
@@ -2661,6 +2716,8 @@ Sync Later
 Review History
 ↓
 Review Exercise Progress
+↓
+Optionally Show the Real-History e1RM Graph
 ↓
 Ask Context-Aware AI Questions
 ↓

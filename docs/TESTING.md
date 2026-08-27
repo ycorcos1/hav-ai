@@ -2647,6 +2647,76 @@ havAI's V1 test strategy is adequately implemented when:
 
 ---
 
+# 139A. Approved Product-Change Coverage
+
+The following V1 behaviors are release-gated.
+
+## Compact onboarding
+
+- one screen contains only weight unit and primary goal
+- `Start Training` persists those choices plus `optional` RPE and `balanced` progression defaults
+- interruption returns to the same compact setup without partial completion
+- no advanced preference, tutorial, or extra required question blocks Home
+- both advanced preferences remain editable under Training Preferences
+
+## Set-entry efficiency and comparison
+
+- comparable last-session sets render beside today's target; absence renders a truthful empty state
+- any total-rep comparison is computed from real comparable history
+- pound controls apply ±5/±10/±25/±45 and kilogram controls apply ±2.5/±5/±10/±20 at the display boundary
+- manual weight entry still maps to canonical kilograms without drift beyond approved precision
+- rep decrement/increment handles boundaries and manual entry remains available
+- prefilled correct values permit completion with one Complete Set action
+
+## Automatic rest timer
+
+- no timer begins before the working-set SQLite commit
+- successful working-set commit starts the configured default or per-exercise override
+- warm-up behavior follows the product rule and does not accidentally start a working-set timer
+- start, pause, resume, reset, add time, and dismiss update timestamp-derived state correctly
+- background/foreground and phone-lock clock advancement remains approximately correct
+- completion feedback respects platform capability/permission
+- navigation and another set completion remain available while running
+- timer exceptions never change the set, queue, or workout state
+
+## Undo completion
+
+- Undo restores the exact weight, reps, RPE, and note draft without destructive confirmation
+- a never-synced completion removes the local set and pending upsert atomically
+- a cloud-known set uses the tombstone/delete or safe update path
+- retrying synchronization is idempotent and rapid taps cannot duplicate or corrupt mutations
+- expiry of the brief Undo affordance leaves normal edit/delete behavior intact
+
+## Notes and user exercise preferences
+
+- workout notes persist offline, synchronize on the workout, and render in detail/history
+- set notes create/edit offline, synchronize on the set, and render where appropriate
+- a persistent exercise note never changes the system exercise row, survives restart, appears during training, and syncs with the owning user preference
+- favorites support system/custom exercises, persist offline, synchronize, and remain user-isolated under RLS
+- per-exercise rest overrides fall back to the profile default when absent
+- note length/empty-value mapping follows contracts
+- progression outputs are byte-for-byte equivalent when only free-form notes differ
+
+## Exercise discovery and active-workout behavior
+
+- picker exposes Popular, Favorites, Muscle Groups, and Search
+- Popular is deterministic/curated and does not depend on social/network analytics
+- canonical muscle groups find the expected exercises
+- active-workout add/reorder/remove remains local-first
+- no Swap or Skip action appears
+- workout completion succeeds with incomplete exercises and sets
+
+## Optional graph and AI note context
+
+- graph is initially optional/user-revealed and the Progress screen works without opening it
+- only real e1RM history points render; no point or continuity is invented
+- incomplete offline history is labeled as limited
+- Coach context selects only relevant bounded notes and labels them subjective
+- structured facts win when a note conflicts, and unrelated/all notes are not sent
+- existing AI safety, auth, ownership, and provider-failure behavior remains unchanged
+
+---
+
 # 140. Final Testing Principle
 
 The most important question is not:

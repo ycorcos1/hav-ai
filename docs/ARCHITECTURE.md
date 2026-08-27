@@ -465,10 +465,7 @@ src/app/
 │
 ├── (onboarding)/
 │   ├── _layout.tsx
-│   ├── units.tsx
-│   ├── goal.tsx
-│   ├── rpe.tsx
-│   └── progression.tsx
+│   └── setup.tsx
 │
 ├── (tabs)/
 │   ├── _layout.tsx
@@ -535,6 +532,7 @@ active workout
 sets
 local templates
 custom exercises
+user exercise preferences (favorites, persistent notes, rest overrides)
 recommendations
 sync queue
 ```
@@ -647,6 +645,7 @@ local_workout_templates
 local_workout_template_exercises
 
 local_exercises
+local_user_exercise_preferences
 
 local_workouts
 local_workout_exercises
@@ -988,6 +987,7 @@ V1:
 workout_template
 workout_template_exercise
 custom_exercise
+user_exercise_preference
 workout
 workout_exercise
 set
@@ -1587,11 +1587,13 @@ validated local current-session data
 server-loaded recent history
 profile preferences
 current recommendation
+bounded relevant user-authored notes
 ```
 
 Server should build minimal relevant context.
 
 Do not send all lifetime workout data.
+The context builder labels persistent exercise notes, workout notes, and set notes as subjective user-authored context. Structured workout facts remain authoritative, and notes never become deterministic progression input.
 
 ---
 
@@ -2404,6 +2406,8 @@ If transaction fails:
 no completed UI state
 ```
 
+Only after this transaction commits may the UI start the automatic rest timer and expose Undo. Timer state is an isolated client concern derived from timestamps; timer failure cannot roll back, delete, or invalidate the set. Undo is a separate local-first transaction that coalesces an unsynced mutation or queues the normal safe cloud delete/update path for a synchronized set.
+
 ---
 
 # 119. Atomic Workout Start
@@ -2520,6 +2524,11 @@ active workout
 set logging
 set editing
 set deletion
+set completion undo
+workout notes
+set notes
+exercise favorites and user exercise preferences
+automatic rest timer operation
 workout completion
 basic metrics
 deterministic progression
@@ -2736,9 +2745,23 @@ background job server
 Redis
 ML progression service
 direct OpenAI mobile calls
+dedicated swap-exercise workflow
+dedicated skip-exercise workflow
 ```
 
 without a deliberate architecture change.
+
+---
+
+# 137A. Approved Workout Convenience Architecture
+
+`user_exercise_preferences` / `local_user_exercise_preferences` is the single user-owned entity for favorites, persistent exercise notes, and optional per-exercise rest-duration overrides. It references either an accessible system exercise or the user's custom exercise, is locally authoritative after creation, and synchronizes through the persistent queue after its exercise dependency.
+
+Workout notes remain fields on workouts; set notes remain fields on sets. No generic notes service or polymorphic table is introduced.
+
+The exercise picker is a read/application-service composition over the exercise library and user preferences. Popular ordering is curated configuration or deterministic ordering; it is not an analytics service.
+
+The automatic rest timer is not a cloud domain entity. The configured default synchronizes with the profile and an optional override with the exercise preference, while the running countdown stays isolated client state represented by timestamps and paused remaining duration. It never gates navigation or set completion.
 
 ---
 
@@ -3131,6 +3154,8 @@ havAI V1 architecture is correctly implemented when:
 - local templates are authoritative before sync
 - custom exercises can be created offline
 - recommendations can be generated and persisted offline
+- user exercise preferences and notes work from local state and synchronize later
+- the rest timer and Undo remain isolated from durable set completion
 - Supabase holds synchronized canonical cloud records
 - cloud metadata timestamps are server-controlled
 - canonical stored weight is kilograms
@@ -3146,6 +3171,7 @@ havAI V1 architecture is correctly implemented when:
 - RLS protects private user data
 - child-table RLS validates parent ownership
 - progression is deterministic and AI-independent
+- free-form notes never enter deterministic progression
 - e1RM uses one canonical implementation
 - PR state derives from raw history
 - personal records are not offline queue entities

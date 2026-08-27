@@ -623,7 +623,7 @@ Example:
 
 ```text
 Cancel
-Skip
+Dismiss
 Why?
 ```
 
@@ -884,6 +884,8 @@ TODAY'S TARGET
 190 LB
 6-8 reps
 
+Target: +1 total rep vs last time
+
 LAST SESSION
 
 185 × 8
@@ -955,6 +957,7 @@ SET     WEIGHT     REPS
 The current workout should visually dominate more than historical data.
 
 History should use secondary text and slightly lower contrast.
+If no comparable session exists, show a truthful empty state and do not manufacture values.
 
 ---
 
@@ -1023,29 +1026,19 @@ with the number itself tappable for keyboard entry.
 
 For pounds:
 
-Default increment:
+Compact quick adjustments support:
 
 ```text
-5 lb
-```
-
-Potential future customization:
-
-```text
-2.5
-5
-10
+±5  ±10  ±25  ±45 lb
 ```
 
 For kilograms:
 
-Default quick increment may be:
-
 ```text
-2.5 kg
+±2.5  ±5  ±10  ±20 kg
 ```
 
-Exact progression increments will be specified elsewhere.
+The smallest common increment may remain visible while larger increments use an expandable compact control. The displayed value remains tappable for manual numeric entry. Conversion occurs at the display boundary; persistence remains canonical kilograms.
 
 ---
 
@@ -1160,11 +1153,13 @@ Ideally near the bottom safe area.
 
 When tapped:
 
-1. immediately show completed state
-2. provide light haptic feedback
-3. advance focus to next set
-4. save locally
-5. sync asynchronously
+1. validate and save locally
+2. only after the SQLite commit succeeds, show completed state
+3. provide light haptic feedback
+4. start the independent rest timer for a working set
+5. expose a brief Undo action
+6. advance focus to the next set
+7. sync asynchronously
 
 The app should not show a loading spinner just to save a normal set.
 
@@ -1248,7 +1243,7 @@ The user is still training.
 
 # 40. Rest Timer
 
-Not required by the PRD, but the design should leave room for it in V1.1.
+The automatic rest timer is included in V1 and starts only after a working-set SQLite commit succeeds.
 
 Potential placement after completing a set:
 
@@ -1258,6 +1253,29 @@ REST
 ```
 
 This should never interfere with logging.
+
+Controls:
+
+```text
+pause / resume
+reset
+add time
+dismiss
+```
+
+The user may navigate, edit, or complete another set while it runs. The visual state derives from timestamps so backgrounding or phone lock does not depend on foreground ticks. Completion feedback uses haptic, sound, or notification where appropriate. Timer errors remain unobtrusive and never imply a workout-data failure.
+
+---
+
+# 40A. Set Completion Undo
+
+After a successful completion, show a compact non-modal message:
+
+```text
+Set completed                     Undo
+```
+
+Undo is available briefly, restores the pre-completion inputs, and does not show the destructive-delete confirmation used for later deletion.
 
 ---
 
@@ -1302,21 +1320,19 @@ Picker structure:
 ```text
 Search exercises...
 
-RECENT
+[ Popular ] [ Favorites ] [ Muscle Groups ]
+
+POPULAR
 Incline Bench
 Cable Row
 
-CHEST
-...
-
-BACK
-...
-
-LEGS
-...
+MUSCLE GROUPS
+Chest · Back · Shoulders · Biceps · Triceps
+Quads · Hamstrings · Glutes · Calves · Core
 ```
 
 Search should receive focus immediately when tapped.
+Popular is curated or deterministically ordered, not social analytics. A favorite control is available on system and custom exercise rows and works from local state.
 
 ---
 
@@ -1354,6 +1370,14 @@ Example:
 Do not build complicated nested filtering for V1.
 
 Search is more important than filters.
+
+---
+
+# 44A. Notes in Training
+
+The active exercise screen shows a user-owned persistent exercise note near the exercise name or target when present, for example `Seat 4 · Bench notch 3`. It must be visually distinct from structured targets and must not look like a global exercise instruction.
+
+Workout notes are optional and accessible from the active workout overview, then shown in workout detail/history. A set note is optional in set entry/editing and remains progressively disclosed so the common logging path stays compact. Present user-authored notes as notes, not measured facts or progression signals.
 
 ---
 
@@ -1595,7 +1619,7 @@ ESTIMATED 1RM
 234 LB
 ↑ 8 lb over 30 days
 
-[ chart ]
+[ Show Graph ]
 
 BEST SET
 
@@ -1620,6 +1644,7 @@ Charts should be:
 - high contrast
 - minimally labeled
 - useful
+- optional and user-revealed with `Show Graph`
 
 For the strength trend:
 
@@ -1631,6 +1656,7 @@ white key values
 ```
 
 Do not add unnecessary gradients or 3D effects.
+The initial V1 series is Estimated 1RM Over Time. Plot only real history points, do not draw invented continuity, and label a limited offline history window honestly. The screen must remain useful without revealing the graph.
 
 The chart should answer:
 
@@ -2081,9 +2107,7 @@ Advanced functionality should remain accessible but secondary.
 
 # 74. Onboarding Design
 
-Onboarding should take under approximately one minute.
-
-One decision per screen.
+Onboarding is one compact setup screen and should take well under approximately one minute.
 
 Example:
 
@@ -2093,13 +2117,21 @@ WHAT DO YOU LIFT IN?
 [ LB ]
 
 [ KG ]
-```
 
-Next.
+PRIMARY GOAL
+
+[ BUILD MUSCLE ]
+[ GET STRONGER ]
+[ BOTH ]
+
+[ START TRAINING ]
+```
 
 No carousel.
 
 No tutorial explaining every feature.
+
+Do not request RPE preference or progression style here. Their defaults are Optional and Balanced, and both are editable later under Profile → Training Preferences.
 
 Users should learn the app through normal use.
 
@@ -2171,10 +2203,7 @@ Login
 
 ONBOARDING
 
-Units
-Goal
-RPE
-Progression Style
+Compact Setup
 
 HOME
 
@@ -2412,6 +2441,8 @@ Lock phone
 in approximately a few seconds when weight is unchanged.
 
 If it takes multiple screens or excessive taps, the design has failed.
+
+During an active workout, the common case uses as few interactions as reasonably possible. Prefer prefilled values, one-handed +/- controls, large touch targets, minimal keyboard use, and immediate local feedback. Avoid unnecessary confirmations, modal-heavy logging, network-dependent UI, and configuration during training. When suggested weight and reps are already correct, completing a set should ideally require only `Complete Set`.
 
 ---
 

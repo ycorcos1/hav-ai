@@ -316,22 +316,22 @@ This process must be idempotent.
 Sequence:
 
 ```text
-Units
+Compact Setup Screen
+  Weight Unit
+  Primary Goal
 ↓
-Primary Goal
+Start Training
 ↓
-RPE Preference
-↓
-Progression Style
-↓
-Save Profile
+Save Profile with advanced defaults
 ↓
 Home
 ```
 
+Defaults are `rpe_preference = optional` and `progression_style = balanced`. These are changed later at `Profile → Training Preferences`, not during onboarding.
+
 ---
 
-# 13. Units Flow
+# 13. Compact Setup: Weight Unit
 
 Screen:
 
@@ -348,15 +348,7 @@ Kilograms (kg)
 
 User selects one.
 
-Then:
-
-```text
-Continue
-```
-
----
-
-# 14. Primary Goal Flow
+# 14. Compact Setup: Primary Goal
 
 Screen:
 
@@ -382,49 +374,23 @@ hybrid
 
 ---
 
-# 15. RPE Preference Flow
+# 15. Start Training Flow
 
-Screen:
-
-```text
-How do you want to use RPE?
-```
-
-Options:
-
-```text
-Hide RPE
-Optional
-Prefer to Track RPE
-```
-
-Stored as:
-
-```text
-hidden
-optional
-preferred
-```
+The weight-unit and primary-goal controls appear together. `Start Training` is disabled until both are valid. On activation, persist both selections, apply the advanced defaults, mark onboarding complete, and route to Home. No tutorial, tour, extra screen, or additional required question intervenes.
 
 ---
 
-# 16. Progression Style Flow
+# 16. Advanced Preference Location
 
-Screen:
-
-```text
-How aggressively should havAI progress you?
-```
-
-Options:
+RPE preference and progression style remain editable under:
 
 ```text
-Conservative
-Balanced
-Aggressive
+Profile
+↓
+Training Preferences
 ```
 
-Balanced should appear as the default/recommended choice.
+They are not first-run steps.
 
 ---
 
@@ -659,11 +625,15 @@ Exercise Picker
 Exercise Picker supports:
 
 ```text
+Popular
+Favorites
+Muscle Groups
 Search
-Muscle Filters
 Built-In Exercises
 Custom Exercises
 ```
+
+Popular uses a system-curated or deterministic V1 order. Favorites are user-specific, available offline once saved, and synchronize later. Muscle Groups uses the canonical taxonomy and prioritizes Chest, Back, Shoulders, Biceps, Triceps, Quads, Hamstrings, Glutes, Calves, and Core.
 
 ---
 
@@ -1062,18 +1032,20 @@ Do not fabricate comparison.
 Normal path:
 
 ```text
-Weight
+Prefilled Weight with quick +/- controls
 ↓
-Reps
+Reps with [-] and [+] controls
 ↓
 RPE optional
+↓
+Set note optional
 ↓
 Complete Set
 ```
 
 Weight may be prefilled.
 
-Reps remain easy to edit.
+Pound quick adjustments support ±5, ±10, ±25, and ±45; kilogram adjustments support ±2.5, ±5, ±10, and ±20. The exact UI may reveal larger increments compactly. Manual numeric weight and rep entry remains available, and weight persists in canonical kilograms.
 
 ---
 
@@ -1098,6 +1070,10 @@ Mark Set Complete
 ↓
 Haptic Feedback
 ↓
+Start Rest Timer for working set
+↓
+Show brief Undo action
+↓
 Prepare Next Set Entry
 ```
 
@@ -1108,6 +1084,30 @@ Do Not Mark Complete
 ↓
 Show Storage Error
 ```
+
+The rest timer starts only after the local commit succeeds. It runs independently and never blocks logging or navigation. A timer failure does not change the completed set.
+
+---
+
+# 48A. Undo Set Completion Flow
+
+During the brief Undo window:
+
+```text
+Tap Undo
+↓
+Restore pre-completion entry state
+↓
+Revert local set mutation transactionally
+```
+
+If the set has not synchronized, remove or coalesce its pending mutation. If it already synchronized, use the normal tombstone/delete or safe update path. No destructive confirmation is shown for this immediate reversal. Undo does not make the rest timer authoritative over workout data.
+
+---
+
+# 48B. Rest Timer Flow
+
+The timer supports start, pause, resume, reset, add time, and dismiss. Its default duration comes from Training Preferences, with an optional per-exercise override. It uses an end timestamp plus paused remaining duration so phone lock/backgrounding does not depend on foreground ticks. The user may log another set at any time. On completion, provide haptic, sound, or notification feedback where platform state and permissions make that appropriate.
 
 ---
 
@@ -1623,6 +1623,7 @@ Finish Workout
 ```
 
 Do not block completion permanently.
+There is no dedicated Skip Exercise state or flow; incomplete planned work simply remains incomplete.
 
 ---
 
@@ -1965,6 +1966,8 @@ Exercises
 Sets
 Warm-Ups
 RPE
+Workout note
+Set notes where present
 ```
 
 ---
@@ -2048,7 +2051,7 @@ Best Weight
 Best Set
 Recent Trend
 Recent Sessions
-Chart
+Show Graph (optional control)
 ```
 
 ---
@@ -2067,13 +2070,19 @@ Do not show fake charts or percentages.
 
 # 100. Exercise Progress Chart Flow
 
-User views simple:
+The normal Progress screen remains useful without a graph. The user may select:
+
+```text
+Show Graph
+```
+
+to reveal the simple:
 
 ```text
 Estimated 1RM Over Time
 ```
 
-No interaction beyond basic readability is required in V1.
+No interaction beyond basic readability is required in V1. Points come only from real workout history; do not interpolate fake continuity. If the offline history window is incomplete, label the limited scope rather than implying complete lifetime history.
 
 ---
 
@@ -2348,6 +2357,32 @@ Save
 Future recommendation behavior updates.
 
 Existing raw history remains.
+
+---
+
+# 116A. Change Default Rest Duration Flow
+
+```text
+Profile → Training Preferences
+↓
+Default Rest Duration
+↓
+Save positive duration
+```
+
+Future working-set completions use the new default unless the exercise has a user-specific override. Changing it never changes workout data.
+
+---
+
+# 116B. Persistent Exercise Preference Flow
+
+From an exercise detail or relevant picker action, the user may toggle Favorite, edit a persistent personal note, and optionally set/clear a rest-duration override. Save locally first, update immediately offline, and synchronize later. System exercise fields remain unchanged.
+
+---
+
+# 116C. Workout Note Flow
+
+From the active workout overview, add/edit/clear an optional workout note. Persist it locally on the workout, synchronize normally, and display it in workout detail/history.
 
 ---
 
@@ -3112,7 +3147,7 @@ next exercise/navigation
 The V1 flows are complete when a user can:
 
 - create an account
-- complete onboarding
+- complete onboarding on one compact two-field screen
 - reopen without repeated onboarding
 - create custom exercises
 - create templates
@@ -3122,11 +3157,16 @@ The V1 flows are complete when a user can:
 - start a template offline
 - prevent accidental second active workout
 - see previous performance
+- adjust weight and reps without requiring the keyboard
 - see today's target
 - log working sets
 - log warm-ups
 - add extra sets
 - edit/delete sets
+- undo an accidental set completion briefly
+- use the non-blocking automatic rest timer
+- save persistent exercise, workout, and set notes
+- browse Popular, Favorites, Muscle Groups, and Search
 - move between exercises freely
 - add/remove/reorder exercises during a workout
 - close and reopen the app without losing progress
@@ -3141,6 +3181,7 @@ The V1 flows are complete when a user can:
 - view history
 - edit/delete historical data
 - view exercise progress
+- optionally reveal the real-history e1RM graph
 - ask Coach questions
 - use Coach during an active workout
 - use Quick Log with confirmation

@@ -122,6 +122,7 @@ The engine does not:
 - enforce RLS
 - decide if a workout should be deleted
 - permanently persist PR state
+- read, interpret, or score free-form exercise, workout, or set notes
 
 ---
 
@@ -299,6 +300,7 @@ type ExerciseSessionPerformance = {
 Only relevant working sets should normally be passed to progression calculations.
 
 Warm-up sets must be excluded.
+Free-form notes are deliberately absent from `ProgressionInput` and `ExerciseSessionPerformance`. Persistent exercise notes, workout notes, and set notes are subjective AI Coach/UI context only in V1 and must not change classification, trend, confidence, reason codes, or recommendations.
 
 ---
 
@@ -3306,7 +3308,10 @@ plateau
 large increment
 bodyweight
 reps only
+notes present but ignored
 ```
+
+At least one regression test must prove that identical structured inputs produce identical results when any exercise, workout, or set note text changes.
 
 ---
 
