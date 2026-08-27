@@ -51,7 +51,8 @@ Use `npm run ios`, `npm run android`, or `npm run web` for a specific platform. 
 Phase 0: Repository preparation — complete
 Task 1.1: Expo application scaffold — complete
 Task 1.2: Minimal havAI shell — complete
-Next: Task 1.3 — Configure TypeScript
+Task 1.3: Strict TypeScript and source alias — complete
+Next: Task 1.4 — Configure Linting
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
