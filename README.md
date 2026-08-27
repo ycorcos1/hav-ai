@@ -54,7 +54,8 @@ Task 1.2: Minimal havAI shell — complete
 Task 1.3: Strict TypeScript and source alias — complete
 Task 1.4: Expo-compatible linting — complete
 Task 1.5: Jest test infrastructure — complete
-Next: Task 1.6 — Add Core Project Scripts
+Task 1.6: Core project scripts — complete
+Next: Task 1.7 — Configure Environment Handling
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
