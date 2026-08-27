@@ -1,17 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { CoachScreen } from '@/features/coach/screens/CoachScreen';
 
 export default function CoachRoute() {
-  return (
-    <View style={styles.container}>
-      <Text>Coach</Text>
-    </View>
-  );
+  return <CoachScreen />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

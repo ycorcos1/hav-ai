@@ -1,17 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { WorkoutsScreen } from '@/features/workouts/screens/WorkoutsScreen';
 
 export default function WorkoutsRoute() {
-  return (
-    <View style={styles.container}>
-      <Text>Workouts</Text>
-    </View>
-  );
+  return <WorkoutsScreen />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

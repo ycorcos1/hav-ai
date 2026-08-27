@@ -1,17 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ProgressScreen } from '@/features/progress/screens/ProgressScreen';
 
 export default function ProgressRoute() {
-  return (
-    <View style={styles.container}>
-      <Text>Progress</Text>
-    </View>
-  );
+  return <ProgressScreen />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
