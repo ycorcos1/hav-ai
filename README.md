@@ -40,8 +40,11 @@ Install dependencies and start the Expo development server:
 
 ```sh
 npm install
-npm start
+cp .env.example .env.local
+npm run dev
 ```
+
+Replace the values in `.env.local` with the public configuration for your development Supabase project. Expo exposes every `EXPO_PUBLIC_` value to the client, so never place private keys or server secrets there.
 
 Use `npm run ios`, `npm run android`, or `npm run web` for a specific platform. See `docs/DEPLOYMENT.md` for the complete environment specification.
 
@@ -55,7 +58,8 @@ Task 1.3: Strict TypeScript and source alias — complete
 Task 1.4: Expo-compatible linting — complete
 Task 1.5: Jest test infrastructure — complete
 Task 1.6: Core project scripts — complete
-Next: Task 1.7 — Configure Environment Handling
+Task 1.7: Environment handling — complete
+Next: Task 2.1 — Define Route Groups
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
