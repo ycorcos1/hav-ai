@@ -66,7 +66,8 @@ Task 2.4: Route guard skeleton — complete
 Task 3.1: Theme tokens — complete
 Task 3.2: Typography system — complete
 Task 3.3: Button components — complete
-Next: Task 3.4 — Create Form/UI Primitives
+Task 3.4: Form/UI primitives — complete
+Next: Task 3.5 — Create Status Components
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
