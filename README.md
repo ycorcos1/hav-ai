@@ -59,7 +59,8 @@ Task 1.4: Expo-compatible linting — complete
 Task 1.5: Jest test infrastructure — complete
 Task 1.6: Core project scripts — complete
 Task 1.7: Environment handling — complete
-Next: Task 2.1 — Define Route Groups
+Task 2.1: Root routing strategy — complete
+Next: Task 2.2 — Create Main Tab Navigation
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
