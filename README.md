@@ -62,7 +62,8 @@ Task 1.7: Environment handling — complete
 Task 2.1: Root routing strategy — complete
 Task 2.2: Main tab navigation — complete
 Task 2.3: Feature-level placeholder screens — complete
-Next: Task 2.4 — Create Route Guard Skeleton
+Task 2.4: Route guard skeleton — complete
+Next: Task 3.1 — Create Theme Token Files
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.

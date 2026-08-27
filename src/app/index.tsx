@@ -1,17 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { RootRouteGuard } from '@/features/routing/components/RootRouteGuard';
+import type { RootRoutingState } from '@/features/routing/resolveRootRoute';
+
+// Temporary until the real session and profile state are implemented.
+const temporaryRootRoutingState: RootRoutingState = {
+  status: 'authenticated',
+  onboardingComplete: true,
+};
 
 export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text>havAI</Text>
-    </View>
-  );
+  return <RootRouteGuard state={temporaryRootRoutingState} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
