@@ -1,9 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { AppText } from '@/components/AppText';
+import { colors } from '@/theme';
 
 export function HomeScreen() {
   return (
     <View style={styles.container}>
-      <Text>Home</Text>
+      <AppText variant="screenTitle">Home</AppText>
     </View>
   );
 }
@@ -12,6 +15,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: colors.background.primary,
     justifyContent: 'center',
   },
 });

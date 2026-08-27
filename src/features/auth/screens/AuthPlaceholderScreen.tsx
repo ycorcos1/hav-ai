@@ -1,9 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { AppText } from '@/components/AppText';
+import { colors } from '@/theme';
 
 export function AuthPlaceholderScreen() {
   return (
     <View style={styles.container}>
-      <Text>Auth</Text>
+      <AppText variant="screenTitle">Auth</AppText>
     </View>
   );
 }
@@ -12,6 +15,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: colors.background.primary,
     justifyContent: 'center',
   },
 });

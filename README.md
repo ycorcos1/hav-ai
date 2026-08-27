@@ -64,7 +64,8 @@ Task 2.2: Main tab navigation — complete
 Task 2.3: Feature-level placeholder screens — complete
 Task 2.4: Route guard skeleton — complete
 Task 3.1: Theme tokens — complete
-Next: Task 3.2 — Create Typography System
+Task 3.2: Typography system — complete
+Next: Task 3.3 — Create Button Components
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
