@@ -50,7 +50,8 @@ Use `npm run ios`, `npm run android`, or `npm run web` for a specific platform. 
 ```text
 Phase 0: Repository preparation — complete
 Task 1.1: Expo application scaffold — complete
-Next: Task 1.2 — Remove Starter Boilerplate
+Task 1.2: Minimal havAI shell — complete
+Next: Task 1.3 — Configure TypeScript
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
