@@ -75,7 +75,10 @@ Task 4.3: Exercise contracts — complete
 Task 4.4: Workout contracts — complete
 Task 4.5: Progression contracts — complete
 Task 4.6: Personal record contracts — complete
-Next: Task 4.7 — Create Sync Contracts
+Task 4.7: Sync contracts — complete
+Task 4.8: AI contracts — complete
+Task 4.9: Runtime validation — complete
+Next: Task 5.1 — Install and Configure Expo SQLite
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.

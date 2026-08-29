@@ -520,6 +520,8 @@ workout_template_exercise
 
 custom_exercise
 
+user_exercise_preference
+
 workout
 workout_exercise
 set
@@ -571,6 +573,7 @@ type SyncQueueItem = {
     | "workout_template"
     | "workout_template_exercise"
     | "custom_exercise"
+    | "user_exercise_preference"
     | "workout"
     | "workout_exercise"
     | "set"

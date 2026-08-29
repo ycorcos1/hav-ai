@@ -1,4 +1,7 @@
-export type AppEnvironment = 'development' | 'preview' | 'production';
+import type { AppEnvironment } from '@/shared/contracts';
+import { appEnvironmentSchema } from '@/shared/schemas';
+
+export type { AppEnvironment } from '@/shared/contracts';
 
 export type RawEnvironment = {
   appEnvironment: string | undefined;
@@ -12,14 +15,8 @@ export type Environment = {
   supabasePublishableKey: string;
 };
 
-const appEnvironments: AppEnvironment[] = [
-  'development',
-  'preview',
-  'production',
-];
-
 function isAppEnvironment(value: string): value is AppEnvironment {
-  return appEnvironments.includes(value as AppEnvironment);
+  return appEnvironmentSchema.safeParse(value).success;
 }
 
 function isHttpUrl(value: string): boolean {

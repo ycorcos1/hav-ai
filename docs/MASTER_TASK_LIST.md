@@ -936,9 +936,13 @@ Define syncable raw/local entities.
 V1 sync entities:
 
 ```text
+workout_template
+workout_template_exercise
+custom_exercise
 workout
 workout_exercise
 set
+user_exercise_preference
 progression_recommendation
 ```
 
