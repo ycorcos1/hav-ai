@@ -69,7 +69,13 @@ Task 3.3: Button components — complete
 Task 3.4: Form/UI primitives — complete
 Task 3.5: Status components — complete
 Task 3.6: Bottom sheet foundation — complete; physical-device verification deferred
-Next: Task 4.1 — Create Common Contracts
+Task 4.1: Common contracts — complete
+Task 4.2: Profile contracts — complete
+Task 4.3: Exercise contracts — complete
+Task 4.4: Workout contracts — complete
+Task 4.5: Progression contracts — complete
+Task 4.6: Personal record contracts — complete
+Next: Task 4.7 — Create Sync Contracts
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
