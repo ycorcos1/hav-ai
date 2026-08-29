@@ -18,13 +18,14 @@ function createConnection(filename: string = ":memory:") {
 }
 
 describe("local migration runner", () => {
-  it("applies the production registry through version five without future tables", async () => {
+  it("applies the production registry through version six without future tables", async () => {
     const database = createConnection();
 
     try {
       await configureLocalDatabase(database);
 
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(5);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(6);
+      await expect(database.getAllAsync("PRAGMA foreign_key_check;")).resolves.toEqual([]);
       await expect(
         database.getFirstAsync<{ count: number }>(
           `SELECT COUNT(*) AS count FROM sqlite_master
@@ -39,17 +40,17 @@ describe("local migration runner", () => {
                'local_progression_recommendations',
                'sync_queue',
                'local_exercises',
-               'cached_recent_exercise_sessions'
+               'cached_recent_exercise_sessions',
+               'local_user_exercise_preferences'
              );`,
         ),
-      ).resolves.toEqual(expect.objectContaining({ count: 10 }));
+      ).resolves.toEqual(expect.objectContaining({ count: 11 }));
       await expect(
         database.getFirstAsync<{ count: number }>(
           `SELECT COUNT(*) AS count FROM sqlite_master
            WHERE type = 'table'
              AND name IN (
-               'cached_exercises',
-               'local_user_exercise_preferences'
+               'cached_exercises'
              );`,
         ),
       ).resolves.toEqual(expect.objectContaining({ count: 0 }));

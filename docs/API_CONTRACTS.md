@@ -1425,7 +1425,7 @@ services
 
 ```ts
 interface LocalWorkoutRepository {
-  getById(id: UUID): Promise<Workout | null>;
+  getById(userId: UUID, id: UUID): Promise<Workout | null>;
 
   getActiveForUser(userId: UUID): Promise<Workout | null>;
 
@@ -1433,7 +1433,7 @@ interface LocalWorkoutRepository {
 
   update(workout: Workout): Promise<void>;
 
-  delete(id: UUID): Promise<void>;
+  delete(userId: UUID, id: UUID): Promise<void>;
 }
 ```
 
@@ -1443,15 +1443,15 @@ interface LocalWorkoutRepository {
 
 ```ts
 interface LocalSetRepository {
-  getById(id: UUID): Promise<WorkoutSet | null>;
+  getById(userId: UUID, id: UUID): Promise<WorkoutSet | null>;
 
-  getForWorkoutExercise(workoutExerciseId: UUID): Promise<WorkoutSet[]>;
+  getForWorkoutExercise(userId: UUID, workoutExerciseId: UUID): Promise<WorkoutSet[]>;
 
   create(set: WorkoutSet): Promise<void>;
 
   update(set: WorkoutSet): Promise<void>;
 
-  deleteOrTombstone(id: UUID): Promise<void>;
+  deleteOrTombstone(userId: UUID, id: UUID): Promise<void>;
 }
 ```
 
@@ -1461,7 +1461,7 @@ interface LocalSetRepository {
 
 ```ts
 interface LocalTemplateRepository {
-  getById(id: UUID): Promise<WorkoutTemplate | null>;
+  getById(userId: UUID, id: UUID): Promise<WorkoutTemplate | null>;
 
   listForUser(userId: UUID): Promise<WorkoutTemplate[]>;
 
@@ -1469,7 +1469,7 @@ interface LocalTemplateRepository {
 
   update(template: WorkoutTemplate): Promise<void>;
 
-  archive(id: UUID): Promise<void>;
+  archive(userId: UUID, id: UUID): Promise<void>;
 }
 ```
 
@@ -1479,7 +1479,7 @@ interface LocalTemplateRepository {
 
 ```ts
 interface LocalExerciseRepository {
-  getById(id: UUID): Promise<Exercise | null>;
+  getById(userId: UUID, id: UUID): Promise<Exercise | null>;
 
   listAccessible(userId: UUID): Promise<Exercise[]>;
 
@@ -1487,7 +1487,7 @@ interface LocalExerciseRepository {
 
   upsert(exercise: Exercise): Promise<void>;
 
-  archiveCustomExercise(id: UUID): Promise<void>;
+  archiveCustomExercise(userId: UUID, id: UUID): Promise<void>;
 }
 ```
 
@@ -1498,7 +1498,7 @@ interface LocalUserExercisePreferenceRepository {
   get(userId: UUID, exerciseId: UUID): Promise<UserExercisePreference | null>;
   listFavorites(userId: UUID): Promise<UserExercisePreference[]>;
   upsert(preference: UserExercisePreference): Promise<void>;
-  deleteOrTombstone(id: UUID): Promise<void>;
+  deleteOrTombstone(userId: UUID, id: UUID): Promise<void>;
 }
 ```
 
@@ -1508,7 +1508,7 @@ interface LocalUserExercisePreferenceRepository {
 
 ```ts
 interface LocalRecommendationRepository {
-  getById(id: UUID): Promise<ProgressionRecommendation | null>;
+  getById(userId: UUID, id: UUID): Promise<ProgressionRecommendation | null>;
 
   getActiveForExercise(
     userId: UUID,
@@ -1517,9 +1517,9 @@ interface LocalRecommendationRepository {
 
   upsert(recommendation: ProgressionRecommendation): Promise<void>;
 
-  markConsumed(id: UUID, consumedAt: ISODateTime): Promise<void>;
+  markConsumed(userId: UUID, id: UUID, consumedAt: ISODateTime): Promise<void>;
 
-  supersede(id: UUID): Promise<void>;
+  supersede(userId: UUID, id: UUID): Promise<void>;
 }
 ```
 

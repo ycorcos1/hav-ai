@@ -116,6 +116,20 @@ export type LocalExerciseRow = {
   server_updated_at: ISODateTime | null;
 };
 
+export type LocalUserExercisePreferenceRow = {
+  id: UUID;
+  user_id: UUID;
+  exercise_id: UUID;
+  is_favorite: SQLiteBoolean;
+  notes: string | null;
+  rest_duration_seconds: number | null;
+  sync_status: LocalSyncStatus;
+  deleted_at: ISODateTime | null;
+  created_at: ISODateTime;
+  updated_at: ISODateTime;
+  server_updated_at: ISODateTime | null;
+};
+
 export type LocalProgressionRecommendationRow = {
   id: UUID;
   user_id: UUID;

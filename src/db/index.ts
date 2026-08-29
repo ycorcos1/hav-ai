@@ -17,3 +17,4 @@ export type {
   TransactionalLocalDatabaseConnection,
 } from "./types";
 export * from "./mappers";
+export * from "./repositories";

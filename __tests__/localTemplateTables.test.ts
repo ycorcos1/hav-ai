@@ -21,7 +21,7 @@ describe("authoritative local template tables migration", () => {
     try {
       const database = openDatabase(filename);
       await configureLocalDatabase(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(5);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(6);
 
       await database.runAsync(
         `INSERT INTO local_workout_templates (

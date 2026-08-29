@@ -42,3 +42,14 @@ export type Exercise = {
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
 };
+
+export type UserExercisePreference = {
+  id: UUID;
+  userId: UUID;
+  exerciseId: UUID;
+  isFavorite: boolean;
+  notes?: string;
+  restDurationSeconds?: number;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+};

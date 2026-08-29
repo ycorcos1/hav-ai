@@ -19,6 +19,10 @@ export class NodeSQLiteConnection implements TransactionalLocalDatabaseConnectio
     return (result as T | undefined) ?? null;
   }
 
+  async getAllAsync<T>(source: string, ...params: SQLiteBindValue[]): Promise<T[]> {
+    return this.database.prepare(source).all(...this.toSupportedParams(params)) as T[];
+  }
+
   async runAsync(source: string, ...params: SQLiteBindValue[]): Promise<unknown> {
     return this.database.prepare(source).run(...this.toSupportedParams(params));
   }

@@ -13,7 +13,13 @@ export type {
   UserProfile,
   WeightUnit,
 } from "./auth";
-export type { EquipmentType, Exercise, MeasurementType, MuscleGroup } from "./exercises";
+export type {
+  EquipmentType,
+  Exercise,
+  MeasurementType,
+  MuscleGroup,
+  UserExercisePreference,
+} from "./exercises";
 export type {
   ExerciseSessionPerformance,
   ExerciseTrend,

@@ -17,7 +17,7 @@ describe("local progression recommendation migration", () => {
     try {
       const database = new NodeSQLiteConnection(new DatabaseSync(filename));
       await configureLocalDatabase(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(5);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(6);
 
       const insertSql = `
         INSERT INTO local_progression_recommendations (

@@ -7,6 +7,10 @@ export {
   progressionRecommendationToRow,
 } from "./progressionRecommendationMapper";
 export {
+  userExercisePreferenceFromRow,
+  userExercisePreferenceToRow,
+} from "./userExercisePreferenceMapper";
+export {
   workoutTemplateExerciseFromRow,
   workoutTemplateExerciseToRow,
   workoutTemplateFromRow,
@@ -24,6 +28,7 @@ export type {
   LocalExerciseRow,
   LocalPersistenceMetadata,
   LocalProgressionRecommendationRow,
+  LocalUserExercisePreferenceRow,
   LocalWorkoutExerciseRow,
   LocalWorkoutRow,
   LocalWorkoutSetRow,
@@ -32,3 +37,4 @@ export type {
   SQLiteBoolean,
 } from "./rows";
 export type { WorkoutSetPersistenceMetadata } from "./workoutMapper";
+export type { UserExercisePreferencePersistenceMetadata } from "./userExercisePreferenceMapper";

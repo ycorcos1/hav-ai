@@ -86,7 +86,9 @@ Task 5.5: Local progression recommendation table — complete
 Task 5.6: Sync queue table — complete
 Task 5.7: Local exercise storage and recent-history cache — complete
 Task 5.8: Local database mappers — complete
-Next: Task 5.9 — Create Local Repository Interfaces and Implementations
+Task 5.9: Local repository interfaces and implementations — complete
+Task 5.10: Local exercise preferences and note persistence — complete
+Next: Task 6.1 — Initialize Supabase CLI
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
