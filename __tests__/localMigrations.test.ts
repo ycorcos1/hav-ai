@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import {
   configureLocalDatabase,
+  ensureSchemaMetadataTable,
   getLocalSchemaVersion,
   runLocalMigrations,
   type LocalMigration,
@@ -17,18 +18,41 @@ function createConnection(filename: string = ":memory:") {
 }
 
 describe("local migration runner", () => {
-  it("starts at schema version zero without creating future domain tables", async () => {
+  it("applies the production registry through version four without future tables", async () => {
     const database = createConnection();
 
     try {
       await configureLocalDatabase(database);
 
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(0);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(4);
       await expect(
         database.getFirstAsync<{ count: number }>(
-          "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name LIKE 'local_%';",
+          `SELECT COUNT(*) AS count FROM sqlite_master
+           WHERE type = 'table'
+             AND name IN (
+               'local_schema_metadata',
+               'local_workouts',
+               'local_workout_exercises',
+               'local_sets',
+               'local_workout_templates',
+               'local_workout_template_exercises',
+               'local_progression_recommendations',
+               'sync_queue'
+             );`,
         ),
-      ).resolves.toEqual(expect.objectContaining({ count: 1 }));
+      ).resolves.toEqual(expect.objectContaining({ count: 8 }));
+      await expect(
+        database.getFirstAsync<{ count: number }>(
+          `SELECT COUNT(*) AS count FROM sqlite_master
+           WHERE type = 'table'
+             AND name IN (
+               'cached_exercises',
+               'cached_recent_exercise_sessions',
+               'local_exercises',
+               'local_user_exercise_preferences'
+             );`,
+        ),
+      ).resolves.toEqual(expect.objectContaining({ count: 0 }));
     } finally {
       database.close();
     }
@@ -60,6 +84,7 @@ describe("local migration runner", () => {
     ];
 
     try {
+      await ensureSchemaMetadataTable(database);
       await expect(runLocalMigrations(database, migrations)).resolves.toBe(2);
       await expect(runLocalMigrations(database, migrations)).resolves.toBe(2);
 
@@ -86,14 +111,14 @@ describe("local migration runner", () => {
 
     try {
       const firstConnection = createConnection(filename);
-      await configureLocalDatabase(firstConnection);
+      await ensureSchemaMetadataTable(firstConnection);
       await runLocalMigrations(firstConnection, [migration]);
       firstConnection.close();
 
       const reopenedConnection = createConnection(filename);
 
       try {
-        await configureLocalDatabase(reopenedConnection);
+        await ensureSchemaMetadataTable(reopenedConnection);
         await expect(runLocalMigrations(reopenedConnection, [migration])).resolves.toBe(1);
         await expect(getLocalSchemaVersion(reopenedConnection)).resolves.toBe(1);
         await expect(
@@ -130,6 +155,7 @@ describe("local migration runner", () => {
     ];
 
     try {
+      await ensureSchemaMetadataTable(database);
       await expect(runLocalMigrations(database, migrations)).rejects.toThrow(
         "intentional migration failure",
       );

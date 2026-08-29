@@ -80,7 +80,11 @@ Task 4.8: AI contracts — complete
 Task 4.9: Runtime validation — complete
 Task 5.1: Expo SQLite connection and bootstrap — complete
 Task 5.2: Local migration runner — complete
-Next: Task 5.3 — Create Local Workout Tables
+Task 5.3: Local workout tables — complete
+Task 5.4: Authoritative local template tables — complete
+Task 5.5: Local progression recommendation table — complete
+Task 5.6: Sync queue table — complete
+Next: Task 5.7 — Create Read Cache Tables
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
