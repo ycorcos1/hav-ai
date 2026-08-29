@@ -84,7 +84,9 @@ Task 5.3: Local workout tables — complete
 Task 5.4: Authoritative local template tables — complete
 Task 5.5: Local progression recommendation table — complete
 Task 5.6: Sync queue table — complete
-Next: Task 5.7 — Create Read Cache Tables
+Task 5.7: Local exercise storage and recent-history cache — complete
+Task 5.8: Local database mappers — complete
+Next: Task 5.9 — Create Local Repository Interfaces and Implementations
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.

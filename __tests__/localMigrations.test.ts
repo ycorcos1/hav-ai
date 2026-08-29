@@ -18,13 +18,13 @@ function createConnection(filename: string = ":memory:") {
 }
 
 describe("local migration runner", () => {
-  it("applies the production registry through version four without future tables", async () => {
+  it("applies the production registry through version five without future tables", async () => {
     const database = createConnection();
 
     try {
       await configureLocalDatabase(database);
 
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(4);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(5);
       await expect(
         database.getFirstAsync<{ count: number }>(
           `SELECT COUNT(*) AS count FROM sqlite_master
@@ -37,18 +37,18 @@ describe("local migration runner", () => {
                'local_workout_templates',
                'local_workout_template_exercises',
                'local_progression_recommendations',
-               'sync_queue'
+               'sync_queue',
+               'local_exercises',
+               'cached_recent_exercise_sessions'
              );`,
         ),
-      ).resolves.toEqual(expect.objectContaining({ count: 8 }));
+      ).resolves.toEqual(expect.objectContaining({ count: 10 }));
       await expect(
         database.getFirstAsync<{ count: number }>(
           `SELECT COUNT(*) AS count FROM sqlite_master
            WHERE type = 'table'
              AND name IN (
                'cached_exercises',
-               'cached_recent_exercise_sessions',
-               'local_exercises',
                'local_user_exercise_preferences'
              );`,
         ),

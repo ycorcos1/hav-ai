@@ -28,7 +28,7 @@ describe("sync queue table migration", () => {
     try {
       const database = new NodeSQLiteConnection(new DatabaseSync(filename));
       await configureLocalDatabase(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(4);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(5);
 
       for (const [index, entityType] of entityTypes.entries()) {
         await database.runAsync(

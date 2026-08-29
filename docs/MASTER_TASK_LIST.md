@@ -1179,25 +1179,29 @@ Queue persists across DB restart.
 
 ---
 
-## Task 5.7: Create Read Cache Tables
+## Task 5.7: Create Local Exercise Storage and Recent-History Cache
 
 ### Goal
 
-Cache cloud/read-only data that is not locally authored.
+Store cached system exercises and authoritative locally authored custom exercises in the canonical local exercise table, alongside a separate recent-history read cache.
 
 Create:
 
 ```text
-cached_exercises
+local_exercises
 cached_recent_exercise_sessions
 ```
+
+`local_exercises` stores both cached system exercises and locally authored custom exercises. Canonical ownership, system/custom, archive, and sync fields distinguish those roles as defined by `DATABASE.md`.
+
+`cached_recent_exercise_sessions` remains read-cache-only.
 
 Do not duplicate authoritative local templates or recommendations into separate ambiguous cache tables.
 
 ### Acceptance Criteria
 
 - cache roles are clear
-- cached data is distinguishable from authoritative unsynced local data
+- cached system exercises are distinguishable from authoritative unsynced custom exercises
 
 ---
 
@@ -1211,7 +1215,7 @@ WorkoutExercise
 WorkoutSet
 WorkoutTemplate
 WorkoutTemplateExercise
-Exercise
+Exercise (`local_exercises` → domain)
 ProgressionRecommendation
 ```
 
@@ -1229,7 +1233,7 @@ Implement:
 LocalWorkoutRepository
 LocalSetRepository
 LocalTemplateRepository
-LocalExerciseCacheRepository
+LocalExerciseRepository
 LocalRecommendationRepository
 ```
 
