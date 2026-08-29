@@ -78,7 +78,9 @@ Task 4.6: Personal record contracts — complete
 Task 4.7: Sync contracts — complete
 Task 4.8: AI contracts — complete
 Task 4.9: Runtime validation — complete
-Next: Task 5.1 — Install and Configure Expo SQLite
+Task 5.1: Expo SQLite connection and bootstrap — complete
+Task 5.2: Local migration runner — complete
+Next: Task 5.3 — Create Local Workout Tables
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
