@@ -101,9 +101,35 @@ describe("SupabaseProfileRepository", () => {
     });
   });
 
+  it("lets the database resolve the canonical 120-second default when omitted", async () => {
+    const single = jest.fn().mockResolvedValue({ data: profileRow, error: null });
+    const select = jest.fn(() => ({ single }));
+    const insert = jest.fn(() => ({ select }));
+    mockFrom.mockReturnValue({ insert });
+
+    await expect(
+      new SupabaseProfileRepository().createOwnProfile({
+        userId,
+        weightUnit: "lb",
+        primaryGoal: "hybrid",
+      }),
+    ).resolves.toMatchObject({ defaultRestDurationSeconds: 120 });
+
+    expect(insert).toHaveBeenCalledWith({
+      user_id: userId,
+      weight_unit: "lb",
+      primary_goal: "hybrid",
+    });
+  });
+
   it("updates only whitelisted mutable fields without a target user ID", async () => {
     const single = jest.fn().mockResolvedValue({
-      data: { ...profileRow, display_name: null, weight_unit: "kg" },
+      data: {
+        ...profileRow,
+        display_name: null,
+        weight_unit: "kg",
+        default_rest_duration_seconds: 300,
+      },
       error: null,
     });
     const select = jest.fn(() => ({ single }));
@@ -113,6 +139,7 @@ describe("SupabaseProfileRepository", () => {
     const input = {
       displayName: undefined,
       weightUnit: "kg",
+      defaultRestDurationSeconds: 300,
       userId: "00000000-0000-4000-8000-000000000002",
       createdAt,
     } as unknown as UpdateOwnProfileInput;
@@ -121,9 +148,14 @@ describe("SupabaseProfileRepository", () => {
       ...expectedProfile,
       displayName: undefined,
       weightUnit: "kg",
+      defaultRestDurationSeconds: 300,
     });
     expect(repository.updateOwnProfile).toHaveLength(1);
-    expect(update).toHaveBeenCalledWith({ display_name: null, weight_unit: "kg" });
+    expect(update).toHaveBeenCalledWith({
+      display_name: null,
+      weight_unit: "kg",
+      default_rest_duration_seconds: 300,
+    });
   });
 
   it("converts provider and mapping failures to a repository error", async () => {

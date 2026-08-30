@@ -69,9 +69,15 @@ describe("shared contract schemas", () => {
 
     expect(userProfileSchema.parse(profile)).toEqual(profile);
     expect(userProfileSchema.safeParse({ ...profile, primaryGoal: undefined }).success).toBe(false);
-    expect(userProfileSchema.safeParse({ ...profile, defaultRestDurationSeconds: 0 }).success).toBe(
-      false,
-    );
+    expect(userProfileSchema.parse({ ...profile, defaultRestDurationSeconds: 300 })).toEqual({
+      ...profile,
+      defaultRestDurationSeconds: 300,
+    });
+    expect(userProfileSchema.safeParse({ ...profile, defaultRestDurationSeconds: 0 }).success).toBe(false);
+    expect(userProfileSchema.safeParse({ ...profile, defaultRestDurationSeconds: -1 }).success).toBe(false);
+    expect(userProfileSchema.safeParse({ ...profile, defaultRestDurationSeconds: 120.5 }).success).toBe(false);
+    expect(userProfileSchema.safeParse({ ...profile, defaultRestDurationSeconds: Number.NaN }).success).toBe(false);
+    expect(userProfileSchema.safeParse({ ...profile, defaultRestDurationSeconds: Number.POSITIVE_INFINITY }).success).toBe(false);
   });
 
   it("validates nested coach requests and rejects malformed session data", () => {

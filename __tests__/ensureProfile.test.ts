@@ -49,14 +49,19 @@ describe('ensureProfile', () => {
   it('returns an existing profile unchanged without creating another', async () => {
     const authService = createAuthService();
     const profileRepository = createProfileRepository();
-    const existingProfile = { ...incompleteProfile, primaryGoal: 'strength' as const };
+    const existingProfile = {
+      ...incompleteProfile,
+      primaryGoal: 'strength' as const,
+      defaultRestDurationSeconds: 300,
+    };
     profileRepository.getOwnProfile.mockResolvedValue(existingProfile);
 
-    await expect(ensureProfile({ authService, profileRepository })).resolves.toBe(
-      existingProfile,
-    );
+    const result = await ensureProfile({ authService, profileRepository });
+
+    expect(result).toBe(existingProfile);
     expect(profileRepository.createOwnProfile).not.toHaveBeenCalled();
     expect(profileRepository.updateOwnProfile).not.toHaveBeenCalled();
+    expect(result.defaultRestDurationSeconds).toBe(300);
   });
 
   it('creates and returns the canonical incomplete profile for the authenticated user', async () => {
