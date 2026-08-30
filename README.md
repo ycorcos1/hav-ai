@@ -122,7 +122,8 @@ Task 5.9: Local repository interfaces and implementations — complete
 Task 5.10: Local exercise preferences and note persistence — complete
 Task 6.1: Supabase CLI and project structure — complete
 Task 6.2: Mobile Supabase client — complete
-Next: Task 6.3 — Create Profiles Migration
+Task 6.3: Profiles migration and row-level security — complete
+Next: Task 6.4 — Add Profiles Types and Validation
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
