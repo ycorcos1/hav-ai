@@ -48,6 +48,38 @@ Replace the values in `.env.local` with the public configuration for your develo
 
 Use `npm run ios`, `npm run android`, or `npm run web` for a specific platform. See `docs/DEPLOYMENT.md` for the complete environment specification.
 
+## Supabase Development Workflow
+
+The Supabase CLI is installed as a project development dependency. Run it through `npx` so the
+version recorded in `package-lock.json` is used consistently.
+
+havAI initially links to one development Supabase project. On a new development machine:
+
+```sh
+npx supabase login
+npx supabase link --project-ref <development-project-ref>
+```
+
+Find the non-secret project reference in the development project’s dashboard URL. Enter access
+tokens and database passwords only in the local CLI prompt; never add them to this repository or
+paste them into application environment files. Supabase stores link and authentication state
+locally, and `supabase/.gitignore` excludes that machine-specific state.
+
+Cloud schema changes must be represented by timestamped migration files:
+
+```sh
+npx supabase migration new <descriptive_name>
+# Edit and review supabase/migrations/<timestamp>_<descriptive_name>.sql
+npx supabase db push --dry-run
+npx supabase db push
+```
+
+When a local container runtime is available, validate migrations from a clean database with
+`npx supabase start` and `npx supabase db reset` before applying them to the linked development
+project. Dashboard-only schema changes are not an approved workflow: committed files under
+`supabase/migrations/` are the source of truth. Production and preview Supabase projects are not
+part of the current development stage.
+
 ## Current Development Stage
 
 ```text
@@ -88,7 +120,9 @@ Task 5.7: Local exercise storage and recent-history cache — complete
 Task 5.8: Local database mappers — complete
 Task 5.9: Local repository interfaces and implementations — complete
 Task 5.10: Local exercise preferences and note persistence — complete
-Next: Task 6.1 — Initialize Supabase CLI
+Task 6.1: Supabase CLI and project structure — complete
+Task 6.2: Mobile Supabase client — complete
+Next: Task 6.3 — Create Profiles Migration
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
