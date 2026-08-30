@@ -133,7 +133,8 @@ Task 6.1: Supabase CLI and project structure — complete
 Task 6.2: Mobile Supabase client — complete
 Task 6.3: Profiles migration and row-level security — complete
 Task 6.4: Generated Supabase database types — complete
-Next: Task 6.5 — Create Profile Repository
+Task 6.5: Profile repository and cloud mapping boundary — complete
+Next: Task 6.6 — Create Auth Service
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
