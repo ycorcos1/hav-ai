@@ -7,6 +7,12 @@ describe('root route guard', () => {
     });
   });
 
+  it('keeps startup failures separate from valid auth states', () => {
+    expect(resolveRootRoute({ status: 'error' })).toEqual({
+      status: 'error',
+    });
+  });
+
   it('routes unauthenticated users to the auth group', () => {
     expect(resolveRootRoute({ status: 'unauthenticated' })).toEqual({
       status: 'redirect',

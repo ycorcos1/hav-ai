@@ -1,10 +1,12 @@
 export type RootRoutingState =
   | { status: 'loading' }
+  | { status: 'error' }
   | { status: 'unauthenticated' }
   | { status: 'authenticated'; onboardingComplete: boolean };
 
 export type ResolvedRootRoute =
   | { status: 'loading' }
+  | { status: 'error' }
   | {
       status: 'redirect';
       href:
@@ -18,6 +20,10 @@ export function resolveRootRoute(
 ): ResolvedRootRoute {
   if (state.status === 'loading') {
     return { status: 'loading' };
+  }
+
+  if (state.status === 'error') {
+    return { status: 'error' };
   }
 
   if (state.status === 'unauthenticated') {

@@ -2,17 +2,18 @@ import { Redirect } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
+import { ErrorState } from '@/components/ErrorState';
+import { Screen } from '@/components/Screen';
+import { SecondaryButton } from '@/components/SecondaryButton';
+import type { EnsureProfileDependencies } from '@/features/profile/useCases/ensureProfile';
 import {
   resolveRootRoute,
-  type RootRoutingState,
 } from '@/features/routing/resolveRootRoute';
+import { useRootRoutingState } from '@/features/routing/useRootRoutingState';
 import { colors } from '@/theme';
 
-type RootRouteGuardProps = {
-  state: RootRoutingState;
-};
-
-export function RootRouteGuard({ state }: RootRouteGuardProps) {
+export function RootRouteGuard(dependencies: EnsureProfileDependencies) {
+  const { retry, state } = useRootRoutingState(dependencies);
   const route = resolveRootRoute(state);
 
   if (route.status === 'loading') {
@@ -20,6 +21,18 @@ export function RootRouteGuard({ state }: RootRouteGuardProps) {
       <View style={styles.loadingContainer}>
         <AppText variant="screenTitle">havAI</AppText>
       </View>
+    );
+  }
+
+  if (route.status === 'error') {
+    return (
+      <Screen contentContainerStyle={styles.errorContainer}>
+        <ErrorState
+          action={<SecondaryButton label="Try Again" onPress={retry} />}
+          message="Check your connection and try again."
+          title="Couldn’t start havAI"
+        />
+      </Screen>
     );
   }
 
@@ -31,6 +44,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     backgroundColor: colors.background.primary,
+    justifyContent: 'center',
+  },
+  errorContainer: {
     justifyContent: 'center',
   },
 });

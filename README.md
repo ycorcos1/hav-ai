@@ -138,7 +138,8 @@ Task 6.6: Authentication service and provider mapping boundary — complete
 Task 6.7: Authentication route structure — complete
 Task 6.8: Welcome screen and authentication entry navigation — complete
 Task 6.11: Ensure Profile use case — complete
-Next: Task 6.12 — Connect Root Route Guard (approved dependency order)
+Task 6.12: Real authentication/profile root routing — complete
+Next: Task 6.9 — Implement Signup Screen (approved dependency order)
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
