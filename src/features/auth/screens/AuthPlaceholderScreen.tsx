@@ -3,10 +3,14 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/AppText';
 import { colors } from '@/theme';
 
-export function AuthPlaceholderScreen() {
+type AuthPlaceholderScreenProps = {
+  title: string;
+};
+
+export function AuthPlaceholderScreen({ title }: AuthPlaceholderScreenProps) {
   return (
     <View style={styles.container}>
-      <AppText variant="screenTitle">Auth</AppText>
+      <AppText variant="screenTitle">{title}</AppText>
     </View>
   );
 }

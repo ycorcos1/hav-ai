@@ -135,7 +135,8 @@ Task 6.3: Profiles migration and row-level security — complete
 Task 6.4: Generated Supabase database types — complete
 Task 6.5: Profile repository and cloud mapping boundary — complete
 Task 6.6: Authentication service and provider mapping boundary — complete
-Next: Task 6.7 — Create Auth Routes
+Task 6.7: Authentication route structure — complete
+Next: Task 6.8 — Implement Welcome Screen
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
