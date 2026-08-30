@@ -5,6 +5,15 @@ import type { Exercise } from '@/shared/contracts';
 
 import { populateExerciseFixture } from './populateExerciseFixture';
 
+export async function getExercise(id: string): Promise<Exercise | null> {
+  const session = await authService.getSession();
+  if (!session) throw new Error('Exercise detail requires an authenticated session.');
+  const database = await bootstrapLocalDatabase();
+  const repository = new SQLiteLocalExerciseRepository(database);
+  await populateExerciseFixture(repository);
+  return repository.getById(session.user.id, id);
+}
+
 export async function loadExerciseLibrary(): Promise<Exercise[]> {
   const session = await authService.getSession();
 

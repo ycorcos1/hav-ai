@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
@@ -24,6 +25,7 @@ export type ExerciseLibraryScreenProps = {
 };
 
 export function ExerciseLibraryScreen({ loadExercises }: ExerciseLibraryScreenProps) {
+  const router = useRouter();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [query, setQuery] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<ExerciseMuscleFilter>('all');
@@ -71,6 +73,7 @@ export function ExerciseLibraryScreen({ loadExercises }: ExerciseLibraryScreenPr
         onChangeText={setQuery}
         value={query}
       />
+      <SecondaryButton label="Create custom exercise" onPress={() => router.push('/exercise/create')} />
 
       <ScrollView
         contentContainerStyle={styles.filters}
@@ -121,6 +124,7 @@ export function ExerciseLibraryScreen({ loadExercises }: ExerciseLibraryScreenPr
         <View style={styles.list}>
           {visibleExercises.map((exercise) => (
             <Card key={exercise.id} testID={`exercise-${exercise.id}`}>
+              <SecondaryButton label="View details" onPress={() => router.push(`/exercise/${exercise.id}`)} />
               <AppText variant="exerciseName">{exercise.name}</AppText>
               <AppText color="secondary" variant="metadata">
                 {exerciseMuscleLabel(exercise.primaryMuscleGroup)} · {formatEquipment(exercise.equipmentType)}

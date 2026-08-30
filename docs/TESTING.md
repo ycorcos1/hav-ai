@@ -31,6 +31,12 @@ The highest-risk areas are:
 
 The testing approach should prioritize these over cosmetic snapshot coverage.
 
+## 1.1 Expo SDK 57 Web Development Limitation
+
+The current development stack is Expo 57.0.17, expo-sqlite 57.0.2, and @expo/metro-config 57.0.11. When `expo-sqlite` enters the web dependency graph, the live Expo web development server may fail with its worker-chunk serializer error for `expo-sqlite/web/worker.ts`.
+
+Static web export and the iOS JavaScript bundle remain required verification and currently pass. Native/iOS is the primary product target; Xcode and physical-device verification are separately deferred. Do not bypass SQLite or create alternate web persistence solely to satisfy this tooling limitation.
+
 ---
 
 # 2. Testing Principles
