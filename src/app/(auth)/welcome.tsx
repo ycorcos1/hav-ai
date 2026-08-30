@@ -1,5 +1,5 @@
-import { AuthPlaceholderScreen } from '@/features/auth/screens/AuthPlaceholderScreen';
+import { WelcomeScreen } from '@/features/auth/screens/WelcomeScreen';
 
 export default function WelcomeRoute() {
-  return <AuthPlaceholderScreen title="Welcome" />;
+  return <WelcomeScreen />;
 }

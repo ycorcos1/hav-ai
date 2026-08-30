@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react-native';
 
 const mockRegisteredScreens: string[] = [];
+const mockPush = jest.fn();
 let mockInitialRouteName: string | undefined;
 
 jest.mock('expo-router', () => {
@@ -23,7 +24,7 @@ jest.mock('expo-router', () => {
     return null;
   };
 
-  return { Stack };
+  return { Stack, useRouter: () => ({ push: mockPush }) };
 });
 
 import AuthLayout from '@/app/(auth)/_layout';
@@ -45,7 +46,7 @@ describe('auth routes', () => {
   });
 
   it.each([
-    ['Welcome', WelcomeRoute],
+    ['Welcome to havAI', WelcomeRoute],
     ['Login', LoginRoute],
     ['Signup', SignupRoute],
   ])('renders the minimal %s route placeholder', async (title, Route) => {

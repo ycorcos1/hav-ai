@@ -136,7 +136,8 @@ Task 6.4: Generated Supabase database types — complete
 Task 6.5: Profile repository and cloud mapping boundary — complete
 Task 6.6: Authentication service and provider mapping boundary — complete
 Task 6.7: Authentication route structure — complete
-Next: Task 6.8 — Implement Welcome Screen
+Task 6.8: Welcome screen and authentication entry navigation — complete
+Next: Task 6.11 — Implement Ensure Profile Use Case (approved dependency order)
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
