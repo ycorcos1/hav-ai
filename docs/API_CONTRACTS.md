@@ -436,6 +436,41 @@ type ProgressionStyle = "conservative" | "balanced" | "aggressive";
 
 ---
 
+# 21A. Authentication Contract
+
+```ts
+type AuthUser = {
+  id: string;
+  email?: string;
+};
+
+type AuthSession = {
+  user: AuthUser;
+};
+
+type AuthResult = {
+  user: AuthUser;
+  session: AuthSession | null;
+};
+
+type AuthErrorCode =
+  | "invalid_credentials"
+  | "email_not_confirmed"
+  | "email_already_registered"
+  | "invalid_email"
+  | "weak_password"
+  | "rate_limited"
+  | "network_error"
+  | "unknown";
+```
+
+The authentication service exposes `signUp`, `signIn`, `signOut`, `getSession`, and
+`subscribeToSession`. Session subscriptions receive only `AuthSession | null` and return a
+plain unsubscribe function. Provider events, tokens, raw users, raw sessions, provider errors,
+and provider subscription objects do not cross the service boundary.
+
+---
+
 # 22. User Profile Contract
 
 ```ts

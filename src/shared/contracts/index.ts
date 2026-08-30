@@ -7,6 +7,10 @@ export type {
   WeightKg,
 } from "./common";
 export type {
+  AuthErrorCode,
+  AuthResult,
+  AuthSession,
+  AuthUser,
   PrimaryGoal,
   ProgressionStyle,
   RpePreference,
