@@ -5,8 +5,9 @@ import { AppState, Platform } from "react-native";
 
 import { environment } from "@/lib/environment";
 import { authStorage } from "@/lib/supabase/authStorage";
+import type { Database } from "@/lib/supabase/database.types";
 
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   environment.supabaseUrl,
   environment.supabasePublishableKey,
   {

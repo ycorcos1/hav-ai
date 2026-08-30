@@ -80,6 +80,15 @@ project. Dashboard-only schema changes are not an approved workflow: committed f
 `supabase/migrations/` are the source of truth. Production and preview Supabase projects are not
 part of the current development stage.
 
+After applying a cloud migration, regenerate the linked development project's public-schema types:
+
+```sh
+npm run supabase:types
+```
+
+This replaces `src/lib/supabase/database.types.ts` with official Supabase CLI output. Treat that
+file as generated code and never edit it manually.
+
 ## Current Development Stage
 
 ```text
@@ -123,7 +132,8 @@ Task 5.10: Local exercise preferences and note persistence — complete
 Task 6.1: Supabase CLI and project structure — complete
 Task 6.2: Mobile Supabase client — complete
 Task 6.3: Profiles migration and row-level security — complete
-Next: Task 6.4 — Add Profiles Types and Validation
+Task 6.4: Generated Supabase database types — complete
+Next: Task 6.5 — Create Profile Repository
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
