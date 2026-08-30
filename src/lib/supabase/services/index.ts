@@ -6,3 +6,4 @@ export {
   type SessionListener,
 } from "./AuthService";
 export { SupabaseAuthService } from "./SupabaseAuthService";
+export { authService } from "./instances";

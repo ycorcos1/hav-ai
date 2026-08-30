@@ -1,5 +1,5 @@
-import { AuthPlaceholderScreen } from '@/features/auth/screens/AuthPlaceholderScreen';
+import { SignupScreen } from '@/features/auth/screens/SignupScreen';
 
 export default function SignupRoute() {
-  return <AuthPlaceholderScreen title="Signup" />;
+  return <SignupScreen />;
 }
