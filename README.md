@@ -137,7 +137,8 @@ Task 6.5: Profile repository and cloud mapping boundary — complete
 Task 6.6: Authentication service and provider mapping boundary — complete
 Task 6.7: Authentication route structure — complete
 Task 6.8: Welcome screen and authentication entry navigation — complete
-Next: Task 6.11 — Implement Ensure Profile Use Case (approved dependency order)
+Task 6.11: Ensure Profile use case — complete
+Next: Task 6.12 — Connect Root Route Guard (approved dependency order)
 ```
 
 Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.

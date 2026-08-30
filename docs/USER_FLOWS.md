@@ -307,6 +307,14 @@ Create Default Incomplete Profile
 Continue
 ```
 
+Profile initialization requires an authenticated session. A missing session produces the
+sanitized application error `no_authenticated_session`.
+
+The incomplete profile starts with provisional `lb` and `hybrid` selections, optional RPE,
+balanced progression, a 120-second default rest duration, and onboarding incomplete. The compact
+setup replaces the provisional weight unit and primary goal with explicit user selections before
+marking onboarding complete.
+
 This process must be idempotent.
 
 ---

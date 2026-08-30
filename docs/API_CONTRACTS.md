@@ -502,6 +502,15 @@ They are not necessarily client-written cloud fields.
 
 First-run setup accepts only `weightUnit` and `primaryGoal`; the application sets `rpePreference: "optional"`, `progressionStyle: "balanced"`, and the default rest duration. No advanced preference is a required onboarding input.
 
+`ensureProfile()` requires an authenticated session. If no session exists, it throws a
+sanitized `EnsureProfileError` with code `"no_authenticated_session"`.
+
+When creating an incomplete profile before onboarding, initialization uses `weightUnit: "lb"`,
+`primaryGoal: "hybrid"`, `rpePreference: "optional"`, `progressionStyle: "balanced"`, a
+120-second default rest duration, and `onboardingCompleted: false`. The weight unit and primary
+goal are provisional initialization values only; onboarding replaces them with the user's
+explicit selections before marking onboarding complete.
+
 ---
 
 # 23. Muscle Group Contract
