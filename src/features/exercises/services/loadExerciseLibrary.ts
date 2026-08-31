@@ -1,17 +1,15 @@
-import { bootstrapLocalDatabase } from '@/db';
-import { SQLiteLocalExerciseRepository } from '@/db/repositories';
 import { authService } from '@/lib/supabase/services';
 import type { Exercise } from '@/shared/contracts';
 
+import { createExercisePersistence } from './exercisePersistence';
 import { populateExerciseFixture } from './populateExerciseFixture';
 
 export async function getExercise(id: string): Promise<Exercise | null> {
   const session = await authService.getSession();
   if (!session) throw new Error('Exercise detail requires an authenticated session.');
-  const database = await bootstrapLocalDatabase();
-  const repository = new SQLiteLocalExerciseRepository(database);
-  await populateExerciseFixture(repository);
-  return repository.getById(session.user.id, id);
+  const { exerciseRepository } = await createExercisePersistence();
+  await populateExerciseFixture(exerciseRepository);
+  return exerciseRepository.getById(session.user.id, id);
 }
 
 export async function loadExerciseLibrary(): Promise<Exercise[]> {
@@ -19,10 +17,7 @@ export async function loadExerciseLibrary(): Promise<Exercise[]> {
 
   if (!session) throw new Error('Exercise library requires an authenticated session.');
 
-  const database = await bootstrapLocalDatabase();
-  const repository = new SQLiteLocalExerciseRepository(database);
-
-  await populateExerciseFixture(repository);
-
-  return repository.listAccessible(session.user.id);
+  const { exerciseRepository } = await createExercisePersistence();
+  await populateExerciseFixture(exerciseRepository);
+  return exerciseRepository.listAccessible(session.user.id);
 }

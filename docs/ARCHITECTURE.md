@@ -98,6 +98,8 @@ Expo Router
 Expo SQLite
 ```
 
+SQLite remains the V1 authoritative local persistence layer for native havAI. A platform-specific browser `localStorage` adapter exists only for development web preview while Expo SDK 57 cannot reliably serve `expo-sqlite` workers; it implements existing repository contracts and is not a production persistence architecture.
+
 ---
 
 ## Cloud Backend

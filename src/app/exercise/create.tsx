@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { bootstrapLocalDatabase } from '@/db';
-import { SQLiteLocalExerciseRepository } from '@/db/repositories';
+import type { LocalExerciseRepository } from '@/db/repositories/types';
 import { CustomExerciseScreen } from '@/features/exercises/screens/CustomExerciseScreen';
+import { createExercisePersistence } from '@/features/exercises/services/exercisePersistence';
 import { authService } from '@/lib/supabase/services';
 
 export default function CreateExerciseRoute() {
@@ -12,9 +12,9 @@ export default function CreateExerciseRoute() {
 }
 
 function CreateExerciseContent({ onSaved }: { onSaved: (id: string) => void }) {
-  const [repository, setRepository] = useState<SQLiteLocalExerciseRepository>();
+  const [repository, setRepository] = useState<LocalExerciseRepository>();
   const [userId, setUserId] = useState<string>();
-  useEffect(() => { void Promise.all([authService.getSession(), bootstrapLocalDatabase()]).then(([session, database]) => { if (session) { setUserId(session.user.id); setRepository(new SQLiteLocalExerciseRepository(database)); } }); }, []);
+  useEffect(() => { void Promise.all([authService.getSession(), createExercisePersistence()]).then(([session, persistence]) => { if (session) { setUserId(session.user.id); setRepository(persistence.exerciseRepository); } }); }, []);
   if (!repository || !userId) return null;
   return <CustomExerciseScreen onSaved={onSaved} repository={repository} userId={userId} />;
 }

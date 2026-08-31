@@ -31,11 +31,13 @@ The highest-risk areas are:
 
 The testing approach should prioritize these over cosmetic snapshot coverage.
 
-## 1.1 Expo SDK 57 Web Development Limitation
+## 1.1 Development Web Preview
 
 The current development stack is Expo 57.0.17, expo-sqlite 57.0.2, and @expo/metro-config 57.0.11. When `expo-sqlite` enters the web dependency graph, the live Expo web development server may fail with its worker-chunk serializer error for `expo-sqlite/web/worker.ts`.
 
-Static web export and the iOS JavaScript bundle remain required verification and currently pass. Native/iOS is the primary product target; Xcode and physical-device verification are separately deferred. Do not bypass SQLite or create alternate web persistence solely to satisfy this tooling limitation.
+For UI and application-flow development in Chrome, exercise features use a platform-specific development preview adapter backed by browser `localStorage` under the `havai:dev:` namespace. Native/iOS continues to use Expo SQLite, which remains havAI's authoritative V1 local persistence layer. Browser storage is not production persistence and does not validate SQLite behavior; SQLite remains covered by repository, migration, and native bundle tests.
+
+The preview adapter may be removed once live Expo SQLite web support is reliable. Until then, do not extend it into a second production architecture or bypass SQLite on native. To clear only havAI preview data from the browser console during development, import and call `resetHavAIWebPreviewData` from `src/db/webPreview/storage.ts` through development tooling.
 
 ---
 
