@@ -39,6 +39,26 @@ export async function createCurrentUserTemplate(
   return service.create(userId, input);
 }
 
+export async function editCurrentUserTemplate(
+  id: UUID,
+  input: SaveTemplateInput,
+): Promise<WorkoutTemplate> {
+  const { service, userId } = await serviceForCurrentUser();
+  return service.edit(userId, id, input);
+}
+
+export async function duplicateCurrentUserTemplate(
+  id: UUID,
+): Promise<WorkoutTemplate> {
+  const { service, userId } = await serviceForCurrentUser();
+  return service.duplicate(userId, id);
+}
+
+export async function archiveCurrentUserTemplate(id: UUID): Promise<void> {
+  const { service, userId } = await serviceForCurrentUser();
+  await service.archive(userId, id);
+}
+
 export async function serviceForCurrentUser() {
   const session = await authService.getSession();
   if (!session) throw new Error("Workout templates require an authenticated session.");

@@ -13,12 +13,14 @@ import type { Exercise } from "@/shared/contracts";
 
 export type TemplateExerciseConfigurationSheetProps = {
   exercise: Exercise | null;
+  initialConfiguration?: TemplateExerciseInput;
   onDismiss: () => void;
   onSave: (configuration: TemplateExerciseInput) => void;
 };
 
 export function TemplateExerciseConfigurationSheet({
   exercise,
+  initialConfiguration,
   onDismiss,
   onSave,
 }: TemplateExerciseConfigurationSheetProps) {
@@ -26,6 +28,7 @@ export function TemplateExerciseConfigurationSheet({
     <TemplateExerciseConfigurationForm
       key={exercise?.id ?? "closed"}
       exercise={exercise}
+      initialConfiguration={initialConfiguration}
       onDismiss={onDismiss}
       onSave={onSave}
     />
@@ -34,13 +37,14 @@ export function TemplateExerciseConfigurationSheet({
 
 function TemplateExerciseConfigurationForm({
   exercise,
+  initialConfiguration,
   onDismiss,
   onSave,
 }: TemplateExerciseConfigurationSheetProps) {
-  const [targetSets, setTargetSets] = useState("");
-  const [targetMinReps, setTargetMinReps] = useState("");
-  const [targetMaxReps, setTargetMaxReps] = useState("");
-  const [notes, setNotes] = useState("");
+  const [targetSets, setTargetSets] = useState(initialConfiguration?.targetSets.toString() ?? "");
+  const [targetMinReps, setTargetMinReps] = useState(initialConfiguration?.targetMinReps.toString() ?? "");
+  const [targetMaxReps, setTargetMaxReps] = useState(initialConfiguration?.targetMaxReps.toString() ?? "");
+  const [notes, setNotes] = useState(initialConfiguration?.notes ?? "");
   const [error, setError] = useState<string>();
 
   function save(): void {
@@ -70,7 +74,7 @@ function TemplateExerciseConfigurationForm({
       <TextInput label="Maximum Reps" keyboardType="number-pad" onChangeText={setTargetMaxReps} value={targetMaxReps} />
       <TextInput label="Exercise Notes (optional)" multiline onChangeText={setNotes} value={notes} />
       {error ? <ErrorState message={error} title="Check exercise targets" /> : null}
-      <PrimaryButton label="Add to Workout" onPress={save} />
+      <PrimaryButton label={initialConfiguration ? "Save Exercise" : "Add to Workout"} onPress={save} />
     </BottomSheet>
   );
 }

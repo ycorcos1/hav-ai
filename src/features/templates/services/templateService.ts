@@ -53,7 +53,14 @@ export class TemplateService {
     now: string = new Date().toISOString(),
   ): Promise<WorkoutTemplate> {
     const current = await this.requireOwned(userId, id);
-    const template = await this.buildTemplate(userId, id, input, current.createdAt, now);
+    const template = await this.buildTemplate(
+      userId,
+      id,
+      input,
+      current.createdAt,
+      now,
+      current.exercises,
+    );
     await this.dependencies.templateRepository.update(template);
     return template;
   }
@@ -103,6 +110,7 @@ export class TemplateService {
     input: SaveTemplateInput,
     createdAt: string,
     updatedAt: string,
+    existingExercises: WorkoutTemplateExercise[] = [],
   ): Promise<WorkoutTemplate> {
     const name = input.name.trim();
     if (!name) throw new TemplateValidationError("Enter a workout name.");
@@ -130,7 +138,7 @@ export class TemplateService {
         targetMinReps: exercise.targetMinReps,
         targetMaxReps: exercise.targetMaxReps,
         ...(cleanOptionalText(exercise.notes) ? { notes: cleanOptionalText(exercise.notes) } : {}),
-        createdAt,
+        createdAt: existingExercises.find(({ id }) => id === exercise.id)?.createdAt ?? createdAt,
         updatedAt,
       });
     }

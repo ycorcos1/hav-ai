@@ -98,6 +98,39 @@ describe("TemplateService", () => {
     expect((await service.list(userId)).map(({ id }) => id)).toEqual([duplicate.id]);
   });
 
+  it("duplicates ownership, exercise configuration, and order without changing the source", async () => {
+    const deps = dependencies();
+    const service = new TemplateService(deps);
+    const original = await service.create(userId, {
+      ...validInput,
+      exercises: [
+        validInput.exercises[0],
+        {
+          exerciseId: "exercise-custom",
+          targetSets: 4,
+          targetMinReps: 10,
+          targetMaxReps: 12,
+          notes: "Slow eccentric",
+        },
+      ],
+    }, now);
+    const sourceSnapshot = structuredClone(original);
+
+    const duplicate = await service.duplicate(userId, original.id, "2026-08-31T17:00:00.000Z");
+
+    expect(duplicate.id).not.toBe(original.id);
+    expect(duplicate.userId).toBe(userId);
+    expect(duplicate.exercises.map(({ exerciseId, position, targetSets, targetMinReps, targetMaxReps, notes }) => ({
+      exerciseId, position, targetSets, targetMinReps, targetMaxReps, notes,
+    }))).toEqual(original.exercises.map(({ exerciseId, position, targetSets, targetMinReps, targetMaxReps, notes }) => ({
+      exerciseId, position, targetSets, targetMinReps, targetMaxReps, notes,
+    })));
+    expect(duplicate.exercises.map(({ id }) => id)).not.toEqual(original.exercises.map(({ id }) => id));
+    expect(new Set(duplicate.exercises.map(({ id }) => id)).size).toBe(duplicate.exercises.length);
+    expect(duplicate.exercises.every((item) => item.userId === userId && item.templateId === duplicate.id)).toBe(true);
+    expect(await service.get(userId, original.id)).toEqual(sourceSnapshot);
+  });
+
   it("rejects invalid input and inaccessible exercises before persistence", async () => {
     const deps = dependencies();
     const service = new TemplateService(deps);
@@ -128,5 +161,48 @@ describe("TemplateService", () => {
       { exerciseId: "exercise-system", position: 0 },
       { exerciseId: "exercise-custom", position: 1 },
     ]);
+  });
+
+  it("edits templates without touching workout snapshot data", async () => {
+    const deps = dependencies();
+    const service = new TemplateService(deps);
+    const original = await service.create(userId, validInput, now);
+    const workoutSnapshot = Object.freeze({
+      id: "workout-1",
+      name: original.name,
+      targetSets: original.exercises[0].targetSets,
+      targetMinReps: original.exercises[0].targetMinReps,
+      targetMaxReps: original.exercises[0].targetMaxReps,
+    });
+    await service.edit(userId, original.id, {
+      ...validInput,
+      name: "Changed template",
+      exercises: [{ ...validInput.exercises[0], id: original.exercises[0].id, targetSets: 5 }],
+    }, "2026-08-31T19:00:00.000Z");
+    expect(workoutSnapshot).toEqual({ id: "workout-1", name: "Push", targetSets: 3, targetMinReps: 6, targetMaxReps: 8 });
+    expect((await service.get(userId, original.id))?.exercises[0]).toMatchObject({ id: original.exercises[0].id, targetSets: 5 });
+  });
+
+  it("archives without deleting persisted data or changing historical workout snapshots", async () => {
+    const deps = dependencies();
+    const service = new TemplateService(deps);
+    const original = await service.create(userId, validInput, now);
+    const historicalWorkout = Object.freeze({
+      id: "workout-1",
+      sourceTemplateId: original.id,
+      name: original.name,
+      exerciseIds: original.exercises.map(({ exerciseId }) => exerciseId),
+    });
+
+    await service.archive(userId, original.id);
+
+    expect(await service.list(userId)).toEqual([]);
+    expect(await service.get(userId, original.id)).toMatchObject({ id: original.id, isArchived: true });
+    expect(historicalWorkout).toEqual({
+      id: "workout-1",
+      sourceTemplateId: original.id,
+      name: "Push",
+      exerciseIds: [systemExercise.id],
+    });
   });
 });

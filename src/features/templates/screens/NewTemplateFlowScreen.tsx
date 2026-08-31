@@ -12,8 +12,10 @@ import type { Exercise, UserExercisePreference, WorkoutTemplate } from "@/shared
 import { colors, spacing } from "@/theme";
 
 import { NewTemplateScreen, type TemplateExerciseSelection } from "./NewTemplateScreen";
+import { reorderTemplateExercises } from "../services/reorderTemplateExercises";
 
 export type NewTemplateFlowScreenProps = {
+  initialDetail?: import("@/features/templates/services/templateApplication").TemplateDetail;
   loadExercises: () => Promise<Exercise[]>;
   loadPreferences: () => Promise<UserExercisePreference[]>;
   onSave: (input: SaveTemplateInput) => Promise<WorkoutTemplate>;
@@ -21,17 +23,31 @@ export type NewTemplateFlowScreenProps = {
 };
 
 export function NewTemplateFlowScreen({
+  initialDetail,
   loadExercises,
   loadPreferences,
   onSave,
   onSaved,
 }: NewTemplateFlowScreenProps) {
-  const [selections, setSelections] = useState<TemplateExerciseSelection[]>([]);
+  const [name, setName] = useState(initialDetail?.template.name ?? "");
+  const [notes, setNotes] = useState(initialDetail?.template.notes ?? "");
+  const [selections, setSelections] = useState<TemplateExerciseSelection[]>(() =>
+    initialDetail?.exercises.map(({ exercise, templateExercise }) => ({
+      exercise,
+      exerciseId: templateExercise.exerciseId,
+      id: templateExercise.id,
+      targetSets: templateExercise.targetSets,
+      targetMinReps: templateExercise.targetMinReps,
+      targetMaxReps: templateExercise.targetMaxReps,
+      ...(templateExercise.notes ? { notes: templateExercise.notes } : {}),
+    })) ?? [],
+  );
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerStatus, setPickerStatus] = useState<"loading" | "ready" | "error">("loading");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [configurationExercise, setConfigurationExercise] = useState<Exercise | null>(null);
+  const [configurationIndex, setConfigurationIndex] = useState<number>();
 
   useEffect(() => {
     if (!pickerVisible || pickerStatus !== "loading") return;
@@ -50,8 +66,15 @@ export function NewTemplateFlowScreen({
 
   function addConfiguredExercise(configuration: TemplateExerciseInput): void {
     if (!configurationExercise) return;
-    setSelections((current) => [...current, { ...configuration, exercise: configurationExercise }]);
+    setSelections((current) => {
+      const selection = { ...configuration, exercise: configurationExercise };
+      if (configurationIndex === undefined) return [...current, selection];
+      return current.map((item, index) => index === configurationIndex
+        ? { ...selection, id: item.id }
+        : item);
+    });
     setConfigurationExercise(null);
+    setConfigurationIndex(undefined);
     setPickerVisible(false);
   }
 
@@ -68,11 +91,12 @@ export function NewTemplateFlowScreen({
           <ExercisePicker
             exercises={exercises}
             favoriteIds={favoriteIds}
-            onSelect={setConfigurationExercise}
+            onSelect={(exercise) => { setConfigurationIndex(undefined); setConfigurationExercise(exercise); }}
           />
         ) : null}
         <TemplateExerciseConfigurationSheet
           exercise={configurationExercise}
+          initialConfiguration={configurationIndex === undefined ? undefined : selections[configurationIndex]}
           onDismiss={() => setConfigurationExercise(null)}
           onSave={addConfiguredExercise}
         />
@@ -83,9 +107,25 @@ export function NewTemplateFlowScreen({
   return (
     <NewTemplateScreen
       exercises={selections}
+      name={name}
+      notes={notes}
       onAddExercise={() => { setPickerStatus("loading"); setPickerVisible(true); }}
+      onEditExercise={(index) => {
+        setConfigurationIndex(index);
+        setConfigurationExercise(selections[index].exercise);
+        setPickerVisible(true);
+        setPickerStatus("ready");
+      }}
+      onMoveExercise={(index, direction) => {
+        setSelections((current) => reorderTemplateExercises(current, index, direction));
+      }}
+      onNameChange={setName}
+      onNotesChange={setNotes}
       onSave={onSave}
       onSaved={onSaved}
+      onRemoveExercise={(index) => setSelections((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+      saveLabel={initialDetail ? "Save Changes" : "Save Workout"}
+      title={initialDetail ? "Edit Workout" : "New Workout"}
     />
   );
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fireEvent, render } from "@testing-library/react-native";
 
 import {
@@ -38,10 +39,24 @@ function savedTemplate(): WorkoutTemplate {
   };
 }
 
+function TestNewTemplateScreen(props: Omit<React.ComponentProps<typeof NewTemplateScreen>, "name" | "notes" | "onNameChange" | "onNotesChange">) {
+  const [name, setName] = useState("");
+  const [notes, setNotes] = useState("");
+  return (
+    <NewTemplateScreen
+      {...props}
+      name={name}
+      notes={notes}
+      onNameChange={setName}
+      onNotesChange={setNotes}
+    />
+  );
+}
+
 describe("NewTemplateScreen", () => {
   it("rejects an empty name and zero exercises", async () => {
     const onSave = jest.fn();
-    const rendered = await render(<NewTemplateScreen exercises={[]} onAddExercise={jest.fn()} onSave={onSave} onSaved={jest.fn()} />);
+    const rendered = await render(<TestNewTemplateScreen exercises={[]} onAddExercise={jest.fn()} onSave={onSave} onSaved={jest.fn()} />);
     await fireEvent.press(rendered.getByRole("button", { name: "Save Workout" }));
     expect(await rendered.findByText("Enter a workout name.")).toBeTruthy();
     await fireEvent.changeText(rendered.getByLabelText("Workout Name"), "Push");
@@ -54,7 +69,7 @@ describe("NewTemplateScreen", () => {
     let resolveSave!: (template: WorkoutTemplate) => void;
     const onSave = jest.fn().mockReturnValue(new Promise<WorkoutTemplate>((resolve) => { resolveSave = resolve; }));
     const onSaved = jest.fn();
-    const rendered = await render(<NewTemplateScreen exercises={[selection]} onAddExercise={jest.fn()} onSave={onSave} onSaved={onSaved} />);
+    const rendered = await render(<TestNewTemplateScreen exercises={[selection]} onAddExercise={jest.fn()} onSave={onSave} onSaved={onSaved} />);
     await fireEvent.changeText(rendered.getByLabelText("Workout Name"), " Push ");
     await fireEvent.press(rendered.getByRole("button", { name: "Save Workout" }));
     await fireEvent.press(rendered.getByRole("button", { name: "Save Workout" }));
@@ -68,7 +83,7 @@ describe("NewTemplateScreen", () => {
 
   it("keeps form data and shows sanitized feedback when persistence fails", async () => {
     const rendered = await render(
-      <NewTemplateScreen
+      <TestNewTemplateScreen
         exercises={[selection]}
         onAddExercise={jest.fn()}
         onSave={async () => { throw new Error("private SQLite details"); }}

@@ -23,19 +23,35 @@ export type TemplateExerciseSelection = TemplateExerciseInput & {
 
 export type NewTemplateScreenProps = {
   exercises: TemplateExerciseSelection[];
+  name: string;
+  notes: string;
   onAddExercise: () => void;
+  onEditExercise?: (index: number) => void;
+  onNameChange: (name: string) => void;
+  onNotesChange: (notes: string) => void;
+  onMoveExercise?: (index: number, direction: "up" | "down") => void;
+  onRemoveExercise?: (index: number) => void;
   onSave: (input: SaveTemplateInput) => Promise<WorkoutTemplate>;
   onSaved: (id: string) => void;
+  saveLabel?: string;
+  title?: string;
 };
 
 export function NewTemplateScreen({
   exercises,
+  name,
+  notes,
   onAddExercise,
+  onEditExercise,
+  onNameChange,
+  onNotesChange,
+  onMoveExercise,
+  onRemoveExercise,
   onSave,
   onSaved,
+  saveLabel = "Save Workout",
+  title = "New Workout",
 }: NewTemplateScreenProps) {
-  const [name, setName] = useState("");
-  const [notes, setNotes] = useState("");
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -64,9 +80,9 @@ export function NewTemplateScreen({
 
   return (
     <Screen contentContainerStyle={styles.content} scroll>
-      <AppText variant="screenTitle">New Workout</AppText>
-      <TextInput label="Workout Name" onChangeText={setName} value={name} />
-      <TextInput label="Notes (optional)" multiline onChangeText={setNotes} value={notes} />
+      <AppText variant="screenTitle">{title}</AppText>
+      <TextInput label="Workout Name" onChangeText={onNameChange} value={name} />
+      <TextInput label="Notes (optional)" multiline onChangeText={onNotesChange} value={notes} />
       <View style={styles.list}>
         {exercises.map((selection, index) => (
           <Card key={`${selection.exercise.id}-${index}`}>
@@ -75,12 +91,36 @@ export function NewTemplateScreen({
               {selection.targetSets} sets · {selection.targetMinReps}-{selection.targetMaxReps} reps
             </AppText>
             {selection.notes ? <AppText color="muted" variant="metadata">{selection.notes}</AppText> : null}
+            {onEditExercise ? <SecondaryButton label="Edit Exercise" onPress={() => onEditExercise(index)} /> : null}
+            {onMoveExercise ? (
+              <View style={styles.rowActions}>
+                <SecondaryButton
+                  accessibilityLabel={`Move ${selection.exercise.name} up`}
+                  disabled={index === 0}
+                  label="Move Up"
+                  onPress={() => onMoveExercise(index, "up")}
+                />
+                <SecondaryButton
+                  accessibilityLabel={`Move ${selection.exercise.name} down`}
+                  disabled={index === exercises.length - 1}
+                  label="Move Down"
+                  onPress={() => onMoveExercise(index, "down")}
+                />
+              </View>
+            ) : null}
+            {onRemoveExercise ? (
+              <SecondaryButton
+                accessibilityLabel={`Remove ${selection.exercise.name}`}
+                label="Remove Exercise"
+                onPress={() => onRemoveExercise(index)}
+              />
+            ) : null}
           </Card>
         ))}
       </View>
       <SecondaryButton label="Add Exercise" onPress={onAddExercise} />
       {error ? <ErrorState message={error} title="Unable to save workout" /> : null}
-      <PrimaryButton label="Save Workout" loading={saving} onPress={() => { void save(); }} />
+      <PrimaryButton label={saveLabel} loading={saving} onPress={() => { void save(); }} />
     </Screen>
   );
 }
@@ -92,4 +132,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
   },
   list: { gap: spacing.sm },
+  rowActions: { gap: spacing.sm, marginTop: spacing.sm },
 });
