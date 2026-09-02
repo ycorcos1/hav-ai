@@ -27,6 +27,7 @@ jest.mock("@/features/exercises/services/populateExerciseFixture", () => ({
 import {
   loadCurrentUserActiveWorkoutExercise,
   loadCurrentUserWorkoutOverview,
+  updateCurrentUserActiveWorkoutNote,
 } from "@/features/workouts/services/workoutApplication";
 
 const time = "2026-09-02T12:00:00.000Z";
@@ -163,5 +164,37 @@ describe("workout application overview", () => {
     dependencies.workoutRepository.getById.mockResolvedValue(workout);
     await expect(loadCurrentUserActiveWorkoutExercise(workout.id, "other-child")).resolves.toBeNull();
     expect(mockCreateExercisePersistence).not.toHaveBeenCalled();
+  });
+
+  it("updates only the authenticated user's active workout note", async () => {
+    const dependencies = repositories();
+    mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
+    dependencies.workoutRepository.getById.mockResolvedValue(workout);
+
+    const updated = await updateCurrentUserActiveWorkoutNote({
+      workoutId: workout.id,
+      notes: " Session note ",
+    });
+
+    expect(dependencies.workoutRepository.getById).toHaveBeenCalledWith("user-a", workout.id);
+    expect(dependencies.workoutRepository.update).toHaveBeenCalledWith(expect.objectContaining({
+      id: workout.id,
+      userId: "user-a",
+      notes: "Session note",
+    }));
+    expect(updated.notes).toBe("Session note");
+  });
+
+  it("rejects missing and completed workouts without writing", async () => {
+    const dependencies = repositories();
+    mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
+    dependencies.workoutRepository.getById.mockResolvedValue(null);
+    await expect(updateCurrentUserActiveWorkoutNote({ workoutId: "missing", notes: "No" }))
+      .rejects.toThrow("active workout note could not be saved");
+
+    dependencies.workoutRepository.getById.mockResolvedValue({ ...workout, status: "completed" });
+    await expect(updateCurrentUserActiveWorkoutNote({ workoutId: workout.id, notes: "No" }))
+      .rejects.toThrow("active workout note could not be saved");
+    expect(dependencies.workoutRepository.update).not.toHaveBeenCalled();
   });
 });

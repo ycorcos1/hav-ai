@@ -9,10 +9,12 @@ import type {
   WorkoutExercise,
   WorkoutTemplate,
   UserExercisePreference,
+  UpdateWorkoutNoteInput,
 } from "@/shared/contracts";
 
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
 import { createWorkoutPersistence } from "./workoutPersistence";
+import { updateActiveWorkoutNote } from "./workoutNotes";
 
 export type WorkoutHomeState = {
   activeWorkout: Workout | null;
@@ -62,6 +64,13 @@ export async function getCurrentUserActiveWorkout(): Promise<Workout | null> {
 export async function getCurrentUserWorkout(id: UUID): Promise<Workout | null> {
   const { persistence, userId } = await persistenceForCurrentUser();
   return persistence.workoutRepository.getById(userId, id);
+}
+
+export async function updateCurrentUserActiveWorkoutNote(
+  input: UpdateWorkoutNoteInput,
+): Promise<Workout> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  return updateActiveWorkoutNote(persistence.workoutRepository, userId, input);
 }
 
 export async function loadCurrentUserWorkoutOverview(

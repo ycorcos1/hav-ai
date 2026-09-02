@@ -2,7 +2,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 
 import { ActiveWorkoutOverviewScreen } from "@/features/workouts/screens/ActiveWorkoutOverviewScreen";
-import { loadCurrentUserWorkoutOverview } from "@/features/workouts/services/workoutApplication";
+import {
+  loadCurrentUserWorkoutOverview,
+  updateCurrentUserActiveWorkoutNote,
+} from "@/features/workouts/services/workoutApplication";
 
 export default function ActiveWorkoutOverviewRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,6 +17,7 @@ export default function ActiveWorkoutOverviewRoute() {
       onOpenExercise={(workoutExerciseId) => {
         router.push(`/workout/${id}/exercise/${workoutExerciseId}`);
       }}
+      saveWorkoutNote={(notes) => updateCurrentUserActiveWorkoutNote({ workoutId: id, notes })}
     />
   );
 }

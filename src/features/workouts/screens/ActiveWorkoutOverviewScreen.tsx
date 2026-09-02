@@ -1,28 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
+import { BottomSheet } from "@/components/BottomSheet";
 import { Card } from "@/components/Card";
 import { ErrorState } from "@/components/ErrorState";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { TextButton } from "@/components/TextButton";
+import { TextInput } from "@/components/TextInput";
 import { WorkoutElapsedTime } from "@/features/workouts/components/WorkoutElapsedTime";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
+import type { Workout } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type ActiveWorkoutOverviewScreenProps = {
   loadWorkout: () => Promise<ActiveWorkoutOverview | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
+  saveWorkoutNote: (notes?: string) => Promise<Workout>;
 };
 
 export function ActiveWorkoutOverviewScreen({
   loadWorkout,
   onOpenExercise,
+  saveWorkoutNote,
 }: ActiveWorkoutOverviewScreenProps) {
   const [overview, setOverview] = useState<ActiveWorkoutOverview | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteEditorVisible, setNoteEditorVisible] = useState(false);
+  const [noteSaveFailed, setNoteSaveFailed] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
+  const noteSavingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +61,29 @@ export function ActiveWorkoutOverviewScreen({
 
   const completedExercises = overview.exercises.filter(({ workoutExercise }) => isExerciseComplete(workoutExercise)).length;
 
+  function openNoteEditor(): void {
+    setNoteDraft(overview?.workout.notes ?? "");
+    setNoteSaveFailed(false);
+    setNoteEditorVisible(true);
+  }
+
+  async function saveNote(): Promise<void> {
+    if (noteSavingRef.current) return;
+    noteSavingRef.current = true;
+    setNoteSaving(true);
+    setNoteSaveFailed(false);
+    try {
+      const workout = await saveWorkoutNote(noteDraft);
+      setOverview((current) => current ? { ...current, workout } : current);
+      setNoteEditorVisible(false);
+    } catch {
+      setNoteSaveFailed(true);
+    } finally {
+      noteSavingRef.current = false;
+      setNoteSaving(false);
+    }
+  }
+
   return (
     <Screen contentContainerStyle={styles.content} scroll>
       <View style={styles.header}>
@@ -60,6 +94,20 @@ export function ActiveWorkoutOverviewScreen({
         <WorkoutElapsedTime startedAt={overview.workout.startedAt} />
       </View>
       <AppText color="secondary">{completedExercises} / {overview.exercises.length} exercises</AppText>
+      <Card style={styles.noteCard}>
+        <View style={styles.noteHeader}>
+          <AppText color="secondary" variant="metadata">WORKOUT NOTE</AppText>
+          <TextButton
+            label={overview.workout.notes ? "Edit Workout Note" : "Add Workout Note"}
+            onPress={openNoteEditor}
+          />
+        </View>
+        {overview.workout.notes ? (
+          <AppText color="secondary">{overview.workout.notes}</AppText>
+        ) : (
+          <AppText color="muted">No workout note.</AppText>
+        )}
+      </Card>
       <View style={styles.list}>
         {overview.exercises.map(({ exercise, workoutExercise }) => (
           <Pressable
@@ -79,6 +127,30 @@ export function ActiveWorkoutOverviewScreen({
       </View>
       <SecondaryButton accessibilityHint="Exercise changes are enabled in a later task." disabled label="Add Exercise" />
       <PrimaryButton accessibilityHint="Workout completion is enabled in a later task." disabled label="Finish Workout" />
+      <BottomSheet
+        accessibilityLabel="Workout note editor"
+        dismissOnBackdropPress={!noteSaving}
+        onDismiss={() => {
+          if (!noteSavingRef.current) setNoteEditorVisible(false);
+        }}
+        showCloseAction={!noteSaving}
+        title="Workout Note"
+        visible={noteEditorVisible}
+      >
+        <TextInput
+          accessibilityLabel="Workout note"
+          multiline
+          onChangeText={setNoteDraft}
+          placeholder="Add an optional note about this workout"
+          value={noteDraft}
+        />
+        {noteSaveFailed ? (
+          <AppText accessibilityRole="alert" style={styles.noteError} variant="metadata">
+            Unable to save the workout note. Your draft was preserved.
+          </AppText>
+        ) : null}
+        <PrimaryButton label="Save Workout Note" loading={noteSaving} onPress={() => { void saveNote(); }} />
+      </BottomSheet>
     </Screen>
   );
 }
@@ -107,4 +179,7 @@ const styles = StyleSheet.create({
   header: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" },
   heading: { flex: 1, gap: spacing.xs },
   list: { gap: spacing.sm },
+  noteCard: { gap: spacing.sm },
+  noteError: { color: colors.semantic.error },
+  noteHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
 });

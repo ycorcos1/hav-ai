@@ -73,6 +73,11 @@ export type EditSetInput = {
   notes?: string;
 };
 
+export type UpdateWorkoutNoteInput = {
+  workoutId: UUID;
+  notes?: string;
+};
+
 export type FinishWorkoutInput = {
   workoutId: UUID;
   completedAt: ISODateTime;

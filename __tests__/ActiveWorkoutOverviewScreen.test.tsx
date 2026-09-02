@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { ActiveWorkoutOverviewScreen } from "@/features/workouts/screens/ActiveWorkoutOverviewScreen";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
@@ -83,9 +83,15 @@ const overview: ActiveWorkoutOverview = {
 
 describe("ActiveWorkoutOverviewScreen", () => {
   const onOpenExercise = jest.fn();
+  const saveWorkoutNote = jest.fn();
 
   beforeEach(() => {
     onOpenExercise.mockClear();
+    saveWorkoutNote.mockReset();
+    saveWorkoutNote.mockImplementation(async (notes?: string) => ({
+      ...overview.workout,
+      ...(notes?.trim() ? { notes: notes.trim() } : { notes: undefined }),
+    }));
   });
 
   afterEach(() => {
@@ -98,6 +104,7 @@ describe("ActiveWorkoutOverviewScreen", () => {
       <ActiveWorkoutOverviewScreen
         loadWorkout={async () => overview}
         onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
       />,
     );
 
@@ -119,7 +126,11 @@ describe("ActiveWorkoutOverviewScreen", () => {
       .mockRejectedValueOnce(new Error("private persistence detail"))
       .mockResolvedValueOnce(overview);
     const rendered = await render(
-      <ActiveWorkoutOverviewScreen loadWorkout={loadWorkout} onOpenExercise={onOpenExercise} />,
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={loadWorkout}
+        onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
     );
 
     expect(await rendered.findByText("Your active workout could not be loaded. Your local data was not changed.")).toBeTruthy();
@@ -134,10 +145,99 @@ describe("ActiveWorkoutOverviewScreen", () => {
       <ActiveWorkoutOverviewScreen
         loadWorkout={async () => null}
         onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
       />,
     );
 
     expect(await rendered.findByText("This active workout is no longer available.")).toBeTruthy();
     expect(rendered.queryByRole("button", { name: "Try Again" })).toBeNull();
+  });
+
+  it("edits and immediately reflects the active workout note", async () => {
+    const withNote = {
+      ...overview,
+      workout: { ...overview.workout, notes: "Initial workout note" },
+    };
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={async () => withNote}
+        onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    expect(await rendered.findByText("Initial workout note")).toBeTruthy();
+    await fireEvent.press(rendered.getByRole("button", { name: "Edit Workout Note" }));
+    const input = rendered.getByLabelText("Workout note");
+    expect(input.props.value).toBe("Initial workout note");
+    await fireEvent.changeText(input, " Updated workout note ");
+    await fireEvent.press(rendered.getByRole("button", { name: "Save Workout Note" }));
+
+    expect(saveWorkoutNote).toHaveBeenCalledWith(" Updated workout note ");
+    expect(await rendered.findByText("Updated workout note")).toBeTruthy();
+  });
+
+  it("supports an empty note state and clearing a saved note", async () => {
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    expect(await rendered.findByText("No workout note.")).toBeTruthy();
+    await fireEvent.press(rendered.getByRole("button", { name: "Add Workout Note" }));
+    await fireEvent.changeText(rendered.getByLabelText("Workout note"), "   ");
+    await fireEvent.press(rendered.getByRole("button", { name: "Save Workout Note" }));
+    expect(await rendered.findByText("No workout note.")).toBeTruthy();
+  });
+
+  it("preserves the draft after a sanitized persistence failure", async () => {
+    saveWorkoutNote.mockRejectedValueOnce(new Error("private storage detail"));
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await rendered.findByText("No workout note.");
+    await fireEvent.press(rendered.getByRole("button", { name: "Add Workout Note" }));
+    await fireEvent.changeText(rendered.getByLabelText("Workout note"), "Keep this draft");
+    await fireEvent.press(rendered.getByRole("button", { name: "Save Workout Note" }));
+
+    expect(await rendered.findByText("Unable to save the workout note. Your draft was preserved.")).toBeTruthy();
+    expect(rendered.getByLabelText("Workout note").props.value).toBe("Keep this draft");
+    expect(rendered.queryByText("private storage detail")).toBeNull();
+  });
+
+  it("prevents duplicate simultaneous note saves", async () => {
+    let resolveSave: ((workout: ActiveWorkoutOverview["workout"]) => void) | undefined;
+    saveWorkoutNote.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveSave = resolve;
+    }));
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await rendered.findByText("No workout note.");
+    await fireEvent.press(rendered.getByRole("button", { name: "Add Workout Note" }));
+    await fireEvent.changeText(rendered.getByLabelText("Workout note"), "One save");
+    const saveButton = rendered.getByRole("button", { name: "Save Workout Note" });
+    await fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
+    expect(saveWorkoutNote).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveSave?.({ ...overview.workout, notes: "One save" });
+    });
+    expect(await rendered.findByText("One save")).toBeTruthy();
+    await rendered.unmount();
   });
 });
