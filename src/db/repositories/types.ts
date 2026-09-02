@@ -1,5 +1,6 @@
 import type {
   Exercise,
+  ExerciseSessionPerformance,
   ISODateTime,
   ProgressionRecommendation,
   UUID,
@@ -15,6 +16,18 @@ export interface LocalWorkoutRepository {
   create(workout: Workout): Promise<void>;
   update(workout: Workout): Promise<void>;
   delete(userId: UUID, id: UUID): Promise<void>;
+}
+
+export interface ExerciseHistoryRepository {
+  getRecentSessions(params: {
+    userId: UUID;
+    exerciseId: UUID;
+    limit: number;
+  }): Promise<ExerciseSessionPerformance[]>;
+  getBestSet(params: {
+    userId: UUID;
+    exerciseId: UUID;
+  }): Promise<WorkoutSet | null>;
 }
 
 export interface LocalSetRepository {

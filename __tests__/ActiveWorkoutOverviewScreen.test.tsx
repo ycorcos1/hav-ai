@@ -82,13 +82,24 @@ const overview: ActiveWorkoutOverview = {
 };
 
 describe("ActiveWorkoutOverviewScreen", () => {
+  const onOpenExercise = jest.fn();
+
+  beforeEach(() => {
+    onOpenExercise.mockClear();
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   it("shows the persisted workout snapshot in exercise order", async () => {
     jest.spyOn(Date, "now").mockReturnValue(Date.parse(startedAt) + 42 * 60 * 1000 + 18 * 1000);
-    const rendered = await render(<ActiveWorkoutOverviewScreen loadWorkout={async () => overview} />);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+      />,
+    );
 
     expect(await rendered.findByText("Push")).toBeTruthy();
     expect(rendered.getByText("42:18")).toBeTruthy();
@@ -99,13 +110,17 @@ describe("ActiveWorkoutOverviewScreen", () => {
     expect(rendered.getByText("0/3 sets")).toBeTruthy();
     expect(rendered.getByRole("button", { name: "Add Exercise" })).toBeDisabled();
     expect(rendered.getByRole("button", { name: "Finish Workout" })).toBeDisabled();
+    await fireEvent.press(rendered.getByRole("button", { name: "Open Cable Fly" }));
+    expect(onOpenExercise).toHaveBeenCalledWith("workout-exercise-2");
   });
 
   it("shows a recoverable sanitized load failure", async () => {
     const loadWorkout = jest.fn()
       .mockRejectedValueOnce(new Error("private persistence detail"))
       .mockResolvedValueOnce(overview);
-    const rendered = await render(<ActiveWorkoutOverviewScreen loadWorkout={loadWorkout} />);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen loadWorkout={loadWorkout} onOpenExercise={onOpenExercise} />,
+    );
 
     expect(await rendered.findByText("Your active workout could not be loaded. Your local data was not changed.")).toBeTruthy();
     expect(rendered.queryByText("private persistence detail")).toBeNull();
@@ -115,7 +130,12 @@ describe("ActiveWorkoutOverviewScreen", () => {
   });
 
   it("handles a missing workout without inventing state", async () => {
-    const rendered = await render(<ActiveWorkoutOverviewScreen loadWorkout={async () => null} />);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        loadWorkout={async () => null}
+        onOpenExercise={onOpenExercise}
+      />,
+    );
 
     expect(await rendered.findByText("This active workout is no longer available.")).toBeTruthy();
     expect(rendered.queryByRole("button", { name: "Try Again" })).toBeNull();

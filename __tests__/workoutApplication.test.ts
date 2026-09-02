@@ -24,7 +24,10 @@ jest.mock("@/features/exercises/services/populateExerciseFixture", () => ({
   populateExerciseFixture: (...args: unknown[]) => mockPopulateExerciseFixture(...args),
 }));
 
-import { loadCurrentUserWorkoutOverview } from "@/features/workouts/services/workoutApplication";
+import {
+  loadCurrentUserActiveWorkoutExercise,
+  loadCurrentUserWorkoutOverview,
+} from "@/features/workouts/services/workoutApplication";
 
 const time = "2026-09-02T12:00:00.000Z";
 const workout: Workout = {
@@ -46,6 +49,10 @@ const exercises: Exercise[] = [
 ];
 
 function repositories() {
+  const exerciseHistoryRepository = {
+    getRecentSessions: jest.fn().mockResolvedValue([]),
+    getBestSet: jest.fn(),
+  };
   const workoutRepository: jest.Mocked<LocalWorkoutRepository> = {
     getById: jest.fn().mockResolvedValue(workout),
     getActiveForUser: jest.fn(),
@@ -74,7 +81,20 @@ function repositories() {
     upsert: jest.fn(),
     archiveCustomExercise: jest.fn(),
   };
-  return { exerciseRepository, recommendationRepository, templateRepository, workoutRepository };
+  const preferenceRepository = {
+    get: jest.fn().mockResolvedValue(null),
+    listFavorites: jest.fn(),
+    upsert: jest.fn(),
+    deleteOrTombstone: jest.fn(),
+  };
+  return {
+    exerciseHistoryRepository,
+    exerciseRepository,
+    preferenceRepository,
+    recommendationRepository,
+    templateRepository,
+    workoutRepository,
+  };
 }
 
 describe("workout application overview", () => {
@@ -86,7 +106,10 @@ describe("workout application overview", () => {
   it("loads the owned workout snapshot and resolves exercises without reading its template", async () => {
     const dependencies = repositories();
     mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
-    mockCreateExercisePersistence.mockResolvedValue({ exerciseRepository: dependencies.exerciseRepository });
+    mockCreateExercisePersistence.mockResolvedValue({
+      exerciseRepository: dependencies.exerciseRepository,
+      preferenceRepository: dependencies.preferenceRepository,
+    });
 
     const overview = await loadCurrentUserWorkoutOverview(workout.id);
 
@@ -108,5 +131,37 @@ describe("workout application overview", () => {
     await expect(loadCurrentUserWorkoutOverview("missing")).resolves.toBeNull();
     expect(mockCreateExercisePersistence).not.toHaveBeenCalled();
     expect(mockPopulateExerciseFixture).not.toHaveBeenCalled();
+  });
+
+  it("loads an exercise from the active workout snapshot without reading its template", async () => {
+    const dependencies = repositories();
+    mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
+    mockCreateExercisePersistence.mockResolvedValue({
+      exerciseRepository: dependencies.exerciseRepository,
+      preferenceRepository: dependencies.preferenceRepository,
+    });
+
+    const activeExercise = await loadCurrentUserActiveWorkoutExercise(workout.id, "child-1");
+
+    expect(activeExercise?.workoutExercise.id).toBe("child-1");
+    expect(activeExercise?.exercise?.name).toBe("Bench Press");
+    expect(dependencies.exerciseHistoryRepository.getRecentSessions).toHaveBeenCalledWith({
+      userId: "user-a",
+      exerciseId: "exercise-1",
+      limit: 1,
+    });
+    expect(dependencies.preferenceRepository.get).toHaveBeenCalledWith("user-a", "exercise-1");
+    expect(dependencies.templateRepository.getById).not.toHaveBeenCalled();
+  });
+
+  it("rejects completed workouts and mismatched workout-exercise IDs", async () => {
+    const dependencies = repositories();
+    dependencies.workoutRepository.getById.mockResolvedValue({ ...workout, status: "completed" });
+    mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
+
+    await expect(loadCurrentUserActiveWorkoutExercise(workout.id, "child-1")).resolves.toBeNull();
+    dependencies.workoutRepository.getById.mockResolvedValue(workout);
+    await expect(loadCurrentUserActiveWorkoutExercise(workout.id, "other-child")).resolves.toBeNull();
+    expect(mockCreateExercisePersistence).not.toHaveBeenCalled();
   });
 });

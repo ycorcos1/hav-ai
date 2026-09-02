@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
 import { Card } from "@/components/Card";
@@ -13,9 +13,13 @@ import { colors, spacing } from "@/theme";
 
 export type ActiveWorkoutOverviewScreenProps = {
   loadWorkout: () => Promise<ActiveWorkoutOverview | null>;
+  onOpenExercise: (workoutExerciseId: string) => void;
 };
 
-export function ActiveWorkoutOverviewScreen({ loadWorkout }: ActiveWorkoutOverviewScreenProps) {
+export function ActiveWorkoutOverviewScreen({
+  loadWorkout,
+  onOpenExercise,
+}: ActiveWorkoutOverviewScreenProps) {
   const [overview, setOverview] = useState<ActiveWorkoutOverview | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -58,12 +62,19 @@ export function ActiveWorkoutOverviewScreen({ loadWorkout }: ActiveWorkoutOvervi
       <AppText color="secondary">{completedExercises} / {overview.exercises.length} exercises</AppText>
       <View style={styles.list}>
         {overview.exercises.map(({ exercise, workoutExercise }) => (
-          <Card key={workoutExercise.id}>
-            <AppText variant="exerciseName">{exercise?.name ?? "Exercise unavailable"}</AppText>
-            <AppText color={isExerciseComplete(workoutExercise) ? "primary" : "secondary"}>
-              {exerciseProgressLabel(workoutExercise)}
-            </AppText>
-          </Card>
+          <Pressable
+            accessibilityLabel={`Open ${exercise?.name ?? "exercise"}`}
+            accessibilityRole="button"
+            key={workoutExercise.id}
+            onPress={() => onOpenExercise(workoutExercise.id)}
+          >
+            <Card>
+              <AppText variant="exerciseName">{exercise?.name ?? "Exercise unavailable"}</AppText>
+              <AppText color={isExerciseComplete(workoutExercise) ? "primary" : "secondary"}>
+                {exerciseProgressLabel(workoutExercise)}
+              </AppText>
+            </Card>
+          </Pressable>
         ))}
       </View>
       <SecondaryButton accessibilityHint="Exercise changes are enabled in a later task." disabled label="Add Exercise" />

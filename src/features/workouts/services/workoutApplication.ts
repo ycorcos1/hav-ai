@@ -1,7 +1,15 @@
 import { authService } from "@/lib/supabase/services";
 import { createExercisePersistence } from "@/features/exercises/services/exercisePersistence";
 import { populateExerciseFixture } from "@/features/exercises/services/populateExerciseFixture";
-import type { Exercise, UUID, Workout, WorkoutExercise, WorkoutTemplate } from "@/shared/contracts";
+import type {
+  Exercise,
+  ExerciseSessionPerformance,
+  UUID,
+  Workout,
+  WorkoutExercise,
+  WorkoutTemplate,
+  UserExercisePreference,
+} from "@/shared/contracts";
 
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
 import { createWorkoutPersistence } from "./workoutPersistence";
@@ -17,6 +25,14 @@ export type ActiveWorkoutOverview = {
     workoutExercise: WorkoutExercise;
   }[];
   workout: Workout;
+};
+
+export type ActiveWorkoutExercise = {
+  exercise: Exercise | null;
+  exercisePreference: UserExercisePreference | null;
+  previousPerformance: ExerciseSessionPerformance | null;
+  workout: Workout;
+  workoutExercise: WorkoutExercise;
 };
 
 export async function loadCurrentUserWorkoutHome(): Promise<WorkoutHomeState> {
@@ -64,6 +80,37 @@ export async function loadCurrentUserWorkoutOverview(
   })));
 
   return { exercises, workout };
+}
+
+export async function loadCurrentUserActiveWorkoutExercise(
+  workoutId: UUID,
+  workoutExerciseId: UUID,
+): Promise<ActiveWorkoutExercise | null> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  const workout = await persistence.workoutRepository.getById(userId, workoutId);
+  if (!workout || workout.status !== "active") return null;
+
+  const workoutExercise = workout.exercises.find(({ id }) => id === workoutExerciseId);
+  if (!workoutExercise) return null;
+
+  const { exerciseRepository, preferenceRepository } = await createExercisePersistence();
+  await populateExerciseFixture(exerciseRepository);
+  const [exercise, exercisePreference, recentPerformance] = await Promise.all([
+    exerciseRepository.getById(userId, workoutExercise.exerciseId),
+    preferenceRepository.get(userId, workoutExercise.exerciseId),
+    persistence.exerciseHistoryRepository.getRecentSessions({
+      userId,
+      exerciseId: workoutExercise.exerciseId,
+      limit: 1,
+    }),
+  ]);
+  return {
+    exercise,
+    exercisePreference,
+    previousPerformance: recentPerformance[0] ?? null,
+    workout,
+    workoutExercise,
+  };
 }
 
 async function persistenceForCurrentUser() {
