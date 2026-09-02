@@ -38,9 +38,13 @@ export class SupabaseProfileRepository implements ProfileRepository {
   }
 
   async updateOwnProfile(input: UpdateOwnProfileInput): Promise<UserProfile> {
+    const { data: authData, error: authError } = await this.client.auth.getUser();
+    if (authError || !authData.user) throw repositoryError("updateOwnProfile");
+
     const { data, error } = await this.client
       .from("profiles")
       .update(profileToUpdate(input))
+      .eq("user_id", authData.user.id)
       .select("*")
       .single();
 

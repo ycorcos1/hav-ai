@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { Text } from 'react-native';
 
 import { RootRouteGuard } from '@/features/routing/components/RootRouteGuard';
 import type { ProfileRepository } from '@/lib/supabase/repositories/ProfileRepository';
@@ -83,10 +84,22 @@ function deferred<T>(): {
   return { promise, resolve: resolvePromise };
 }
 
+function renderGuard(
+  mocks: RoutingMocks,
+  segments: readonly string[] = [],
+  childLabel?: string,
+) {
+  return render(
+    <RootRouteGuard {...mocks} segments={segments}>
+      {childLabel ? <Text>{childLabel}</Text> : null}
+    </RootRouteGuard>,
+  );
+}
+
 describe('RootRouteGuard', () => {
   it('routes startup without a session to Welcome without resolving a profile', async () => {
     const mocks = createRoutingMocks(null);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
 
     expect(await screen.findByText('redirect:/(auth)/welcome')).toBeTruthy();
     expect(mocks.profileRepository.getOwnProfile).not.toHaveBeenCalled();
@@ -96,7 +109,7 @@ describe('RootRouteGuard', () => {
   it('routes an incomplete authenticated profile to Onboarding', async () => {
     const mocks = createRoutingMocks(session);
     mocks.profileRepository.getOwnProfile.mockResolvedValue(incompleteProfile);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
 
     expect(await screen.findByText('redirect:/(onboarding)/setup')).toBeTruthy();
   });
@@ -104,7 +117,7 @@ describe('RootRouteGuard', () => {
   it('routes a complete authenticated profile to Home', async () => {
     const mocks = createRoutingMocks(session);
     mocks.profileRepository.getOwnProfile.mockResolvedValue(completeProfile);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
 
     expect(await screen.findByText('redirect:/(tabs)/home')).toBeTruthy();
   });
@@ -113,7 +126,7 @@ describe('RootRouteGuard', () => {
     const mocks = createRoutingMocks(null);
     const pendingSession = deferred<AuthSession | null>();
     mocks.authService.getSession.mockReturnValue(pendingSession.promise);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
 
     expect(screen.getByText('havAI')).toBeTruthy();
     expect(screen.queryByText(/redirect:/)).toBeNull();
@@ -121,7 +134,7 @@ describe('RootRouteGuard', () => {
 
   it('responds to signed-out and signed-in profile transitions', async () => {
     const mocks = createRoutingMocks(null);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
     expect(await screen.findByText('redirect:/(auth)/welcome')).toBeTruthy();
 
     mocks.authService.getSession.mockResolvedValue(session);
@@ -144,7 +157,7 @@ describe('RootRouteGuard', () => {
     mocks.profileRepository.getOwnProfile
       .mockRejectedValueOnce(new Error('private provider detail'))
       .mockResolvedValueOnce(completeProfile);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
 
     expect(await screen.findByText('Couldn’t start havAI')).toBeTruthy();
     expect(screen.queryByText('private provider detail')).toBeNull();
@@ -161,7 +174,7 @@ describe('RootRouteGuard', () => {
     const mocks = createRoutingMocks(session);
     const pendingProfile = deferred<UserProfile | null>();
     mocks.profileRepository.getOwnProfile.mockReturnValue(pendingProfile.promise);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
     expect(screen.getByText('havAI')).toBeTruthy();
 
     await act(async () => mocks.emitSession(null));
@@ -174,11 +187,80 @@ describe('RootRouteGuard', () => {
 
   it('disposes its single active subscription on unmount', async () => {
     const mocks = createRoutingMocks(null);
-    const screen = await render(<RootRouteGuard {...mocks} />);
+    const screen = await renderGuard(mocks);
     await screen.findByText('redirect:/(auth)/welcome');
 
     expect(mocks.authService.subscribeToSession).toHaveBeenCalledTimes(1);
     await screen.unmount();
     expect(mocks.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['/(tabs)/workouts', ['(tabs)', 'workouts']],
+    ['/(tabs)/home', ['(tabs)', 'home']],
+  ])('routes an unauthenticated direct %s request to Welcome', async (_route, segments) => {
+    const mocks = createRoutingMocks(null);
+    const screen = await renderGuard(mocks, segments, 'protected content');
+
+    expect(await screen.findByText('redirect:/(auth)/welcome')).toBeTruthy();
+    expect(screen.queryByText('protected content')).toBeNull();
+  });
+
+  it('routes an incomplete profile away from a directly requested protected tab', async () => {
+    const mocks = createRoutingMocks(session);
+    mocks.profileRepository.getOwnProfile.mockResolvedValue(incompleteProfile);
+    const screen = await renderGuard(mocks, ['(tabs)', 'workouts'], 'protected content');
+
+    expect(await screen.findByText('redirect:/(onboarding)/setup')).toBeTruthy();
+    expect(screen.queryByText('protected content')).toBeNull();
+  });
+
+  it.each([
+    ['tabs', ['(tabs)', 'workouts']],
+    ['template detail', ['template', '[id]']],
+    ['workout detail', ['workout', '[id]']],
+  ])('allows a completed profile to access protected %s routes', async (_route, segments) => {
+    const mocks = createRoutingMocks(session);
+    mocks.profileRepository.getOwnProfile.mockResolvedValue(completeProfile);
+    const screen = await renderGuard(mocks, segments, 'protected content');
+
+    expect(await screen.findByText('protected content')).toBeTruthy();
+    expect(screen.queryByText(/redirect:/)).toBeNull();
+  });
+
+  it.each([
+    ['Login', ['(auth)', 'login']],
+    ['Signup', ['(auth)', 'signup']],
+  ])('keeps public %s available without a session', async (_route, segments) => {
+    const mocks = createRoutingMocks(null);
+    const screen = await renderGuard(mocks, segments, 'public auth content');
+
+    expect(await screen.findByText('public auth content')).toBeTruthy();
+    expect(screen.queryByText(/redirect:/)).toBeNull();
+  });
+
+  it('routes out of protected content when the active session becomes null', async () => {
+    const mocks = createRoutingMocks(session);
+    mocks.profileRepository.getOwnProfile.mockResolvedValue(completeProfile);
+    const screen = await renderGuard(mocks, ['(tabs)', 'workouts'], 'protected content');
+    expect(await screen.findByText('protected content')).toBeTruthy();
+
+    await act(async () => mocks.emitSession(null));
+
+    expect(await screen.findByText('redirect:/(auth)/welcome')).toBeTruthy();
+    expect(screen.queryByText('protected content')).toBeNull();
+  });
+
+  it('resumes canonical profile routing when a session becomes valid', async () => {
+    const mocks = createRoutingMocks(null);
+    mocks.profileRepository.getOwnProfile.mockResolvedValue(completeProfile);
+    const screen = await renderGuard(mocks, ['(auth)', 'login'], 'public auth content');
+    expect(await screen.findByText('public auth content')).toBeTruthy();
+
+    mocks.authService.getSession.mockResolvedValue(session);
+    await act(async () => mocks.emitSession(session));
+
+    expect(await screen.findByText('redirect:/(tabs)/home')).toBeTruthy();
+    expect(screen.queryByText('public auth content')).toBeNull();
   });
 });

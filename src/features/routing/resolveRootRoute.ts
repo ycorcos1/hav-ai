@@ -15,6 +15,10 @@ export type ResolvedRootRoute =
         | '/(tabs)/home';
     };
 
+export type ResolvedPersistentRootRoute =
+  | ResolvedRootRoute
+  | { status: 'allow' };
+
 export function resolveRootRoute(
   state: RootRoutingState,
 ): ResolvedRootRoute {
@@ -35,4 +39,37 @@ export function resolveRootRoute(
   }
 
   return { status: 'redirect', href: '/(tabs)/home' };
+}
+
+export function resolvePersistentRootRoute(
+  state: RootRoutingState,
+  segments: readonly string[],
+): ResolvedPersistentRootRoute {
+  const destination = resolveRootRoute(state);
+  if (destination.status !== 'redirect') return destination;
+
+  const currentArea = routeAreaFromSegments(segments);
+  const destinationArea = routeAreaFromHref(destination.href);
+
+  return currentArea === destinationArea
+    ? { status: 'allow' }
+    : destination;
+}
+
+type RouteArea = 'auth' | 'onboarding' | 'protected' | 'root';
+
+function routeAreaFromSegments(segments: readonly string[]): RouteArea {
+  const rootSegment = segments[0];
+  if (!rootSegment) return 'root';
+  if (rootSegment === '(auth)') return 'auth';
+  if (rootSegment === '(onboarding)') return 'onboarding';
+  return 'protected';
+}
+
+function routeAreaFromHref(
+  href: Extract<ResolvedRootRoute, { status: 'redirect' }>['href'],
+): Exclude<RouteArea, 'root'> {
+  if (href === '/(auth)/welcome') return 'auth';
+  if (href === '/(onboarding)/setup') return 'onboarding';
+  return 'protected';
 }

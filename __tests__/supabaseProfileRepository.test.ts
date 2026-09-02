@@ -1,9 +1,13 @@
 import type { UserProfile } from "@/shared/contracts";
 
 const mockFrom = jest.fn();
+const mockGetUser = jest.fn();
 
 jest.mock("@/lib/supabase/client", () => ({
-  supabase: { from: (...args: unknown[]) => mockFrom(...args) },
+  supabase: {
+    auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
+    from: (...args: unknown[]) => mockFrom(...args),
+  },
 }));
 
 import {
@@ -46,6 +50,7 @@ const expectedProfile: UserProfile = {
 describe("SupabaseProfileRepository", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetUser.mockResolvedValue({ data: { user: { id: userId } }, error: null });
   });
 
   it("gets and maps only the profile exposed by RLS", async () => {
@@ -122,7 +127,7 @@ describe("SupabaseProfileRepository", () => {
     });
   });
 
-  it("updates only whitelisted mutable fields without a target user ID", async () => {
+  it("updates only whitelisted mutable fields for the authenticated user", async () => {
     const single = jest.fn().mockResolvedValue({
       data: {
         ...profileRow,
@@ -133,7 +138,8 @@ describe("SupabaseProfileRepository", () => {
       error: null,
     });
     const select = jest.fn(() => ({ single }));
-    const update = jest.fn(() => ({ select }));
+    const eq = jest.fn(() => ({ select }));
+    const update = jest.fn(() => ({ eq }));
     mockFrom.mockReturnValue({ update });
     const repository = new SupabaseProfileRepository();
     const input = {
@@ -156,6 +162,50 @@ describe("SupabaseProfileRepository", () => {
       weight_unit: "kg",
       default_rest_duration_seconds: 300,
     });
+    expect(eq).toHaveBeenCalledWith("user_id", userId);
+  });
+
+  it("rejects an update with a sanitized error when no user is authenticated", async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
+    const repository = new SupabaseProfileRepository();
+
+    await expect(repository.updateOwnProfile({ weightUnit: "kg" })).rejects.toMatchObject({
+      name: "ProfileRepositoryError",
+      code: "PROFILE_REPOSITORY_ERROR",
+      operation: "updateOwnProfile",
+    });
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes authenticated-user and profile update provider failures", async () => {
+    const repository = new SupabaseProfileRepository();
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: "sensitive auth provider detail" },
+    });
+
+    const authRequest = repository.updateOwnProfile({ weightUnit: "kg" });
+    await expect(authRequest).rejects.toMatchObject({
+      name: "ProfileRepositoryError",
+      operation: "updateOwnProfile",
+    });
+    await expect(authRequest).rejects.not.toThrow("sensitive auth provider detail");
+
+    const single = jest.fn().mockResolvedValue({
+      data: null,
+      error: { message: "sensitive PostgREST detail" },
+    });
+    const select = jest.fn(() => ({ single }));
+    const eq = jest.fn(() => ({ select }));
+    mockFrom.mockReturnValue({ update: jest.fn(() => ({ eq })) });
+
+    const updateRequest = repository.updateOwnProfile({ weightUnit: "kg" });
+    await expect(updateRequest).rejects.toMatchObject({
+      name: "ProfileRepositoryError",
+      operation: "updateOwnProfile",
+    });
+    await expect(updateRequest).rejects.not.toThrow("sensitive PostgREST detail");
+    expect(eq).toHaveBeenCalledWith("user_id", userId);
   });
 
   it("converts provider and mapping failures to a repository error", async () => {

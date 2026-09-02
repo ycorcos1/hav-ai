@@ -18,6 +18,7 @@ import type {
   TransactionalLocalDatabaseConnection,
 } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
+import { enqueueSyncUpsert } from "./syncQueueUtils";
 import type { LocalWorkoutRepository } from "./types";
 
 const workoutColumns = ["id", "user_id", "source_template_id", "name", "status", "started_at", "completed_at", "notes", "sync_status", "created_at", "updated_at", "server_updated_at"];
@@ -42,8 +43,64 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
     return row ? this.hydrate(row, userId) : null;
   }
 
-  async create(workout: Workout): Promise<void> { await this.save(workout); }
-  async update(workout: Workout): Promise<void> { await this.save(workout); }
+  async create(workout: Workout): Promise<void> {
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const active = await transaction.getFirstAsync<{ id: string }>(
+        "SELECT id FROM local_workouts WHERE user_id=? AND status='active' LIMIT 1;",
+        workout.userId,
+      );
+      if (active && active.id !== workout.id) {
+        throw new Error("An active workout already exists for this user.");
+      }
+      await this.saveInTransaction(transaction, workout);
+      await enqueueSyncUpsert(transaction, "workout", workout.id, workout.createdAt);
+      for (const exercise of workout.exercises) {
+        await enqueueSyncUpsert(transaction, "workout_exercise", exercise.id, exercise.createdAt);
+        if (!exercise.sourceRecommendationId) continue;
+        const recommendation = await transaction.getFirstAsync<{
+          exercise_id: string;
+          status: string;
+          user_id: string;
+        }>(
+          "SELECT user_id, exercise_id, status FROM local_progression_recommendations WHERE id=?;",
+          exercise.sourceRecommendationId,
+        );
+        if (
+          !recommendation
+          || recommendation.user_id !== workout.userId
+          || recommendation.exercise_id !== exercise.exerciseId
+          || recommendation.status !== "active"
+        ) {
+          throw new Error("Workout recommendation snapshot is not active or accessible.");
+        }
+        await transaction.runAsync(
+          `UPDATE local_progression_recommendations
+           SET status='consumed', consumed_at=?, updated_at=?,
+             sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
+           WHERE id=? AND user_id=?;`,
+          workout.startedAt,
+          workout.startedAt,
+          exercise.sourceRecommendationId,
+          workout.userId,
+        );
+        await enqueueSyncUpsert(
+          transaction,
+          "progression_recommendation",
+          exercise.sourceRecommendationId,
+          workout.createdAt,
+        );
+      }
+    });
+  }
+  async update(workout: Workout): Promise<void> {
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      await this.saveInTransaction(transaction, workout);
+      await enqueueSyncUpsert(transaction, "workout", workout.id, workout.updatedAt);
+      for (const exercise of workout.exercises) {
+        await enqueueSyncUpsert(transaction, "workout_exercise", exercise.id, workout.updatedAt);
+      }
+    });
+  }
 
   private async hydrate(row: LocalWorkoutRow, userId: string): Promise<Workout> {
     const exerciseRows = await this.database.getAllAsync<LocalWorkoutExerciseRow>(
@@ -63,24 +120,31 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
 
   private async save(workout: Workout): Promise<void> {
     await this.database.withExclusiveTransactionAsync(async (transaction) => {
-      const existing = await transaction.getFirstAsync<{ user_id: string }>(
-        "SELECT user_id FROM local_workouts WHERE id=?;", workout.id,
-      );
-      if (existing && existing.user_id !== workout.userId) return;
-      await saveWorkoutRow(transaction, workout);
-      for (const exercise of workout.exercises) {
-        if (exercise.userId !== workout.userId || exercise.workoutId !== workout.id) {
-          throw new Error("Workout exercise ownership or ancestry does not match its workout.");
-        }
-        await saveWorkoutExerciseRow(transaction, exercise);
-        for (const set of exercise.sets) {
-          if (set.userId !== workout.userId || set.workoutId !== workout.id || set.workoutExerciseId !== exercise.id) {
-            throw new Error("Workout set ownership or ancestry does not match its workout exercise.");
-          }
-          await saveWorkoutSetRow(transaction, set);
-        }
-      }
+      await this.saveInTransaction(transaction, workout);
     });
+  }
+
+  private async saveInTransaction(
+    transaction: LocalDatabaseTransaction,
+    workout: Workout,
+  ): Promise<void> {
+    const existing = await transaction.getFirstAsync<{ user_id: string }>(
+      "SELECT user_id FROM local_workouts WHERE id=?;", workout.id,
+    );
+    if (existing && existing.user_id !== workout.userId) return;
+    await saveWorkoutRow(transaction, workout);
+    for (const exercise of workout.exercises) {
+      if (exercise.userId !== workout.userId || exercise.workoutId !== workout.id) {
+        throw new Error("Workout exercise ownership or ancestry does not match its workout.");
+      }
+      await saveWorkoutExerciseRow(transaction, exercise);
+      for (const set of exercise.sets) {
+        if (set.userId !== workout.userId || set.workoutId !== workout.id || set.workoutExerciseId !== exercise.id) {
+          throw new Error("Workout set ownership or ancestry does not match its workout exercise.");
+        }
+        await saveWorkoutSetRow(transaction, set);
+      }
+    }
   }
 
   async delete(userId: string, id: string): Promise<void> {

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Redirect } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
@@ -7,14 +8,23 @@ import { Screen } from '@/components/Screen';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import type { EnsureProfileDependencies } from '@/features/profile/useCases/ensureProfile';
 import {
-  resolveRootRoute,
+  resolvePersistentRootRoute,
 } from '@/features/routing/resolveRootRoute';
 import { useRootRoutingState } from '@/features/routing/useRootRoutingState';
 import { colors } from '@/theme';
 
-export function RootRouteGuard(dependencies: EnsureProfileDependencies) {
+type RootRouteGuardProps = EnsureProfileDependencies & {
+  children?: ReactNode;
+  segments: readonly string[];
+};
+
+export function RootRouteGuard({
+  children,
+  segments,
+  ...dependencies
+}: RootRouteGuardProps) {
   const { retry, state } = useRootRoutingState(dependencies);
-  const route = resolveRootRoute(state);
+  const route = resolvePersistentRootRoute(state, segments);
 
   if (route.status === 'loading') {
     return (
@@ -35,6 +45,8 @@ export function RootRouteGuard(dependencies: EnsureProfileDependencies) {
       </Screen>
     );
   }
+
+  if (route.status === 'allow') return children;
 
   return <Redirect href={route.href} />;
 }
