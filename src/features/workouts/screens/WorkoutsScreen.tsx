@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
@@ -21,10 +21,11 @@ export function WorkoutsScreen({ loadTemplates, onCreate, onOpen }: WorkoutsScre
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [attempt, setAttempt] = useState(0);
+  const loadTemplatesForAttempt = useEffectEvent(loadTemplates);
 
   useEffect(() => {
     let active = true;
-    void loadTemplates().then(
+    void loadTemplatesForAttempt().then(
       (loaded) => {
         if (!active) return;
         setTemplates(loaded);
@@ -35,7 +36,7 @@ export function WorkoutsScreen({ loadTemplates, onCreate, onOpen }: WorkoutsScre
       },
     );
     return () => { active = false; };
-  }, [attempt, loadTemplates]);
+  }, [attempt]);
 
   return (
     <Screen contentContainerStyle={styles.container} scroll>

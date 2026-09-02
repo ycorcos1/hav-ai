@@ -47,4 +47,30 @@ describe("WorkoutsScreen", () => {
     );
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
+
+  it("does not reload when a route wrapper recreates loader props", async () => {
+    const firstLoad = jest.fn(async () => [template]);
+    const rendered = await render(
+      <WorkoutsScreen
+        loadTemplates={firstLoad}
+        onCreate={jest.fn()}
+        onOpen={jest.fn()}
+      />,
+    );
+
+    expect(await rendered.findByText("Push")).toBeTruthy();
+
+    const recreatedLoad = jest.fn(async () => [template]);
+    await rendered.rerender(
+      <WorkoutsScreen
+        loadTemplates={recreatedLoad}
+        onCreate={jest.fn()}
+        onOpen={jest.fn()}
+      />,
+    );
+
+    expect(firstLoad).toHaveBeenCalledTimes(1);
+    expect(recreatedLoad).not.toHaveBeenCalled();
+    expect(rendered.getByText("Push")).toBeTruthy();
+  });
 });
