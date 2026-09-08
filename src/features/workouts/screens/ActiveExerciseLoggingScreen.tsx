@@ -10,7 +10,12 @@ import { SetInputRow, type SetInputValues } from "@/features/workouts/components
 import { triggerSetCompletionHaptic } from "@/features/workouts/services/setCompletionFeedback";
 import type { ActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
 import { formatDisplayWeight } from "@/features/workouts/services/weightConversion";
-import type { CompleteSetInput, CompleteSetResult, WorkoutSet } from "@/shared/contracts";
+import type {
+  CompleteSetInput,
+  CompleteSetResult,
+  WorkoutSet,
+  WorkoutSetType,
+} from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type ActiveExerciseLoggingScreenProps = {
@@ -31,6 +36,8 @@ export function ActiveExerciseLoggingScreen({
   const [attempt, setAttempt] = useState(0);
   const [completionError, setCompletionError] = useState(false);
   const [entryVersion, setEntryVersion] = useState(0);
+  const [entrySetType, setEntrySetType] = useState<WorkoutSetType>("working");
+  const [extraSetEntryVisible, setExtraSetEntryVisible] = useState(false);
   const [savingSet, setSavingSet] = useState(false);
   const completionLocked = useRef(false);
 
@@ -96,6 +103,14 @@ export function ActiveExerciseLoggingScreen({
   const nextExercise = currentIndex >= 0 && currentIndex < orderedExercises.length - 1
     ? orderedExercises[currentIndex + 1]
     : undefined;
+  const completedWorkingSetCount = workoutExercise.sets.filter(
+    ({ setType }) => setType === "working",
+  ).length;
+  const plannedWorkingSetsComplete = workoutExercise.targetSets !== undefined
+    && completedWorkingSetCount >= workoutExercise.targetSets;
+  const setEntryVisible = entrySetType === "warmup"
+    || !plannedWorkingSetsComplete
+    || extraSetEntryVisible;
 
   const completeCurrentSet = async (values: SetInputValues): Promise<void> => {
     if (completionLocked.current) return;
@@ -107,7 +122,7 @@ export function ActiveExerciseLoggingScreen({
         exerciseId: workoutExercise.exerciseId,
         reps: values.reps,
         ...(values.rpe === undefined ? {} : { rpe: values.rpe }),
-        setType: "working",
+        setType: entrySetType,
         ...(values.weightKg === undefined ? {} : { weightKg: values.weightKg }),
         workoutExerciseId: workoutExercise.id,
         workoutId: workout.id,
@@ -115,6 +130,8 @@ export function ActiveExerciseLoggingScreen({
       setActiveExercise((current) => current
         ? appendCompletedSet(current, result.set)
         : current);
+      setEntrySetType("working");
+      setExtraSetEntryVisible(false);
       setEntryVersion((value) => value + 1);
       await triggerSetCompletionHaptic();
     } catch {
@@ -165,25 +182,47 @@ export function ActiveExerciseLoggingScreen({
         {workoutExercise.sets.length === 0 ? (
           <AppText color="muted">No sets completed yet.</AppText>
         ) : (
-          workoutExercise.sets.map((set, index) => (
-            <AppText key={set.id} color="secondary">
-              {setLabel(index, set.weightKg, set.reps, profile.weightUnit)}
+          completedSetLabels(workoutExercise.sets, profile.weightUnit).map(({ id, label }) => (
+            <AppText key={id} color="secondary">
+              {label}
             </AppText>
           ))
         )}
       </View>
 
-      <SetInputRow
-        key={`${workoutExercise.id}-${entryVersion}`}
-        disabled={savingSet || !exercise}
-        initialWeightKg={workoutExercise.targetWeightKg}
-        onComplete={(values) => {
-          void completeCurrentSet(values);
-        }}
-        requiresWeight={exercise?.measurementType === "weight_reps"}
-        rpePreference={profile.rpePreference}
-        weightUnit={profile.weightUnit}
-      />
+      {entrySetType === "warmup" ? (
+        <AppText color="secondary" variant="sectionHeading">WARM-UP SET</AppText>
+      ) : null}
+      {setEntryVisible ? (
+        <SetInputRow
+          key={`${workoutExercise.id}-${entryVersion}`}
+          disabled={savingSet || !exercise}
+          initialWeightKg={workoutExercise.targetWeightKg}
+          onComplete={(values) => {
+            void completeCurrentSet(values);
+          }}
+          requiresWeight={exercise?.measurementType === "weight_reps"}
+          rpePreference={profile.rpePreference}
+          weightUnit={profile.weightUnit}
+        />
+      ) : (
+        <SecondaryButton
+          accessibilityHint="Adds another working-set entry to this workout only."
+          label="Add Set"
+          onPress={() => setExtraSetEntryVisible(true)}
+        />
+      )}
+      {entrySetType !== "warmup" ? (
+        <SecondaryButton
+          accessibilityHint="Logs a warm-up without counting it as a working set."
+          label="Add Warm-Up Set"
+          onPress={() => {
+            setEntrySetType("warmup");
+            setExtraSetEntryVisible(false);
+            setEntryVersion((value) => value + 1);
+          }}
+        />
+      ) : null}
       {completionError ? (
         <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
           This set could not be saved. Check your entries and try again.
@@ -233,6 +272,25 @@ function setLabel(
     ? "Bodyweight"
     : `${formatDisplayWeight(weightKg, weightUnit)} ${weightUnit}`;
   return `Set ${index + 1}: ${weight} × ${reps}`;
+}
+
+function completedSetLabels(
+  sets: WorkoutSet[],
+  weightUnit: ActiveWorkoutExercise["profile"]["weightUnit"],
+): { id: string; label: string }[] {
+  let warmupCount = 0;
+  let workingCount = 0;
+  return [...sets]
+    .sort((left, right) => left.position - right.position)
+    .map((set) => {
+      const prefix = set.setType === "warmup"
+        ? `Warm-up ${warmupCount += 1}`
+        : `Set ${workingCount += 1}`;
+      const weight = set.weightKg === undefined
+        ? "Bodyweight"
+        : `${formatDisplayWeight(set.weightKg, weightUnit)} ${weightUnit}`;
+      return { id: set.id, label: `${prefix}: ${weight} × ${set.reps}` };
+    });
 }
 
 function appendCompletedSet(
