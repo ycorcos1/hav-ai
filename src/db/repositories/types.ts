@@ -3,6 +3,7 @@ import type {
   ExerciseSessionPerformance,
   ISODateTime,
   ProgressionRecommendation,
+  UserProfile,
   UUID,
   Workout,
   WorkoutSet,
@@ -16,6 +17,11 @@ export interface LocalWorkoutRepository {
   create(workout: Workout): Promise<void>;
   update(workout: Workout): Promise<void>;
   delete(userId: UUID, id: UUID): Promise<void>;
+}
+
+export interface LocalProfileCacheRepository {
+  get(userId: UUID): Promise<UserProfile | null>;
+  upsert(profile: UserProfile): Promise<void>;
 }
 
 export interface ExerciseHistoryRepository {

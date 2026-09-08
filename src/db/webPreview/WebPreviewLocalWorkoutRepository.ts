@@ -1,9 +1,10 @@
 import type { LocalWorkoutRepository } from "@/db/repositories/types";
-import type { SyncEntityType, SyncQueueItem, UUID, Workout } from "@/shared/contracts";
+import type { Workout } from "@/shared/contracts";
 
 import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
 import {
   readWorkoutWebPreviewState,
+  enqueueWorkoutWebPreviewMutation,
   writeWorkoutWebPreviewState,
   type WorkoutWebPreviewState,
 } from "./workoutStorage";
@@ -34,11 +35,11 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
     this.consumeRecommendations(state, workout);
     if (existing) state.workouts[state.workouts.indexOf(existing)] = workout;
     else state.workouts.push(workout);
-    enqueue(state, "workout", workout.id, workout.createdAt);
+    enqueueWorkoutWebPreviewMutation(state, "workout", workout.id, workout.createdAt);
     workout.exercises.forEach((exercise) => {
-      enqueue(state, "workout_exercise", exercise.id, exercise.createdAt);
+      enqueueWorkoutWebPreviewMutation(state, "workout_exercise", exercise.id, exercise.createdAt);
       if (exercise.sourceRecommendationId) {
-        enqueue(state, "progression_recommendation", exercise.sourceRecommendationId, workout.createdAt);
+        enqueueWorkoutWebPreviewMutation(state, "progression_recommendation", exercise.sourceRecommendationId, workout.createdAt);
       }
     });
     writeWorkoutWebPreviewState(this.storage, state);
@@ -50,8 +51,8 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
     const index = state.workouts.findIndex(({ id }) => id === workout.id);
     if (index < 0 || state.workouts[index].userId !== workout.userId) return;
     state.workouts[index] = workout;
-    enqueue(state, "workout", workout.id, workout.updatedAt);
-    workout.exercises.forEach((exercise) => enqueue(
+    enqueueWorkoutWebPreviewMutation(state, "workout", workout.id, workout.updatedAt);
+    workout.exercises.forEach((exercise) => enqueueWorkoutWebPreviewMutation(
       state,
       "workout_exercise",
       exercise.id,
@@ -94,33 +95,4 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
       throw new Error("Workout exercise ownership or ancestry does not match its workout.");
     }
   }
-}
-
-function enqueue(
-  state: WorkoutWebPreviewState,
-  entityType: SyncEntityType,
-  entityId: UUID,
-  createdAt: string,
-): void {
-  const existing = state.queue.find((item) => item.entityType === entityType && item.entityId === entityId);
-  if (existing) {
-    existing.operation = "upsert";
-    existing.attemptCount = 0;
-    delete existing.lastAttemptAt;
-    delete existing.lastError;
-    return;
-  }
-  const item: SyncQueueItem = {
-    id: createUuid(), entityType, entityId, operation: "upsert", attemptCount: 0, createdAt,
-  };
-  state.queue.push(item);
-}
-
-function createUuid(): UUID {
-  const cryptoApi = globalThis.crypto as Crypto | undefined;
-  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
-    const random = Math.floor(Math.random() * 16);
-    return (character === "x" ? random : (random & 0x3) | 0x8).toString(16);
-  });
 }

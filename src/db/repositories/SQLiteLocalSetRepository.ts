@@ -2,7 +2,7 @@ import type { WorkoutSet } from "@/shared/contracts";
 
 import { workoutSetFromRow, workoutSetToRow } from "../mappers";
 import type { LocalWorkoutSetRow } from "../mappers";
-import type { TransactionalLocalDatabaseConnection } from "../types";
+import type { LocalDatabaseConnection } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
 import type { LocalSetRepository } from "./types";
 
@@ -13,7 +13,7 @@ const columns = [
 ];
 
 export class SQLiteLocalSetRepository implements LocalSetRepository {
-  constructor(private readonly database: TransactionalLocalDatabaseConnection) {}
+  constructor(private readonly database: LocalDatabaseConnection) {}
 
   async getById(userId: string, id: string): Promise<WorkoutSet | null> {
     const row = await this.database.getFirstAsync<LocalWorkoutSetRow>(
@@ -34,6 +34,13 @@ export class SQLiteLocalSetRepository implements LocalSetRepository {
   async update(set: WorkoutSet): Promise<void> { await this.save(set); }
 
   private async save(set: WorkoutSet): Promise<void> {
+    const existing = await this.database.getFirstAsync<{ user_id: string }>(
+      "SELECT user_id FROM local_sets WHERE id = ?;",
+      set.id,
+    );
+    if (existing && existing.user_id !== set.userId) {
+      throw new Error("Set ancestry is not accessible to its user.");
+    }
     const parent = await this.database.getFirstAsync<{ user_id: string }>(
       `SELECT user_id FROM local_workout_exercises
        WHERE id=? AND workout_id=? AND exercise_id=? AND user_id=?;`,

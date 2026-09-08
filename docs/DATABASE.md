@@ -2526,6 +2526,26 @@ server_updated_at text null
 
 ---
 
+# 86A. Local Profile Cache Table
+
+Table:
+
+```sql
+local_profile_cache
+```
+
+Purpose:
+
+Stores the latest successfully resolved canonical profile for offline-readable
+workout preferences. Supabase remains cloud-authoritative; this table is a
+user-scoped local cache and does not introduce a profile sync-queue entity.
+
+It preserves the canonical `UserProfile` fields needed by offline workout
+behavior, including `weight_unit`, RPE preference, progression style, default
+rest duration, onboarding state, and profile timestamps.
+
+---
+
 # 87. Local Exercises Table
 
 Table:

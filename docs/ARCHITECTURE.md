@@ -672,6 +672,12 @@ Read caches are replaceable.
 
 They must not be confused with unsynced authoritative user data.
 
+The user profile remains cloud-authoritative. Its latest successfully resolved
+canonical value is also stored in the user-scoped `local_profile_cache` so
+active-workout preferences such as `weightUnit` remain readable without a
+network request. This cache is not a new sync entity and does not replace the
+Supabase profile repository.
+
 ---
 
 # 25. Why Templates Are Local-First

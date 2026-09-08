@@ -1,4 +1,10 @@
-import type { ProgressionRecommendation, SyncQueueItem, Workout } from "@/shared/contracts";
+import type {
+  ProgressionRecommendation,
+  SyncEntityType,
+  SyncQueueItem,
+  Workout,
+  WorkoutSet,
+} from "@/shared/contracts";
 
 import {
   browserWebPreviewStorage,
@@ -9,6 +15,7 @@ import {
 export const workoutWebPreviewStorageKey = `${webPreviewStoragePrefix}workout-persistence:v1`;
 
 export type WorkoutWebPreviewState = {
+  deletedSets: WorkoutSet[];
   queue: SyncQueueItem[];
   recommendations: ProgressionRecommendation[];
   version: 1;
@@ -19,11 +26,14 @@ export function readWorkoutWebPreviewState(
   storage: WebPreviewStorage = browserWebPreviewStorage(),
 ): WorkoutWebPreviewState {
   const serialized = storage.getItem(workoutWebPreviewStorageKey);
-  if (!serialized) return { queue: [], recommendations: [], version: 1, workouts: [] };
+  if (!serialized) return { deletedSets: [], queue: [], recommendations: [], version: 1, workouts: [] };
   try {
     const parsed: unknown = JSON.parse(serialized);
     if (!isWorkoutState(parsed)) throw new Error("Invalid preview state.");
-    return parsed;
+    return {
+      ...parsed,
+      deletedSets: parsed.deletedSets ?? [],
+    };
   } catch {
     throw new Error("The development workout preview data could not be read.");
   }
@@ -40,11 +50,39 @@ export function writeWorkoutWebPreviewState(
   }
 }
 
+export function enqueueWorkoutWebPreviewMutation(
+  state: WorkoutWebPreviewState,
+  entityType: SyncEntityType,
+  entityId: string,
+  createdAt: string,
+): void {
+  const existing = state.queue.find(
+    (item) => item.entityType === entityType && item.entityId === entityId,
+  );
+  if (existing) {
+    existing.operation = "upsert";
+    existing.attemptCount = 0;
+    delete existing.lastAttemptAt;
+    delete existing.lastError;
+    return;
+  }
+  state.queue.push({
+    id: createUuid(),
+    entityType,
+    entityId,
+    operation: "upsert",
+    attemptCount: 0,
+    createdAt,
+  });
+}
+
 function isWorkoutState(value: unknown): value is WorkoutWebPreviewState {
   return isRecord(value)
     && value.version === 1
     && Array.isArray(value.workouts)
     && value.workouts.every(isWorkout)
+    && (value.deletedSets === undefined
+      || (Array.isArray(value.deletedSets) && value.deletedSets.every(isSet)))
     && Array.isArray(value.recommendations)
     && value.recommendations.every(isRecommendation)
     && Array.isArray(value.queue)
@@ -67,7 +105,26 @@ function isWorkout(value: unknown): value is Workout {
       && typeof exercise.workoutId === "string"
       && typeof exercise.exerciseId === "string"
       && typeof exercise.position === "number"
-      && Array.isArray(exercise.sets));
+      && Array.isArray(exercise.sets)
+      && exercise.sets.every(isSet));
+}
+
+function isSet(value: unknown): value is WorkoutSet {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.userId === "string"
+    && typeof value.workoutId === "string"
+    && typeof value.workoutExerciseId === "string"
+    && typeof value.exerciseId === "string"
+    && typeof value.position === "number"
+    && (value.setType === "working" || value.setType === "warmup")
+    && (value.weightKg === undefined || typeof value.weightKg === "number")
+    && typeof value.reps === "number"
+    && (value.rpe === undefined || typeof value.rpe === "number")
+    && (value.notes === undefined || typeof value.notes === "string")
+    && typeof value.completedAt === "string"
+    && typeof value.createdAt === "string"
+    && typeof value.updatedAt === "string";
 }
 
 function isRecommendation(value: unknown): value is ProgressionRecommendation {
@@ -96,4 +153,13 @@ function isQueueItem(value: unknown): value is SyncQueueItem {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function createUuid(): string {
+  const cryptoApi = globalThis.crypto as Crypto | undefined;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+    const random = Math.floor(Math.random() * 16);
+    return (character === "x" ? random : (random & 0x3) | 0x8).toString(16);
+  });
 }

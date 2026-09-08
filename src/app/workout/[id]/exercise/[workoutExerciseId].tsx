@@ -2,7 +2,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 
 import { ActiveExerciseLoggingScreen } from "@/features/workouts/screens/ActiveExerciseLoggingScreen";
-import { loadCurrentUserActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
+import {
+  completeCurrentUserSet,
+  loadCurrentUserActiveWorkoutExercise,
+} from "@/features/workouts/services/workoutApplication";
 
 export default function ActiveExerciseLoggingRoute() {
   const { id, workoutExerciseId } = useLocalSearchParams<{
@@ -16,6 +19,7 @@ export default function ActiveExerciseLoggingRoute() {
   );
   return (
     <ActiveExerciseLoggingScreen
+      completeSet={completeCurrentUserSet}
       loadExercise={loadExercise}
       onOpenExercise={(nextWorkoutExerciseId) => {
         router.replace(`/workout/${id}/exercise/${nextWorkoutExerciseId}`);

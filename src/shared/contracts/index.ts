@@ -43,6 +43,7 @@ export type {
 export type { WorkoutTemplate, WorkoutTemplateExercise } from "./templates";
 export type {
   CompleteSetInput,
+  CompleteSetResult,
   EditSetInput,
   ExerciseWorkoutSummary,
   FinishWorkoutInput,

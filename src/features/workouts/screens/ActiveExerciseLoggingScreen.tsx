@@ -1,22 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
 import { Card } from "@/components/Card";
 import { ErrorState } from "@/components/ErrorState";
-import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { SetInputRow, type SetInputValues } from "@/features/workouts/components/SetInputRow";
+import { triggerSetCompletionHaptic } from "@/features/workouts/services/setCompletionFeedback";
 import type { ActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
+import { formatDisplayWeight } from "@/features/workouts/services/weightConversion";
+import type { CompleteSetInput, CompleteSetResult, WorkoutSet } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type ActiveExerciseLoggingScreenProps = {
+  completeSet: (input: CompleteSetInput) => Promise<CompleteSetResult>;
   loadExercise: () => Promise<ActiveWorkoutExercise | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
   onOverview: () => void;
 };
 
 export function ActiveExerciseLoggingScreen({
+  completeSet,
   loadExercise,
   onOpenExercise,
   onOverview,
@@ -24,6 +29,10 @@ export function ActiveExerciseLoggingScreen({
   const [activeExercise, setActiveExercise] = useState<ActiveWorkoutExercise | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [completionError, setCompletionError] = useState(false);
+  const [entryVersion, setEntryVersion] = useState(0);
+  const [savingSet, setSavingSet] = useState(false);
+  const completionLocked = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -76,6 +85,7 @@ export function ActiveExerciseLoggingScreen({
   const {
     exercise,
     exercisePreference,
+    profile,
     previousPerformance,
     workout,
     workoutExercise,
@@ -86,6 +96,34 @@ export function ActiveExerciseLoggingScreen({
   const nextExercise = currentIndex >= 0 && currentIndex < orderedExercises.length - 1
     ? orderedExercises[currentIndex + 1]
     : undefined;
+
+  const completeCurrentSet = async (values: SetInputValues): Promise<void> => {
+    if (completionLocked.current) return;
+    completionLocked.current = true;
+    setSavingSet(true);
+    setCompletionError(false);
+    try {
+      const result = await completeSet({
+        exerciseId: workoutExercise.exerciseId,
+        reps: values.reps,
+        ...(values.rpe === undefined ? {} : { rpe: values.rpe }),
+        setType: "working",
+        ...(values.weightKg === undefined ? {} : { weightKg: values.weightKg }),
+        workoutExerciseId: workoutExercise.id,
+        workoutId: workout.id,
+      });
+      setActiveExercise((current) => current
+        ? appendCompletedSet(current, result.set)
+        : current);
+      setEntryVersion((value) => value + 1);
+      await triggerSetCompletionHaptic();
+    } catch {
+      setCompletionError(true);
+    } finally {
+      completionLocked.current = false;
+      setSavingSet(false);
+    }
+  };
 
   return (
     <Screen contentContainerStyle={styles.content} scroll>
@@ -102,7 +140,9 @@ export function ActiveExerciseLoggingScreen({
       <Card style={styles.targetCard}>
         <AppText color="secondary" variant="metadata">TODAY&apos;S TARGET</AppText>
         {workoutExercise.targetWeightKg !== undefined ? (
-          <AppText variant="sectionHeading">{workoutExercise.targetWeightKg} kg</AppText>
+          <AppText variant="sectionHeading">
+            {formatDisplayWeight(workoutExercise.targetWeightKg, profile.weightUnit)} {profile.weightUnit}
+          </AppText>
         ) : null}
         <AppText>{targetDescription(workoutExercise)}</AppText>
       </Card>
@@ -112,7 +152,7 @@ export function ActiveExerciseLoggingScreen({
         {previousPerformance ? (
           previousPerformance.sets.map((set, index) => (
             <AppText key={`${previousPerformance.workoutId}-${index}`} color="secondary">
-              {setLabel(index, set.weightKg, set.reps)}
+              {setLabel(index, set.weightKg, set.reps, profile.weightUnit)}
             </AppText>
           ))
         ) : (
@@ -127,17 +167,28 @@ export function ActiveExerciseLoggingScreen({
         ) : (
           workoutExercise.sets.map((set, index) => (
             <AppText key={set.id} color="secondary">
-              {setLabel(index, set.weightKg, set.reps)}
+              {setLabel(index, set.weightKg, set.reps, profile.weightUnit)}
             </AppText>
           ))
         )}
       </View>
 
-      <PrimaryButton
-        accessibilityHint="Set completion is enabled when set logging is implemented."
-        disabled
-        label="Complete Set"
+      <SetInputRow
+        key={`${workoutExercise.id}-${entryVersion}`}
+        disabled={savingSet || !exercise}
+        initialWeightKg={workoutExercise.targetWeightKg}
+        onComplete={(values) => {
+          void completeCurrentSet(values);
+        }}
+        requiresWeight={exercise?.measurementType === "weight_reps"}
+        rpePreference={profile.rpePreference}
+        weightUnit={profile.weightUnit}
       />
+      {completionError ? (
+        <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
+          This set could not be saved. Check your entries and try again.
+        </AppText>
+      ) : null}
       <View style={styles.switchingControls}>
         <SecondaryButton
           disabled={!previousExercise}
@@ -172,14 +223,44 @@ function targetDescription(
   return "No target was snapshotted.";
 }
 
-function setLabel(index: number, weightKg: number | undefined, reps: number): string {
-  const weight = weightKg === undefined ? "Bodyweight" : `${weightKg} kg`;
+function setLabel(
+  index: number,
+  weightKg: number | undefined,
+  reps: number,
+  weightUnit: ActiveWorkoutExercise["profile"]["weightUnit"],
+): string {
+  const weight = weightKg === undefined
+    ? "Bodyweight"
+    : `${formatDisplayWeight(weightKg, weightUnit)} ${weightUnit}`;
   return `Set ${index + 1}: ${weight} × ${reps}`;
+}
+
+function appendCompletedSet(
+  activeExercise: ActiveWorkoutExercise,
+  completedSet: WorkoutSet,
+): ActiveWorkoutExercise {
+  const append = (sets: WorkoutSet[]) => [...sets, completedSet]
+    .sort((left, right) => left.position - right.position);
+  const workoutExercise = {
+    ...activeExercise.workoutExercise,
+    sets: append(activeExercise.workoutExercise.sets),
+  };
+  return {
+    ...activeExercise,
+    workout: {
+      ...activeExercise.workout,
+      exercises: activeExercise.workout.exercises.map((exercise) => (
+        exercise.id === workoutExercise.id ? workoutExercise : exercise
+      )),
+    },
+    workoutExercise,
+  };
 }
 
 const styles = StyleSheet.create({
   centered: { alignItems: "center", justifyContent: "center" },
   content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
+  error: { color: colors.semantic.error },
   note: { gap: spacing.xs },
   section: { gap: spacing.sm },
   switchingControls: { gap: spacing.sm },

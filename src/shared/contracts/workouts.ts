@@ -65,6 +65,14 @@ export type CompleteSetInput = {
   notes?: string;
 };
 
+export type CompleteSetResult = {
+  set: WorkoutSet;
+  feedback?: {
+    type: "rep_improvement" | "matched_previous" | "personal_record";
+    message: string;
+  };
+};
+
 export type EditSetInput = {
   setId: UUID;
   weightKg?: WeightKg;

@@ -9,6 +9,7 @@ import type { Exercise, Workout } from "@/shared/contracts";
 const mockGetSession = jest.fn();
 const mockCreateWorkoutPersistence = jest.fn();
 const mockCreateExercisePersistence = jest.fn();
+const mockCreateProfileCachePersistence = jest.fn();
 const mockPopulateExerciseFixture = jest.fn();
 
 jest.mock("@/lib/supabase/services", () => ({
@@ -22,6 +23,9 @@ jest.mock("@/features/exercises/services/exercisePersistence", () => ({
 }));
 jest.mock("@/features/exercises/services/populateExerciseFixture", () => ({
   populateExerciseFixture: (...args: unknown[]) => mockPopulateExerciseFixture(...args),
+}));
+jest.mock("@/features/profile/services/profileCachePersistence", () => ({
+  createProfileCachePersistence: (...args: unknown[]) => mockCreateProfileCachePersistence(...args),
 }));
 
 import {
@@ -102,6 +106,22 @@ describe("workout application overview", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetSession.mockResolvedValue({ user: { id: "user-a" } });
+    mockCreateProfileCachePersistence.mockResolvedValue({
+      profileCacheRepository: {
+        get: jest.fn().mockResolvedValue({
+          userId: "user-a",
+          weightUnit: "kg",
+          primaryGoal: "hybrid",
+          rpePreference: "optional",
+          progressionStyle: "balanced",
+          defaultRestDurationSeconds: 120,
+          onboardingCompleted: true,
+          createdAt: time,
+          updatedAt: time,
+        }),
+        upsert: jest.fn(),
+      },
+    });
   });
 
   it("loads the owned workout snapshot and resolves exercises without reading its template", async () => {
@@ -146,6 +166,7 @@ describe("workout application overview", () => {
 
     expect(activeExercise?.workoutExercise.id).toBe("child-1");
     expect(activeExercise?.exercise?.name).toBe("Bench Press");
+    expect(activeExercise?.profile.weightUnit).toBe("kg");
     expect(dependencies.exerciseHistoryRepository.getRecentSessions).toHaveBeenCalledWith({
       userId: "user-a",
       exerciseId: "exercise-1",

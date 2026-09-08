@@ -1,7 +1,10 @@
 import { authService } from "@/lib/supabase/services";
 import { createExercisePersistence } from "@/features/exercises/services/exercisePersistence";
 import { populateExerciseFixture } from "@/features/exercises/services/populateExerciseFixture";
+import { createProfileCachePersistence } from "@/features/profile/services/profileCachePersistence";
 import type {
+  CompleteSetInput,
+  CompleteSetResult,
   Exercise,
   ExerciseSessionPerformance,
   UUID,
@@ -10,11 +13,15 @@ import type {
   WorkoutTemplate,
   UserExercisePreference,
   UpdateWorkoutNoteInput,
+  UserProfile,
 } from "@/shared/contracts";
 
+import { CompleteSetService } from "./completeSet";
+import { createSetPersistence } from "./setPersistence";
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
 import { createWorkoutPersistence } from "./workoutPersistence";
 import { updateActiveWorkoutNote } from "./workoutNotes";
+import { getCachedWorkoutProfile } from "./workoutProfilePreferences";
 
 export type WorkoutHomeState = {
   activeWorkout: Workout | null;
@@ -32,6 +39,7 @@ export type ActiveWorkoutOverview = {
 export type ActiveWorkoutExercise = {
   exercise: Exercise | null;
   exercisePreference: UserExercisePreference | null;
+  profile: UserProfile;
   previousPerformance: ExerciseSessionPerformance | null;
   workout: Workout;
   workoutExercise: WorkoutExercise;
@@ -73,6 +81,14 @@ export async function updateCurrentUserActiveWorkoutNote(
   return updateActiveWorkoutNote(persistence.workoutRepository, userId, input);
 }
 
+export async function completeCurrentUserSet(
+  input: CompleteSetInput,
+): Promise<CompleteSetResult> {
+  const session = await authService.getSession();
+  if (!session) throw new Error("Completing a set requires an authenticated session.");
+  return new CompleteSetService(await createSetPersistence()).complete(session.user.id, input);
+}
+
 export async function loadCurrentUserWorkoutOverview(
   id: UUID,
 ): Promise<ActiveWorkoutOverview | null> {
@@ -102,11 +118,15 @@ export async function loadCurrentUserActiveWorkoutExercise(
   const workoutExercise = workout.exercises.find(({ id }) => id === workoutExerciseId);
   if (!workoutExercise) return null;
 
-  const { exerciseRepository, preferenceRepository } = await createExercisePersistence();
+  const [{ exerciseRepository, preferenceRepository }, { profileCacheRepository }] = await Promise.all([
+    createExercisePersistence(),
+    createProfileCachePersistence(),
+  ]);
   await populateExerciseFixture(exerciseRepository);
-  const [exercise, exercisePreference, recentPerformance] = await Promise.all([
+  const [exercise, exercisePreference, profile, recentPerformance] = await Promise.all([
     exerciseRepository.getById(userId, workoutExercise.exerciseId),
     preferenceRepository.get(userId, workoutExercise.exerciseId),
+    getCachedWorkoutProfile(profileCacheRepository, userId),
     persistence.exerciseHistoryRepository.getRecentSessions({
       userId,
       exerciseId: workoutExercise.exerciseId,
@@ -116,6 +136,7 @@ export async function loadCurrentUserActiveWorkoutExercise(
   return {
     exercise,
     exercisePreference,
+    profile,
     previousPerformance: recentPerformance[0] ?? null,
     workout,
     workoutExercise,
