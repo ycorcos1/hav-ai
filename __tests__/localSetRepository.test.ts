@@ -9,6 +9,7 @@ import { WebPreviewLocalSetRepository } from "@/db/webPreview/WebPreviewLocalSet
 import { WebPreviewLocalWorkoutRepository } from "@/db/webPreview/WebPreviewLocalWorkoutRepository";
 import type { WebPreviewStorage } from "@/db/webPreview/storage";
 import {
+  markWorkoutWebPreviewSetCloudKnown,
   readWorkoutWebPreviewState,
   writeWorkoutWebPreviewState,
 } from "@/db/webPreview/workoutStorage";
@@ -129,7 +130,7 @@ describe("WebPreviewLocalSetRepository", () => {
     );
 
     const state = readWorkoutWebPreviewState(storage);
-    state.queue = state.queue.filter(({ entityType }) => entityType !== "set");
+    markWorkoutWebPreviewSetCloudKnown(state, earlier.id);
     writeWorkoutWebPreviewState(storage, state);
     await recreated.deleteOrTombstone(userId, earlier.id);
     expect(await recreated.getById(userId, earlier.id)).toBeNull();

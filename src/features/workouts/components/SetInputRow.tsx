@@ -23,7 +23,10 @@ import { spacing } from "@/theme";
 export type SetInputValues = Pick<CompleteSetInput, "reps" | "rpe" | "weightKg">;
 
 export type SetInputRowProps = {
+  actionLabel?: string;
   disabled?: boolean;
+  initialReps?: number;
+  initialRpe?: RPE;
   initialWeightKg?: WeightKg;
   onComplete: (values: SetInputValues) => void;
   requiresWeight: boolean;
@@ -34,7 +37,10 @@ export type SetInputRowProps = {
 const rpeValues: readonly RPE[] = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
 export function SetInputRow({
+  actionLabel = "Complete Set",
   disabled = false,
+  initialReps,
+  initialRpe,
   initialWeightKg,
   onComplete,
   requiresWeight,
@@ -44,8 +50,8 @@ export function SetInputRow({
   const [weight, setWeight] = useState(
     initialWeightKg === undefined ? "" : formatDisplayWeight(initialWeightKg, weightUnit),
   );
-  const [reps, setReps] = useState("");
-  const [rpe, setRpe] = useState<RPE>();
+  const [reps, setReps] = useState(initialReps === undefined ? "" : String(initialReps));
+  const [rpe, setRpe] = useState<RPE | undefined>(initialRpe);
   const [rpeOpen, setRpeOpen] = useState(false);
 
   const parsedWeight = Number(weight);
@@ -106,7 +112,7 @@ export function SetInputRow({
         </View>
       ) : null}
 
-      <PrimaryButton disabled={!canComplete} label="Complete Set" onPress={complete} />
+      <PrimaryButton disabled={!canComplete} label={actionLabel} onPress={complete} />
 
       <BottomSheet
         accessibilityLabel="RPE selection"

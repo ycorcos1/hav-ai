@@ -1,12 +1,12 @@
 import type {
   CompleteSetInput,
   CompleteSetResult,
-  RPE,
   UUID,
   WorkoutSet,
 } from "@/shared/contracts";
 
 import type { SetPersistence } from "./setPersistenceTypes";
+import { validateSetValues } from "./setValidation";
 
 export class CompleteSetError extends Error {
   readonly name = "CompleteSetError";
@@ -83,21 +83,12 @@ function validateInput(input: CompleteSetInput): void {
   if (input.setType !== "working" && input.setType !== "warmup") {
     throw new CompleteSetError("Set type is invalid.");
   }
-  if (!Number.isInteger(input.reps) || input.reps <= 0) {
-    throw new CompleteSetError("Reps must be a positive whole number.");
-  }
-  if (
-    input.weightKg !== undefined
-    && (!Number.isFinite(input.weightKg) || input.weightKg < 0)
-  ) {
-    throw new CompleteSetError("Weight must be a non-negative number.");
-  }
-  if (input.rpe !== undefined && !validRpeValues.includes(input.rpe)) {
-    throw new CompleteSetError("RPE must be between 6 and 10 in 0.5 increments.");
+  try {
+    validateSetValues(input);
+  } catch (error: unknown) {
+    throw new CompleteSetError(error instanceof Error ? error.message : "Set values are invalid.");
   }
 }
-
-const validRpeValues: readonly RPE[] = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
 function createUuid(): UUID {
   const cryptoApi = globalThis.crypto as Crypto | undefined;

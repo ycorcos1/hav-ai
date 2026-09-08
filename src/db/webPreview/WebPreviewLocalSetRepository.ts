@@ -3,6 +3,8 @@ import type { Workout, WorkoutExercise, WorkoutSet } from "@/shared/contracts";
 
 import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
 import {
+  enqueueWorkoutWebPreviewDelete,
+  removeWorkoutWebPreviewMutation,
   readWorkoutWebPreviewState,
   writeWorkoutWebPreviewState,
   type WorkoutWebPreviewState,
@@ -34,14 +36,7 @@ export class WebPreviewLocalSetRepository implements LocalSetRepository {
 
   async deleteOrTombstone(userId: string, id: string): Promise<void> {
     const state = readWorkoutWebPreviewState(this.storage);
-    const found = findVisibleSet(state, id);
-    if (!found || found.set.userId !== userId) return;
-
-    found.exercise.sets = found.exercise.sets.filter((set) => set.id !== id);
-    const pending = state.queue.some(
-      (item) => item.entityType === "set" && item.entityId === id && item.operation === "upsert",
-    );
-    if (!pending) state.deletedSets.push(found.set);
+    deleteWorkoutSetInPreviewState(state, userId, id, new Date().toISOString());
     writeWorkoutWebPreviewState(this.storage, state);
   }
 
@@ -72,8 +67,38 @@ export function saveWorkoutSetInPreviewState(
 
   const index = parent.exercise.sets.findIndex(({ id }) => id === set.id);
   if (index >= 0) parent.exercise.sets[index] = set;
-  else parent.exercise.sets.push(set);
+  else {
+    parent.exercise.sets.push(set);
+    state.setSyncMetadata[set.id] ??= { cloudKnown: false };
+  }
   state.deletedSets = state.deletedSets.filter(({ id }) => id !== set.id);
+}
+
+export type WebPreviewSetDeleteResult = "deleted-local" | "missing" | "tombstoned";
+
+export function deleteWorkoutSetInPreviewState(
+  state: WorkoutWebPreviewState,
+  userId: string,
+  id: string,
+  deletedAt: string,
+): WebPreviewSetDeleteResult {
+  const found = findVisibleSet(state, id);
+  if (!found) return "missing";
+  if (found.set.userId !== userId) {
+    throw new Error("Set ancestry is not accessible to its user.");
+  }
+
+  found.exercise.sets = found.exercise.sets.filter((set) => set.id !== id);
+  if (!state.setSyncMetadata[id]?.cloudKnown) {
+    delete state.setSyncMetadata[id];
+    removeWorkoutWebPreviewMutation(state, "set", id);
+    return "deleted-local";
+  }
+
+  state.deletedSets = state.deletedSets.filter((set) => set.id !== id);
+  state.deletedSets.push({ ...found.set, updatedAt: deletedAt });
+  enqueueWorkoutWebPreviewDelete(state, "set", id, deletedAt);
+  return "tombstoned";
 }
 
 type FoundWorkoutExercise = {

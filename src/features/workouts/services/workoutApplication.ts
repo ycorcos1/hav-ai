@@ -5,11 +5,13 @@ import { createProfileCachePersistence } from "@/features/profile/services/profi
 import type {
   CompleteSetInput,
   CompleteSetResult,
+  EditSetInput,
   Exercise,
   ExerciseSessionPerformance,
   UUID,
   Workout,
   WorkoutExercise,
+  WorkoutSet,
   WorkoutTemplate,
   UserExercisePreference,
   UpdateWorkoutNoteInput,
@@ -17,6 +19,8 @@ import type {
 } from "@/shared/contracts";
 
 import { CompleteSetService } from "./completeSet";
+import { DeleteSetService } from "./deleteSet";
+import { EditSetService } from "./editSet";
 import { createSetPersistence } from "./setPersistence";
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
 import { createWorkoutPersistence } from "./workoutPersistence";
@@ -87,6 +91,18 @@ export async function completeCurrentUserSet(
   const session = await authService.getSession();
   if (!session) throw new Error("Completing a set requires an authenticated session.");
   return new CompleteSetService(await createSetPersistence()).complete(session.user.id, input);
+}
+
+export async function editCurrentUserSet(input: EditSetInput): Promise<WorkoutSet> {
+  const session = await authService.getSession();
+  if (!session) throw new Error("Editing a set requires an authenticated session.");
+  return new EditSetService(await createSetPersistence()).edit(session.user.id, input);
+}
+
+export async function deleteCurrentUserSet(setId: UUID): Promise<void> {
+  const session = await authService.getSession();
+  if (!session) throw new Error("Deleting a set requires an authenticated session.");
+  await new DeleteSetService(await createSetPersistence()).delete(session.user.id, setId);
 }
 
 export async function loadCurrentUserWorkoutOverview(

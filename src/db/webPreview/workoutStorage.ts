@@ -18,22 +18,39 @@ export type WorkoutWebPreviewState = {
   deletedSets: WorkoutSet[];
   queue: SyncQueueItem[];
   recommendations: ProgressionRecommendation[];
+  setSyncMetadata: Record<string, WebPreviewSetSyncMetadata>;
   version: 1;
   workouts: Workout[];
+};
+
+export type WebPreviewSetSyncMetadata = {
+  cloudKnown: boolean;
 };
 
 export function readWorkoutWebPreviewState(
   storage: WebPreviewStorage = browserWebPreviewStorage(),
 ): WorkoutWebPreviewState {
   const serialized = storage.getItem(workoutWebPreviewStorageKey);
-  if (!serialized) return { deletedSets: [], queue: [], recommendations: [], version: 1, workouts: [] };
+  if (!serialized) {
+    return {
+      deletedSets: [],
+      queue: [],
+      recommendations: [],
+      setSyncMetadata: {},
+      version: 1,
+      workouts: [],
+    };
+  }
   try {
     const parsed: unknown = JSON.parse(serialized);
     if (!isWorkoutState(parsed)) throw new Error("Invalid preview state.");
-    return {
+    const state: WorkoutWebPreviewState = {
       ...parsed,
       deletedSets: parsed.deletedSets ?? [],
+      setSyncMetadata: parsed.setSyncMetadata ?? {},
     };
+    normalizeLegacySetSyncMetadata(state);
+    return state;
   } catch {
     throw new Error("The development workout preview data could not be read.");
   }
@@ -76,6 +93,50 @@ export function enqueueWorkoutWebPreviewMutation(
   });
 }
 
+export function enqueueWorkoutWebPreviewDelete(
+  state: WorkoutWebPreviewState,
+  entityType: SyncEntityType,
+  entityId: string,
+  createdAt: string,
+): void {
+  const existing = state.queue.find(
+    (item) => item.entityType === entityType && item.entityId === entityId,
+  );
+  if (existing) {
+    existing.operation = "delete";
+    existing.attemptCount = 0;
+    delete existing.lastAttemptAt;
+    delete existing.lastError;
+    return;
+  }
+  state.queue.push({
+    id: createUuid(),
+    entityType,
+    entityId,
+    operation: "delete",
+    attemptCount: 0,
+    createdAt,
+  });
+}
+
+export function removeWorkoutWebPreviewMutation(
+  state: WorkoutWebPreviewState,
+  entityType: SyncEntityType,
+  entityId: string,
+): void {
+  state.queue = state.queue.filter(
+    (item) => item.entityType !== entityType || item.entityId !== entityId,
+  );
+}
+
+export function markWorkoutWebPreviewSetCloudKnown(
+  state: WorkoutWebPreviewState,
+  setId: string,
+): void {
+  if (!hasSet(state, setId)) return;
+  state.setSyncMetadata[setId] = { cloudKnown: true };
+}
+
 function isWorkoutState(value: unknown): value is WorkoutWebPreviewState {
   return isRecord(value)
     && value.version === 1
@@ -83,10 +144,37 @@ function isWorkoutState(value: unknown): value is WorkoutWebPreviewState {
     && value.workouts.every(isWorkout)
     && (value.deletedSets === undefined
       || (Array.isArray(value.deletedSets) && value.deletedSets.every(isSet)))
+    && (value.setSyncMetadata === undefined || isSetSyncMetadata(value.setSyncMetadata))
     && Array.isArray(value.recommendations)
     && value.recommendations.every(isRecommendation)
     && Array.isArray(value.queue)
     && value.queue.every(isQueueItem);
+}
+
+function normalizeLegacySetSyncMetadata(state: WorkoutWebPreviewState): void {
+  for (const workout of state.workouts) {
+    for (const exercise of workout.exercises) {
+      for (const set of exercise.sets) {
+        state.setSyncMetadata[set.id] ??= { cloudKnown: true };
+      }
+    }
+  }
+  for (const set of state.deletedSets) {
+    state.setSyncMetadata[set.id] ??= { cloudKnown: true };
+  }
+}
+
+function hasSet(state: WorkoutWebPreviewState, setId: string): boolean {
+  return state.deletedSets.some(({ id }) => id === setId)
+    || state.workouts.some(({ exercises }) => exercises.some(({ sets }) => (
+      sets.some(({ id }) => id === setId)
+    )));
+}
+
+function isSetSyncMetadata(value: unknown): value is Record<string, WebPreviewSetSyncMetadata> {
+  return isRecord(value) && Object.values(value).every(
+    (metadata) => isRecord(metadata) && typeof metadata.cloudKnown === "boolean",
+  );
 }
 
 function isWorkout(value: unknown): value is Workout {

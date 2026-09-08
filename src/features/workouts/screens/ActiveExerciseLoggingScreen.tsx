@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
+import { BottomSheet } from "@/components/BottomSheet";
 import { Card } from "@/components/Card";
 import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { TextButton } from "@/components/TextButton";
 import { SetInputRow, type SetInputValues } from "@/features/workouts/components/SetInputRow";
 import { triggerSetCompletionHaptic } from "@/features/workouts/services/setCompletionFeedback";
 import type { ActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
@@ -13,6 +15,7 @@ import { formatDisplayWeight } from "@/features/workouts/services/weightConversi
 import type {
   CompleteSetInput,
   CompleteSetResult,
+  EditSetInput,
   WorkoutSet,
   WorkoutSetType,
 } from "@/shared/contracts";
@@ -20,6 +23,8 @@ import { colors, spacing } from "@/theme";
 
 export type ActiveExerciseLoggingScreenProps = {
   completeSet: (input: CompleteSetInput) => Promise<CompleteSetResult>;
+  deleteSet?: (setId: string) => Promise<void>;
+  editSet?: (input: EditSetInput) => Promise<WorkoutSet>;
   loadExercise: () => Promise<ActiveWorkoutExercise | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
   onOverview: () => void;
@@ -27,6 +32,8 @@ export type ActiveExerciseLoggingScreenProps = {
 
 export function ActiveExerciseLoggingScreen({
   completeSet,
+  deleteSet,
+  editSet,
   loadExercise,
   onOpenExercise,
   onOverview,
@@ -39,7 +46,14 @@ export function ActiveExerciseLoggingScreen({
   const [entrySetType, setEntrySetType] = useState<WorkoutSetType>("working");
   const [extraSetEntryVisible, setExtraSetEntryVisible] = useState(false);
   const [savingSet, setSavingSet] = useState(false);
+  const [editingSet, setEditingSet] = useState<WorkoutSet>();
+  const [editError, setEditError] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingSet, setDeletingSet] = useState(false);
   const completionLocked = useRef(false);
+  const deleteLocked = useRef(false);
+  const editLocked = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -142,6 +156,47 @@ export function ActiveExerciseLoggingScreen({
     }
   };
 
+  const saveEditedSet = async (values: SetInputValues): Promise<void> => {
+    if (!editingSet || !editSet || editLocked.current) return;
+    editLocked.current = true;
+    setSavingEdit(true);
+    setEditError(false);
+    setDeleteError(false);
+    try {
+      const saved = await editSet({
+        setId: editingSet.id,
+        reps: values.reps,
+        ...(values.rpe === undefined ? {} : { rpe: values.rpe }),
+        ...(values.weightKg === undefined ? {} : { weightKg: values.weightKg }),
+      });
+      setActiveExercise((current) => current ? replaceCompletedSet(current, saved) : current);
+      setEditingSet(undefined);
+    } catch {
+      setEditError(true);
+    } finally {
+      editLocked.current = false;
+      setSavingEdit(false);
+    }
+  };
+
+  const deleteEditedSet = async (): Promise<void> => {
+    if (!editingSet || !deleteSet || deleteLocked.current) return;
+    deleteLocked.current = true;
+    setDeletingSet(true);
+    setEditError(false);
+    setDeleteError(false);
+    try {
+      await deleteSet(editingSet.id);
+      setActiveExercise((current) => current ? removeCompletedSet(current, editingSet.id) : current);
+      setEditingSet(undefined);
+    } catch {
+      setDeleteError(true);
+    } finally {
+      deleteLocked.current = false;
+      setDeletingSet(false);
+    }
+  };
+
   return (
     <Screen contentContainerStyle={styles.content} scroll>
       <SecondaryButton label="Workout Overview" onPress={onOverview} />
@@ -182,10 +237,18 @@ export function ActiveExerciseLoggingScreen({
         {workoutExercise.sets.length === 0 ? (
           <AppText color="muted">No sets completed yet.</AppText>
         ) : (
-          completedSetLabels(workoutExercise.sets, profile.weightUnit).map(({ id, label }) => (
-            <AppText key={id} color="secondary">
-              {label}
-            </AppText>
+          completedSetLabels(workoutExercise.sets, profile.weightUnit).map(({ label, set }) => (
+            <TextButton
+              key={set.id}
+              accessibilityLabel={`Edit ${label}`}
+              disabled={!editSet}
+              label={label}
+              onPress={() => {
+                setEditError(false);
+                setDeleteError(false);
+                setEditingSet(set);
+              }}
+            />
           ))
         )}
       </View>
@@ -228,6 +291,64 @@ export function ActiveExerciseLoggingScreen({
           This set could not be saved. Check your entries and try again.
         </AppText>
       ) : null}
+      <BottomSheet
+        accessibilityLabel="Edit completed set"
+        onDismiss={() => {
+          if (!savingEdit && !deletingSet) setEditingSet(undefined);
+        }}
+        title="Edit completed set"
+        visible={editingSet !== undefined}
+      >
+        {editingSet ? (
+          <SetInputRow
+            key={`${editingSet.id}-${editingSet.updatedAt}`}
+            actionLabel="Save Set"
+            disabled={savingEdit || deletingSet}
+            initialReps={editingSet.reps}
+            initialRpe={editingSet.rpe}
+            initialWeightKg={editingSet.weightKg}
+            onComplete={(values) => {
+              void saveEditedSet(values);
+            }}
+            requiresWeight={exercise?.measurementType === "weight_reps"}
+            rpePreference={profile.rpePreference}
+            weightUnit={profile.weightUnit}
+          />
+        ) : null}
+        {editingSet && deleteSet ? (
+          <SecondaryButton
+            disabled={savingEdit || deletingSet}
+            label="Delete Set"
+            loading={deletingSet}
+            onPress={() => {
+              Alert.alert(
+                "Delete set?",
+                "This completed set will be removed from the workout.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => {
+                      void deleteEditedSet();
+                    },
+                  },
+                ],
+              );
+            }}
+          />
+        ) : null}
+        {editError ? (
+          <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
+            This set could not be updated. Your previous values were kept.
+          </AppText>
+        ) : null}
+        {deleteError ? (
+          <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
+            This set could not be deleted. It remains in your workout.
+          </AppText>
+        ) : null}
+      </BottomSheet>
       <View style={styles.switchingControls}>
         <SecondaryButton
           disabled={!previousExercise}
@@ -277,7 +398,7 @@ function setLabel(
 function completedSetLabels(
   sets: WorkoutSet[],
   weightUnit: ActiveWorkoutExercise["profile"]["weightUnit"],
-): { id: string; label: string }[] {
+): { label: string; set: WorkoutSet }[] {
   let warmupCount = 0;
   let workingCount = 0;
   return [...sets]
@@ -289,8 +410,52 @@ function completedSetLabels(
       const weight = set.weightKg === undefined
         ? "Bodyweight"
         : `${formatDisplayWeight(set.weightKg, weightUnit)} ${weightUnit}`;
-      return { id: set.id, label: `${prefix}: ${weight} × ${set.reps}` };
+      return { label: `${prefix}: ${weight} × ${set.reps}`, set };
     });
+}
+
+function replaceCompletedSet(
+  activeExercise: ActiveWorkoutExercise,
+  editedSet: WorkoutSet,
+): ActiveWorkoutExercise {
+  const replace = (sets: WorkoutSet[]) => sets.map((set) => (
+    set.id === editedSet.id ? editedSet : set
+  ));
+  const workoutExercise = {
+    ...activeExercise.workoutExercise,
+    sets: replace(activeExercise.workoutExercise.sets),
+  };
+  return {
+    ...activeExercise,
+    workout: {
+      ...activeExercise.workout,
+      exercises: activeExercise.workout.exercises.map((exercise) => (
+        exercise.id === workoutExercise.id ? workoutExercise : exercise
+      )),
+    },
+    workoutExercise,
+  };
+}
+
+function removeCompletedSet(
+  activeExercise: ActiveWorkoutExercise,
+  setId: string,
+): ActiveWorkoutExercise {
+  const remove = (sets: WorkoutSet[]) => sets.filter(({ id }) => id !== setId);
+  const workoutExercise = {
+    ...activeExercise.workoutExercise,
+    sets: remove(activeExercise.workoutExercise.sets),
+  };
+  return {
+    ...activeExercise,
+    workout: {
+      ...activeExercise.workout,
+      exercises: activeExercise.workout.exercises.map((exercise) => (
+        exercise.id === workoutExercise.id ? workoutExercise : exercise
+      )),
+    },
+    workoutExercise,
+  };
 }
 
 function appendCompletedSet(

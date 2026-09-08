@@ -1,4 +1,8 @@
-import { WebPreviewLocalSetRepository, saveWorkoutSetInPreviewState } from "@/db/webPreview/WebPreviewLocalSetRepository";
+import {
+  deleteWorkoutSetInPreviewState,
+  WebPreviewLocalSetRepository,
+  saveWorkoutSetInPreviewState,
+} from "@/db/webPreview/WebPreviewLocalSetRepository";
 import { WebPreviewLocalWorkoutRepository } from "@/db/webPreview/WebPreviewLocalWorkoutRepository";
 import { browserWebPreviewStorage, type WebPreviewStorage } from "@/db/webPreview/storage";
 import {
@@ -8,7 +12,7 @@ import {
 } from "@/db/webPreview/workoutStorage";
 import type { WorkoutSet } from "@/shared/contracts";
 
-import type { SetPersistence } from "./setPersistenceTypes";
+import type { SetDeleteResult, SetPersistence } from "./setPersistenceTypes";
 
 export class WebPreviewSetPersistence implements SetPersistence {
   readonly setRepository: WebPreviewLocalSetRepository;
@@ -24,6 +28,24 @@ export class WebPreviewSetPersistence implements SetPersistence {
     saveWorkoutSetInPreviewState(state, set);
     enqueueWorkoutWebPreviewMutation(state, "set", set.id, set.completedAt);
     writeWorkoutWebPreviewState(this.storage, state);
+  }
+
+  async commitEditedSet(set: WorkoutSet): Promise<void> {
+    const state = readWorkoutWebPreviewState(this.storage);
+    saveWorkoutSetInPreviewState(state, set);
+    enqueueWorkoutWebPreviewMutation(state, "set", set.id, set.updatedAt);
+    writeWorkoutWebPreviewState(this.storage, state);
+  }
+
+  async deleteCompletedSet(
+    userId: string,
+    setId: string,
+    deletedAt: string,
+  ): Promise<SetDeleteResult> {
+    const state = readWorkoutWebPreviewState(this.storage);
+    const result = deleteWorkoutSetInPreviewState(state, userId, setId, deletedAt);
+    if (result !== "missing") writeWorkoutWebPreviewState(this.storage, state);
+    return result;
   }
 }
 
