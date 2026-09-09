@@ -24,14 +24,24 @@ import { spacing } from "@/theme";
 
 export type SetInputValues = Pick<CompleteSetInput, "notes" | "reps" | "rpe" | "weightKg">;
 
+export type SetInputDraft = {
+  notes: string;
+  notesVisible: boolean;
+  reps: string;
+  rpe?: RPE;
+  weight: string;
+};
+
 export type SetInputRowProps = {
   actionLabel?: string;
   disabled?: boolean;
   initialNotes?: string;
+  initialDraft?: SetInputDraft;
   initialReps?: number;
   initialRpe?: RPE;
   initialWeightKg?: WeightKg;
   onComplete: (values: SetInputValues) => void;
+  onCompleteDraftCaptured?: (draft: SetInputDraft) => void;
   requiresWeight: boolean;
   rpePreference: RpePreference;
   weightUnit: WeightUnit;
@@ -43,22 +53,29 @@ export function SetInputRow({
   actionLabel = "Complete Set",
   disabled = false,
   initialNotes,
+  initialDraft,
   initialReps,
   initialRpe,
   initialWeightKg,
   onComplete,
+  onCompleteDraftCaptured,
   requiresWeight,
   rpePreference,
   weightUnit,
 }: SetInputRowProps) {
   const [weight, setWeight] = useState(
-    initialWeightKg === undefined ? "" : formatDisplayWeight(initialWeightKg, weightUnit),
+    initialDraft?.weight
+      ?? (initialWeightKg === undefined ? "" : formatDisplayWeight(initialWeightKg, weightUnit)),
   );
-  const [reps, setReps] = useState(initialReps === undefined ? "" : String(initialReps));
-  const [rpe, setRpe] = useState<RPE | undefined>(initialRpe);
+  const [reps, setReps] = useState(
+    initialDraft?.reps ?? (initialReps === undefined ? "" : String(initialReps)),
+  );
+  const [rpe, setRpe] = useState<RPE | undefined>(initialDraft?.rpe ?? initialRpe);
   const [rpeOpen, setRpeOpen] = useState(false);
-  const [notes, setNotes] = useState(initialNotes ?? "");
-  const [notesVisible, setNotesVisible] = useState(Boolean(initialNotes));
+  const [notes, setNotes] = useState(initialDraft?.notes ?? initialNotes ?? "");
+  const [notesVisible, setNotesVisible] = useState(
+    initialDraft?.notesVisible ?? Boolean(initialNotes),
+  );
 
   const parsedWeight = Number(weight);
   const parsedReps = Number(reps);
@@ -79,6 +96,7 @@ export function SetInputRow({
   const complete = () => {
     if (!canComplete) return;
     const normalizedNotes = notes.trim() || undefined;
+    onCompleteDraftCaptured?.({ notes, notesVisible, reps, rpe, weight });
     onComplete({
       reps: parsedReps,
       ...(requiresWeight

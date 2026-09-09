@@ -8,7 +8,11 @@ import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
-import { SetInputRow, type SetInputValues } from "@/features/workouts/components/SetInputRow";
+import {
+  SetInputRow,
+  type SetInputDraft,
+  type SetInputValues,
+} from "@/features/workouts/components/SetInputRow";
 import { triggerSetCompletionHaptic } from "@/features/workouts/services/setCompletionFeedback";
 import type { ActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
 import { formatDisplayWeight } from "@/features/workouts/services/weightConversion";
@@ -16,6 +20,7 @@ import type {
   CompleteSetInput,
   CompleteSetResult,
   EditSetInput,
+  UndoSetCompletionResult,
   WorkoutSet,
   WorkoutSetType,
 } from "@/shared/contracts";
@@ -28,6 +33,18 @@ export type ActiveExerciseLoggingScreenProps = {
   loadExercise: () => Promise<ActiveWorkoutExercise | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
   onOverview: () => void;
+  undoSet?: (setId: string) => Promise<UndoSetCompletionResult>;
+};
+
+export const SET_COMPLETION_UNDO_DURATION_MS = 5_000;
+
+type SetCompletionUndoOpportunity = {
+  deadline: number;
+  draft: SetInputDraft;
+  extraSetEntryVisible: boolean;
+  setId: string;
+  setType: WorkoutSetType;
+  token: number;
 };
 
 export function ActiveExerciseLoggingScreen({
@@ -37,6 +54,7 @@ export function ActiveExerciseLoggingScreen({
   loadExercise,
   onOpenExercise,
   onOverview,
+  undoSet,
 }: ActiveExerciseLoggingScreenProps) {
   const [activeExercise, setActiveExercise] = useState<ActiveWorkoutExercise | null>();
   const [failed, setFailed] = useState(false);
@@ -51,9 +69,17 @@ export function ActiveExerciseLoggingScreen({
   const [deleteError, setDeleteError] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingSet, setDeletingSet] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState<SetInputDraft>();
+  const [undoOpportunity, setUndoOpportunity] = useState<SetCompletionUndoOpportunity>();
+  const [undoError, setUndoError] = useState(false);
+  const [undoingSet, setUndoingSet] = useState(false);
+  const completionDraft = useRef<SetInputDraft | undefined>(undefined);
   const completionLocked = useRef(false);
   const deleteLocked = useRef(false);
   const editLocked = useRef(false);
+  const undoLocked = useRef(false);
+  const activeUndoToken = useRef(0);
+  const undoSequence = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +98,20 @@ export function ActiveExerciseLoggingScreen({
       active = false;
     };
   }, [attempt, loadExercise]);
+
+  useEffect(() => {
+    if (!undoOpportunity) return;
+    const remaining = Math.max(0, undoOpportunity.deadline - Date.now());
+    const timeout = setTimeout(() => {
+      if (undoLocked.current) return;
+      setUndoOpportunity((current) => {
+        if (current?.token !== undoOpportunity.token) return current;
+        activeUndoToken.current = 0;
+        return undefined;
+      });
+    }, remaining);
+    return () => clearTimeout(timeout);
+  }, [undoOpportunity]);
 
   if (failed || activeExercise === null) {
     return (
@@ -135,6 +175,9 @@ export function ActiveExerciseLoggingScreen({
     completionLocked.current = true;
     setSavingSet(true);
     setCompletionError(false);
+    const capturedDraft = completionDraft.current;
+    const capturedSetType = entrySetType;
+    const capturedExtraSetEntryVisible = extraSetEntryVisible;
     try {
       const result = await completeSet({
         exerciseId: workoutExercise.exerciseId,
@@ -149,6 +192,22 @@ export function ActiveExerciseLoggingScreen({
       setActiveExercise((current) => current
         ? appendCompletedSet(current, result.set)
         : current);
+      if (capturedDraft && undoSet) {
+        const token = undoSequence.current + 1;
+        undoSequence.current = token;
+        activeUndoToken.current = token;
+        setUndoOpportunity({
+          deadline: Date.now() + SET_COMPLETION_UNDO_DURATION_MS,
+          draft: capturedDraft,
+          extraSetEntryVisible: capturedExtraSetEntryVisible,
+          setId: result.set.id,
+          setType: capturedSetType,
+          token,
+        });
+        setUndoError(false);
+      }
+      completionDraft.current = undefined;
+      setRestoredDraft(undefined);
       setEntrySetType("working");
       setExtraSetEntryVisible(false);
       setEntryVersion((value) => value + 1);
@@ -158,6 +217,49 @@ export function ActiveExerciseLoggingScreen({
     } finally {
       completionLocked.current = false;
       setSavingSet(false);
+    }
+  };
+
+  const undoCompletedSet = async (): Promise<void> => {
+    const opportunity = undoOpportunity;
+    if (!opportunity || !undoSet || undoLocked.current) return;
+    if (Date.now() >= opportunity.deadline) {
+      if (activeUndoToken.current === opportunity.token) activeUndoToken.current = 0;
+      setUndoOpportunity((current) => (
+        current?.token === opportunity.token ? undefined : current
+      ));
+      return;
+    }
+
+    undoLocked.current = true;
+    setUndoingSet(true);
+    setUndoError(false);
+    try {
+      await undoSet(opportunity.setId);
+      setActiveExercise((current) => current
+        ? removeCompletedSet(current, opportunity.setId)
+        : current);
+      if (activeUndoToken.current === opportunity.token) {
+        activeUndoToken.current = 0;
+        setEntrySetType(opportunity.setType);
+        setExtraSetEntryVisible(opportunity.extraSetEntryVisible);
+        setRestoredDraft(opportunity.draft);
+        setEntryVersion((value) => value + 1);
+        setUndoOpportunity(undefined);
+      }
+    } catch {
+      setUndoError(true);
+      if (Date.now() >= opportunity.deadline && activeUndoToken.current === opportunity.token) {
+        activeUndoToken.current = 0;
+        setUndoOpportunity(undefined);
+      } else {
+        setUndoOpportunity((current) => (
+          current?.token === opportunity.token ? { ...current } : current
+        ));
+      }
+    } finally {
+      undoLocked.current = false;
+      setUndoingSet(false);
     }
   };
 
@@ -271,6 +373,24 @@ export function ActiveExerciseLoggingScreen({
         )}
       </View>
 
+      {undoOpportunity ? (
+        <View accessibilityLabel="Set completion undo" style={styles.undoMessage}>
+          <AppText color="secondary">Set completed</AppText>
+          <TextButton
+            disabled={undoingSet}
+            label="Undo"
+            onPress={() => {
+              void undoCompletedSet();
+            }}
+          />
+        </View>
+      ) : null}
+      {undoError ? (
+        <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
+          This set could not be undone. It remains in your workout.
+        </AppText>
+      ) : null}
+
       {entrySetType === "warmup" ? (
         <AppText color="secondary" variant="sectionHeading">WARM-UP SET</AppText>
       ) : null}
@@ -278,7 +398,11 @@ export function ActiveExerciseLoggingScreen({
         <SetInputRow
           key={`${workoutExercise.id}-${entryVersion}`}
           disabled={savingSet || !exercise}
+          initialDraft={restoredDraft}
           initialWeightKg={entryWeightKg}
+          onCompleteDraftCaptured={(draft) => {
+            completionDraft.current = draft;
+          }}
           onComplete={(values) => {
             void completeCurrentSet(values);
           }}
@@ -508,4 +632,9 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   switchingControls: { gap: spacing.sm },
   targetCard: { borderLeftColor: colors.accent.primary, borderLeftWidth: 3, gap: spacing.sm },
+  undoMessage: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
 });

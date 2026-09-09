@@ -48,6 +48,8 @@ export type {
   ExerciseWorkoutSummary,
   FinishWorkoutInput,
   UpdateWorkoutNoteInput,
+  UndoSetCompletionInput,
+  UndoSetCompletionResult,
   Workout,
   WorkoutExercise,
   WorkoutSet,

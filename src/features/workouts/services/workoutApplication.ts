@@ -15,6 +15,7 @@ import type {
   WorkoutTemplate,
   UserExercisePreference,
   UpdateWorkoutNoteInput,
+  UndoSetCompletionResult,
   UserProfile,
 } from "@/shared/contracts";
 
@@ -23,6 +24,7 @@ import { DeleteSetService } from "./deleteSet";
 import { EditSetService } from "./editSet";
 import { createSetPersistence } from "./setPersistence";
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
+import { UndoSetCompletionService } from "./undoSetCompletion";
 import { createWorkoutPersistence } from "./workoutPersistence";
 import { updateActiveWorkoutNote } from "./workoutNotes";
 import { getCachedWorkoutProfile } from "./workoutProfilePreferences";
@@ -103,6 +105,14 @@ export async function deleteCurrentUserSet(setId: UUID): Promise<void> {
   const session = await authService.getSession();
   if (!session) throw new Error("Deleting a set requires an authenticated session.");
   await new DeleteSetService(await createSetPersistence()).delete(session.user.id, setId);
+}
+
+export async function undoCurrentUserSetCompletion(
+  setId: UUID,
+): Promise<UndoSetCompletionResult> {
+  const session = await authService.getSession();
+  if (!session) throw new Error("Undoing a set requires an authenticated session.");
+  return new UndoSetCompletionService(await createSetPersistence()).undo(session.user.id, setId);
 }
 
 export async function loadCurrentUserWorkoutOverview(

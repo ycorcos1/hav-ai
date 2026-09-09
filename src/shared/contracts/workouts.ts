@@ -81,6 +81,19 @@ export type EditSetInput = {
   notes?: string;
 };
 
+export type UndoSetCompletionInput = {
+  setId: UUID;
+};
+
+export type UndoSetCompletionResult = {
+  restoredDraft: {
+    weightKg?: WeightKg;
+    reps: number;
+    rpe?: RPE;
+    notes?: string;
+  };
+};
+
 export type UpdateWorkoutNoteInput = {
   workoutId: UUID;
   notes?: string;

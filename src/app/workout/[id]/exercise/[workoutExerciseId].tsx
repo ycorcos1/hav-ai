@@ -7,6 +7,7 @@ import {
   deleteCurrentUserSet,
   editCurrentUserSet,
   loadCurrentUserActiveWorkoutExercise,
+  undoCurrentUserSetCompletion,
 } from "@/features/workouts/services/workoutApplication";
 
 export default function ActiveExerciseLoggingRoute() {
@@ -29,6 +30,7 @@ export default function ActiveExerciseLoggingRoute() {
         router.replace(`/workout/${id}/exercise/${nextWorkoutExerciseId}`);
       }}
       onOverview={() => router.replace(`/workout/${id}`)}
+      undoSet={undoCurrentUserSetCompletion}
     />
   );
 }
