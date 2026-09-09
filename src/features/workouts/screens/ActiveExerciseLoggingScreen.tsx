@@ -125,6 +125,10 @@ export function ActiveExerciseLoggingScreen({
   const setEntryVisible = entrySetType === "warmup"
     || !plannedWorkingSetsComplete
     || extraSetEntryVisible;
+  const previousWorkingSetWeight = [...(previousPerformance?.sets ?? [])]
+    .reverse()
+    .find(({ weightKg }) => weightKg !== undefined)?.weightKg;
+  const entryWeightKg = previousWorkingSetWeight ?? workoutExercise.targetWeightKg;
 
   const completeCurrentSet = async (values: SetInputValues): Promise<void> => {
     if (completionLocked.current) return;
@@ -134,6 +138,7 @@ export function ActiveExerciseLoggingScreen({
     try {
       const result = await completeSet({
         exerciseId: workoutExercise.exerciseId,
+        ...(values.notes === undefined ? {} : { notes: values.notes }),
         reps: values.reps,
         ...(values.rpe === undefined ? {} : { rpe: values.rpe }),
         setType: entrySetType,
@@ -165,6 +170,9 @@ export function ActiveExerciseLoggingScreen({
     try {
       const saved = await editSet({
         setId: editingSet.id,
+        ...(Object.prototype.hasOwnProperty.call(values, "notes")
+          ? { notes: values.notes }
+          : {}),
         reps: values.reps,
         ...(values.rpe === undefined ? {} : { rpe: values.rpe }),
         ...(values.weightKg === undefined ? {} : { weightKg: values.weightKg }),
@@ -238,17 +246,27 @@ export function ActiveExerciseLoggingScreen({
           <AppText color="muted">No sets completed yet.</AppText>
         ) : (
           completedSetLabels(workoutExercise.sets, profile.weightUnit).map(({ label, set }) => (
-            <TextButton
-              key={set.id}
-              accessibilityLabel={`Edit ${label}`}
-              disabled={!editSet}
-              label={label}
-              onPress={() => {
-                setEditError(false);
-                setDeleteError(false);
-                setEditingSet(set);
-              }}
-            />
+            <View key={set.id} style={styles.completedSet}>
+              <TextButton
+                accessibilityLabel={`Edit ${label}`}
+                disabled={!editSet}
+                label={label}
+                onPress={() => {
+                  setEditError(false);
+                  setDeleteError(false);
+                  setEditingSet(set);
+                }}
+              />
+              {set.notes ? (
+                <AppText
+                  accessibilityLabel={`Note for ${label}`}
+                  color="muted"
+                  variant="metadata"
+                >
+                  Set note: {set.notes}
+                </AppText>
+              ) : null}
+            </View>
           ))
         )}
       </View>
@@ -260,7 +278,7 @@ export function ActiveExerciseLoggingScreen({
         <SetInputRow
           key={`${workoutExercise.id}-${entryVersion}`}
           disabled={savingSet || !exercise}
-          initialWeightKg={workoutExercise.targetWeightKg}
+          initialWeightKg={entryWeightKg}
           onComplete={(values) => {
             void completeCurrentSet(values);
           }}
@@ -304,6 +322,7 @@ export function ActiveExerciseLoggingScreen({
             key={`${editingSet.id}-${editingSet.updatedAt}`}
             actionLabel="Save Set"
             disabled={savingEdit || deletingSet}
+            initialNotes={editingSet.notes}
             initialReps={editingSet.reps}
             initialRpe={editingSet.rpe}
             initialWeightKg={editingSet.weightKg}
@@ -482,6 +501,7 @@ function appendCompletedSet(
 
 const styles = StyleSheet.create({
   centered: { alignItems: "center", justifyContent: "center" },
+  completedSet: { gap: spacing.xs },
   content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
   error: { color: colors.semantic.error },
   note: { gap: spacing.xs },

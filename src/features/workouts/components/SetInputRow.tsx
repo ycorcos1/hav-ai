@@ -6,7 +6,9 @@ import { BottomSheet } from "@/components/BottomSheet";
 import { FilterChip } from "@/components/FilterChip";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { TextButton } from "@/components/TextButton";
 import { TextInput } from "@/components/TextInput";
+import { WeightAdjustmentControls } from "@/features/workouts/components/WeightAdjustmentControls";
 import {
   canonicalWeightKg,
   formatDisplayWeight,
@@ -20,11 +22,12 @@ import type {
 } from "@/shared/contracts";
 import { spacing } from "@/theme";
 
-export type SetInputValues = Pick<CompleteSetInput, "reps" | "rpe" | "weightKg">;
+export type SetInputValues = Pick<CompleteSetInput, "notes" | "reps" | "rpe" | "weightKg">;
 
 export type SetInputRowProps = {
   actionLabel?: string;
   disabled?: boolean;
+  initialNotes?: string;
   initialReps?: number;
   initialRpe?: RPE;
   initialWeightKg?: WeightKg;
@@ -39,6 +42,7 @@ const rpeValues: readonly RPE[] = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 export function SetInputRow({
   actionLabel = "Complete Set",
   disabled = false,
+  initialNotes,
   initialReps,
   initialRpe,
   initialWeightKg,
@@ -53,6 +57,8 @@ export function SetInputRow({
   const [reps, setReps] = useState(initialReps === undefined ? "" : String(initialReps));
   const [rpe, setRpe] = useState<RPE | undefined>(initialRpe);
   const [rpeOpen, setRpeOpen] = useState(false);
+  const [notes, setNotes] = useState(initialNotes ?? "");
+  const [notesVisible, setNotesVisible] = useState(Boolean(initialNotes));
 
   const parsedWeight = Number(weight);
   const parsedReps = Number(reps);
@@ -61,14 +67,25 @@ export function SetInputRow({
   const repsValid = reps.trim().length > 0 && Number.isInteger(parsedReps) && parsedReps > 0;
   const canComplete = !disabled && weightValid && repsValid;
 
+  const adjustReps = (delta: -1 | 1): void => {
+    if (reps.trim() === "") {
+      if (delta === 1) setReps("1");
+      return;
+    }
+    if (!Number.isSafeInteger(parsedReps)) return;
+    setReps(String(Math.max(1, parsedReps + delta)));
+  };
+
   const complete = () => {
     if (!canComplete) return;
+    const normalizedNotes = notes.trim() || undefined;
     onComplete({
       reps: parsedReps,
       ...(requiresWeight
         ? { weightKg: canonicalWeightKg(parsedWeight, weightUnit) }
         : {}),
       ...(rpe === undefined ? {} : { rpe }),
+      ...(notesVisible || initialNotes !== undefined ? { notes: normalizedNotes } : {}),
     });
   };
 
@@ -76,27 +93,48 @@ export function SetInputRow({
     <View accessibilityLabel="Set input" style={styles.container}>
       <View style={styles.inputs}>
         {requiresWeight ? (
+          <View style={styles.field}>
+            <TextInput
+              disabled={disabled}
+              error={weight.length > 0 && !weightValid ? "Enter a valid weight." : undefined}
+              keyboardType="decimal-pad"
+              label={`Weight (${weightUnit})`}
+              onChangeText={setWeight}
+              returnKeyType="next"
+              value={weight}
+            />
+            <WeightAdjustmentControls
+              disabled={disabled}
+              onChange={setWeight}
+              value={weight}
+              weightUnit={weightUnit}
+            />
+          </View>
+        ) : null}
+        <View accessibilityLabel="Rep adjustments" style={styles.repField}>
+          <TextButton
+            accessibilityLabel="Decrease reps"
+            disabled={disabled}
+            label="−"
+            onPress={() => adjustReps(-1)}
+          />
           <TextInput
             containerStyle={styles.field}
             disabled={disabled}
-            error={weight.length > 0 && !weightValid ? "Enter a valid weight." : undefined}
-            keyboardType="decimal-pad"
-            label={`Weight (${weightUnit})`}
-            onChangeText={setWeight}
-            returnKeyType="next"
-            value={weight}
+            error={reps.length > 0 && !repsValid ? "Enter a whole number above zero." : undefined}
+            keyboardType="number-pad"
+            label="Reps"
+            onChangeText={setReps}
+            returnKeyType="done"
+            value={reps}
           />
-        ) : null}
-        <TextInput
-          containerStyle={styles.field}
-          disabled={disabled}
-          error={reps.length > 0 && !repsValid ? "Enter a whole number above zero." : undefined}
-          keyboardType="number-pad"
-          label="Reps"
-          onChangeText={setReps}
-          returnKeyType="done"
-          value={reps}
-        />
+          <TextButton
+            accessibilityLabel="Increase reps"
+            disabled={disabled}
+            label="+"
+            onPress={() => adjustReps(1)}
+          />
+        </View>
       </View>
 
       {rpePreference !== "hidden" ? (
@@ -111,6 +149,23 @@ export function SetInputRow({
           />
         </View>
       ) : null}
+
+      <View style={styles.noteField}>
+        <TextButton
+          disabled={disabled}
+          label={notesVisible ? "Hide Set Note" : "Add Set Note"}
+          onPress={() => setNotesVisible((current) => !current)}
+        />
+        {notesVisible ? (
+          <TextInput
+            disabled={disabled}
+            label="Set Note (optional)"
+            multiline
+            onChangeText={setNotes}
+            value={notes}
+          />
+        ) : null}
+      </View>
 
       <PrimaryButton disabled={!canComplete} label={actionLabel} onPress={complete} />
 
@@ -143,6 +198,13 @@ const styles = StyleSheet.create({
   container: { gap: spacing.lg },
   field: { flex: 1 },
   inputs: { flexDirection: "row", gap: spacing.md },
+  noteField: { gap: spacing.xs },
+  repField: {
+    alignItems: "flex-end",
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
   rpeField: { gap: spacing.sm },
   rpeOptions: { gap: spacing.sm },
 });

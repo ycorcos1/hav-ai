@@ -6,7 +6,7 @@ import type {
 } from "@/shared/contracts";
 
 import type { SetPersistence } from "./setPersistenceTypes";
-import { validateSetValues } from "./setValidation";
+import { normalizeSetNote, validateSetValues } from "./setValidation";
 
 export class CompleteSetError extends Error {
   readonly name = "CompleteSetError";
@@ -54,6 +54,7 @@ export class CompleteSetService {
       -1,
     ) + 1;
     const timestamp = this.now();
+    const notes = normalizeSetNote(input.notes);
     const set: WorkoutSet = {
       id: this.createId(),
       userId,
@@ -65,7 +66,7 @@ export class CompleteSetService {
       ...(input.weightKg === undefined ? {} : { weightKg: input.weightKg }),
       reps: input.reps,
       ...(input.rpe === undefined ? {} : { rpe: input.rpe }),
-      ...(input.notes === undefined ? {} : { notes: input.notes }),
+      ...(notes === undefined ? {} : { notes }),
       completedAt: timestamp,
       createdAt: timestamp,
       updatedAt: timestamp,

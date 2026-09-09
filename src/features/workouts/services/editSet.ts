@@ -1,7 +1,7 @@
 import type { EditSetInput, UUID, WorkoutSet } from "@/shared/contracts";
 
 import type { SetPersistence } from "./setPersistenceTypes";
-import { validateSetValues } from "./setValidation";
+import { normalizeSetNote, validateSetValues } from "./setValidation";
 
 export class EditSetError extends Error {
   readonly name = "EditSetError";
@@ -42,6 +42,9 @@ export class EditSetService {
       throw new EditSetError("The active workout set is not available.");
     }
 
+    const notes = Object.prototype.hasOwnProperty.call(input, "notes")
+      ? normalizeSetNote(input.notes)
+      : existing.notes;
     const edited: WorkoutSet = {
       id: existing.id,
       userId: existing.userId,
@@ -53,7 +56,7 @@ export class EditSetService {
       ...(input.weightKg === undefined ? {} : { weightKg: input.weightKg }),
       reps: input.reps,
       ...(input.rpe === undefined ? {} : { rpe: input.rpe }),
-      ...(existing.notes === undefined ? {} : { notes: existing.notes }),
+      ...(notes === undefined ? {} : { notes }),
       completedAt: existing.completedAt,
       createdAt: existing.createdAt,
       updatedAt: this.now(),
