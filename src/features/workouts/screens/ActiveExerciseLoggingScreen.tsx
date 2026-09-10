@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
+import { useRestTimer } from "@/features/workouts/components/RestTimerProvider";
 import {
   SetInputRow,
   type SetInputDraft,
@@ -56,6 +57,8 @@ export function ActiveExerciseLoggingScreen({
   onOverview,
   undoSet,
 }: ActiveExerciseLoggingScreenProps) {
+  const restTimer = useRestTimer();
+  const [timerError, setTimerError] = useState(false);
   const [activeExercise, setActiveExercise] = useState<ActiveWorkoutExercise | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -211,6 +214,15 @@ export function ActiveExerciseLoggingScreen({
       setEntrySetType("working");
       setExtraSetEntryVisible(false);
       setEntryVersion((value) => value + 1);
+      if (result.set.setType === "working") {
+        try {
+          restTimer?.dispatch({ type: "start", setId: result.set.id,
+            durationSeconds: exercisePreference?.restDurationSeconds ?? profile.defaultRestDurationSeconds });
+          setTimerError(false);
+        } catch {
+          setTimerError(true);
+        }
+      }
       await triggerSetCompletionHaptic();
     } catch {
       setCompletionError(true);
@@ -236,6 +248,8 @@ export function ActiveExerciseLoggingScreen({
     setUndoError(false);
     try {
       await undoSet(opportunity.setId);
+      try { restTimer?.dispatch({ type: "dismiss", setId: opportunity.setId }); }
+      catch { setTimerError(true); }
       setActiveExercise((current) => current
         ? removeCompletedSet(current, opportunity.setId)
         : current);
@@ -431,6 +445,11 @@ export function ActiveExerciseLoggingScreen({
       {completionError ? (
         <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
           This set could not be saved. Check your entries and try again.
+        </AppText>
+      ) : null}
+      {timerError ? (
+        <AppText accessibilityRole="alert" color="secondary">
+          Your set was saved, but the rest timer could not be updated. Continue logging normally.
         </AppText>
       ) : null}
       <BottomSheet
