@@ -6,14 +6,13 @@ import { AppText } from '@/components/AppText';
 import { ErrorState } from '@/components/ErrorState';
 import { Screen } from '@/components/Screen';
 import { SecondaryButton } from '@/components/SecondaryButton';
-import type { EnsureProfileDependencies } from '@/features/profile/useCases/ensureProfile';
 import {
   resolvePersistentRootRoute,
 } from '@/features/routing/resolveRootRoute';
-import { useRootRoutingState } from '@/features/routing/useRootRoutingState';
+import { useRootRoutingState, type RootRoutingDependencies } from '@/features/routing/useRootRoutingState';
 import { colors } from '@/theme';
 
-type RootRouteGuardProps = EnsureProfileDependencies & {
+type RootRouteGuardProps = RootRoutingDependencies & {
   children?: ReactNode;
   segments: readonly string[];
 };

@@ -2,7 +2,8 @@ export type RootRoutingState =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'unauthenticated' }
-  | { status: 'authenticated'; onboardingComplete: boolean };
+  | { status: 'authenticated'; onboardingComplete: boolean }
+  | { status: 'local-owner'; onboardingComplete: boolean };
 
 export type ResolvedRootRoute =
   | { status: 'loading' }

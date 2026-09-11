@@ -15,6 +15,13 @@ const mockPopulateExerciseFixture = jest.fn();
 jest.mock("@/lib/supabase/services", () => ({
   authService: { getSession: (...args: unknown[]) => mockGetSession(...args) },
 }));
+jest.mock("@/features/routing/localRecovery", () => ({
+  requireCurrentLocalOwner: async () => {
+    const session = await mockGetSession();
+    if (!session) throw new Error("Workout sessions require an authenticated session.");
+    return { userId: session.user.id, assertCurrent: () => {} };
+  },
+}));
 jest.mock("@/features/workouts/services/workoutPersistence", () => ({
   createWorkoutPersistence: (...args: unknown[]) => mockCreateWorkoutPersistence(...args),
 }));

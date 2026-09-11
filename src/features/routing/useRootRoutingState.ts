@@ -8,13 +8,17 @@ import type { AuthSession } from '@/shared/contracts';
 
 import type { RootRoutingState } from './resolveRootRoute';
 
-export function useRootRoutingState(dependencies: EnsureProfileDependencies): {
+export type RootRoutingDependencies = EnsureProfileDependencies & {
+  recoverStartup?: () => Promise<RootRoutingState>;
+};
+
+export function useRootRoutingState(dependencies: RootRoutingDependencies): {
   retry: () => void;
   state: RootRoutingState;
 } {
   const [state, setState] = useState<RootRoutingState>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
-  const { authService, profileRepository } = dependencies;
+  const { authService, profileRepository, recoverStartup } = dependencies;
 
   const retry = useCallback(() => {
     setState({ status: 'loading' });
@@ -29,6 +33,15 @@ export function useRootRoutingState(dependencies: EnsureProfileDependencies): {
 
     const resolveSession = (session: AuthSession | null) => {
       const generation = ++resolutionGeneration;
+
+      if (recoverStartup) {
+        if (active) setState({ status: 'loading' });
+        void recoverStartup().then(
+          (resolved) => { if (active && generation === resolutionGeneration) setState(resolved); },
+          () => { if (active && generation === resolutionGeneration) setState({ status: 'error' }); },
+        );
+        return;
+      }
 
       if (!session) {
         if (active) setState({ status: 'unauthenticated' });
@@ -71,7 +84,9 @@ export function useRootRoutingState(dependencies: EnsureProfileDependencies): {
       };
     }
 
-    void authService.getSession().then(
+    if (recoverStartup) {
+      resolveSession(null);
+    } else void authService.getSession().then(
       (session) => {
         if (!active || authEventRevision !== startupAuthEventRevision) return;
 
@@ -90,7 +105,7 @@ export function useRootRoutingState(dependencies: EnsureProfileDependencies): {
       resolutionGeneration += 1;
       unsubscribe();
     };
-  }, [attempt, authService, profileRepository]);
+  }, [attempt, authService, profileRepository, recoverStartup]);
 
   return { retry, state };
 }

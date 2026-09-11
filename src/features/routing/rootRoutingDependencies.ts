@@ -1,9 +1,11 @@
-import type { EnsureProfileDependencies } from '@/features/profile/useCases/ensureProfile';
+import type { RootRoutingDependencies } from './useRootRoutingState';
+import { recoverLocalStartup } from './localRecovery';
 import { CachedProfileRepository } from '@/features/profile/services/CachedProfileRepository';
 import { SupabaseProfileRepository } from '@/lib/supabase/repositories';
 import { authService } from '@/lib/supabase/services';
 
-export const rootRoutingDependencies: EnsureProfileDependencies = {
+export const rootRoutingDependencies: RootRoutingDependencies = {
   authService,
   profileRepository: new CachedProfileRepository(new SupabaseProfileRepository()),
+  recoverStartup: () => recoverLocalStartup(rootRoutingDependencies),
 };

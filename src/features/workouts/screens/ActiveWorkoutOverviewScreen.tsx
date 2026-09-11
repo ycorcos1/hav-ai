@@ -12,11 +12,12 @@ import { TextButton } from "@/components/TextButton";
 import { TextInput } from "@/components/TextInput";
 import { WorkoutElapsedTime } from "@/features/workouts/components/WorkoutElapsedTime";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
+import type { RecoveryWorkoutOverview } from "@/features/workouts/services/workoutRecoveryContext";
 import type { Workout } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type ActiveWorkoutOverviewScreenProps = {
-  loadWorkout: () => Promise<ActiveWorkoutOverview | null>;
+  loadWorkout: () => Promise<RecoveryWorkoutOverview | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
   saveWorkoutNote: (notes?: string) => Promise<Workout>;
 };
@@ -26,7 +27,7 @@ export function ActiveWorkoutOverviewScreen({
   onOpenExercise,
   saveWorkoutNote,
 }: ActiveWorkoutOverviewScreenProps) {
-  const [overview, setOverview] = useState<ActiveWorkoutOverview | null>();
+  const [overview, setOverview] = useState<RecoveryWorkoutOverview | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [noteDraft, setNoteDraft] = useState("");
@@ -118,6 +119,9 @@ export function ActiveWorkoutOverviewScreen({
           >
             <Card>
               <AppText variant="exerciseName">{exercise?.name ?? "Exercise unavailable"}</AppText>
+              {overview.lastActiveWorkoutExerciseId === workoutExercise.id ? (
+                <AppText color="secondary" variant="metadata">Last active</AppText>
+              ) : null}
               <AppText color={isExerciseComplete(workoutExercise) ? "primary" : "secondary"}>
                 {exerciseProgressLabel(workoutExercise)}
               </AppText>

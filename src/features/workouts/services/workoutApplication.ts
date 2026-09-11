@@ -1,4 +1,4 @@
-import { authService } from "@/lib/supabase/services";
+import { requireCurrentLocalOwner } from "@/features/routing/localRecovery";
 import { createExercisePersistence } from "@/features/exercises/services/exercisePersistence";
 import { populateExerciseFixture } from "@/features/exercises/services/populateExerciseFixture";
 import { createProfileCachePersistence } from "@/features/profile/services/profileCachePersistence";
@@ -90,29 +90,33 @@ export async function updateCurrentUserActiveWorkoutNote(
 export async function completeCurrentUserSet(
   input: CompleteSetInput,
 ): Promise<CompleteSetResult> {
-  const session = await authService.getSession();
-  if (!session) throw new Error("Completing a set requires an authenticated session.");
-  return new CompleteSetService(await createSetPersistence()).complete(session.user.id, input);
+  const owner = await requireCurrentLocalOwner();
+  const persistence = await createSetPersistence();
+  owner.assertCurrent();
+  return new CompleteSetService(persistence).complete(owner.userId, input);
 }
 
 export async function editCurrentUserSet(input: EditSetInput): Promise<WorkoutSet> {
-  const session = await authService.getSession();
-  if (!session) throw new Error("Editing a set requires an authenticated session.");
-  return new EditSetService(await createSetPersistence()).edit(session.user.id, input);
+  const owner = await requireCurrentLocalOwner();
+  const persistence = await createSetPersistence();
+  owner.assertCurrent();
+  return new EditSetService(persistence).edit(owner.userId, input);
 }
 
 export async function deleteCurrentUserSet(setId: UUID): Promise<void> {
-  const session = await authService.getSession();
-  if (!session) throw new Error("Deleting a set requires an authenticated session.");
-  await new DeleteSetService(await createSetPersistence()).delete(session.user.id, setId);
+  const owner = await requireCurrentLocalOwner();
+  const persistence = await createSetPersistence();
+  owner.assertCurrent();
+  await new DeleteSetService(persistence).delete(owner.userId, setId);
 }
 
 export async function undoCurrentUserSetCompletion(
   setId: UUID,
 ): Promise<UndoSetCompletionResult> {
-  const session = await authService.getSession();
-  if (!session) throw new Error("Undoing a set requires an authenticated session.");
-  return new UndoSetCompletionService(await createSetPersistence()).undo(session.user.id, setId);
+  const owner = await requireCurrentLocalOwner();
+  const persistence = await createSetPersistence();
+  owner.assertCurrent();
+  return new UndoSetCompletionService(persistence).undo(owner.userId, setId);
 }
 
 export async function loadCurrentUserWorkoutOverview(
@@ -170,7 +174,8 @@ export async function loadCurrentUserActiveWorkoutExercise(
 }
 
 async function persistenceForCurrentUser() {
-  const session = await authService.getSession();
-  if (!session) throw new Error("Workout sessions require an authenticated session.");
-  return { persistence: await createWorkoutPersistence(), userId: session.user.id };
+  const owner = await requireCurrentLocalOwner();
+  const persistence = await createWorkoutPersistence();
+  owner.assertCurrent();
+  return { persistence, userId: owner.userId };
 }

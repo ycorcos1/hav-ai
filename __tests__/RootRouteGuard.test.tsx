@@ -97,6 +97,25 @@ function renderGuard(
 }
 
 describe('RootRouteGuard', () => {
+  it('supports local-only startup and ignores stale recovery after sign-out', async () => {
+    const mocks = createRoutingMocks(session);
+    const pending = deferred<import('@/features/routing/resolveRootRoute').RootRoutingState>();
+    const recoverStartup = jest.fn().mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({ status: 'unauthenticated' });
+    const screen = await render(<RootRouteGuard {...mocks} recoverStartup={recoverStartup} segments={['(tabs)', 'home']}><Text>owned workout</Text></RootRouteGuard>);
+    await act(async () => mocks.emitSession(null));
+    expect(await screen.findByText('redirect:/(auth)/welcome')).toBeTruthy();
+    await act(async () => pending.resolve({ status: 'local-owner', onboardingComplete: true }));
+    expect(screen.queryByText('owned workout')).toBeNull();
+  });
+
+  it('allows local-owner recovery without representing a cloud session', async () => {
+    const mocks = createRoutingMocks(null);
+    const recoverStartup = jest.fn().mockResolvedValue({ status: 'local-owner', onboardingComplete: true });
+    const screen = await render(<RootRouteGuard {...mocks} recoverStartup={recoverStartup} segments={['(tabs)', 'home']}><Text>owned workout</Text></RootRouteGuard>);
+    expect(await screen.findByText('owned workout')).toBeTruthy();
+    expect(mocks.profileRepository.getOwnProfile).not.toHaveBeenCalled();
+  });
   it('routes startup without a session to Welcome without resolving a profile', async () => {
     const mocks = createRoutingMocks(null);
     const screen = await renderGuard(mocks);

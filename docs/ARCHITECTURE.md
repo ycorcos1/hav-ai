@@ -517,6 +517,21 @@ SESSION + ONBOARDING COMPLETE
 
 Active workout restoration occurs independently from remote cloud loading.
 
+Task 12.1 local recovery distinguishes a `LocalOwnerIdentity` from a cloud
+`AuthSession`. Normal session resolution is preferred. Only a sanitized network
+failure may fall back to structurally valid, still-persisted Supabase ownership
+plus the same user's cached profile. Recheck the stored auth state after async
+reads; missing/replaced auth state cannot restore the old user. This fallback
+authorizes local workout access only, never cloud requests or token refresh.
+
+Task 12.2 stores only an advisory workout-exercise instance bookmark in the
+separate Expo `SQLiteStorage` database `havai-recovery.db` (`storage(key, value)`).
+Keys include user and workout IDs; values contain the instance ID. This is not
+auth storage, domain data, or a sync entity, and main application schema remains
+7. Validate against the current owned active workout before use. Home Resume
+still opens the overview, which identifies the last active row. Development web
+preview uses `havai:dev:recovery:` instead of native SQLite.
+
 ---
 
 # 19. State Categories

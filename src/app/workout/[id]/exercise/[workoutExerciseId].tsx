@@ -6,9 +6,9 @@ import {
   completeCurrentUserSet,
   deleteCurrentUserSet,
   editCurrentUserSet,
-  loadCurrentUserActiveWorkoutExercise,
   undoCurrentUserSetCompletion,
 } from "@/features/workouts/services/workoutApplication";
+import { loadAndRememberActiveExercise } from "@/features/workouts/services/workoutRecoveryContext";
 
 export default function ActiveExerciseLoggingRoute() {
   const { id, workoutExerciseId } = useLocalSearchParams<{
@@ -17,7 +17,7 @@ export default function ActiveExerciseLoggingRoute() {
   }>();
   const router = useRouter();
   const loadExercise = useCallback(
-    () => loadCurrentUserActiveWorkoutExercise(id, workoutExerciseId),
+    () => loadAndRememberActiveExercise(id, workoutExerciseId),
     [id, workoutExerciseId],
   );
   return (

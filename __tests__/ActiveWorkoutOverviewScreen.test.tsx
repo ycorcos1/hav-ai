@@ -82,6 +82,16 @@ const overview: ActiveWorkoutOverview = {
 };
 
 describe("ActiveWorkoutOverviewScreen", () => {
+  it("identifies the last active row without automatically opening the exercise", async () => {
+    const open = jest.fn();
+    const rendered = await render(<ActiveWorkoutOverviewScreen
+      loadWorkout={async () => ({ ...overview, lastActiveWorkoutExerciseId: "workout-exercise-2" })}
+      onOpenExercise={open} saveWorkoutNote={async () => overview.workout} />);
+    expect(await rendered.findByText("Last active")).toBeTruthy();
+    expect(open).not.toHaveBeenCalled();
+    await fireEvent.press(rendered.getByRole("button", { name: "Open Cable Fly" }));
+    expect(open).toHaveBeenCalledWith("workout-exercise-2");
+  });
   const onOpenExercise = jest.fn();
   const saveWorkoutNote = jest.fn();
 
