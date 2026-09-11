@@ -1346,6 +1346,24 @@ This is a release gate for gym testing.
 
 ---
 
+## 62A. Deferred Phase 12 Local-Workout Device Check
+
+Status: **DEFERRED — native development/preview-build workflow not established.**
+
+Once that workflow exists, verify on a physical iPhone:
+
+- create a template, then enable airplane mode
+- start the template and confirm `Offline · Saved on device`
+- log working and warm-up sets, edit a completed set, and add an extra set
+- background and foreground the app, then lock and unlock the phone
+- force close and relaunch havAI
+- use `Resume Workout` and confirm exercise order, set values, types, positions, and notes
+- confirm the current disabled `Finish Workout` placeholder is reachable
+
+The file-backed SQLite integration tests cover process-boundary durability, but do not prove actual iOS lifecycle behavior. Real workout finishing remains owned by Task 15.5.
+
+---
+
 # 63. Real Gym Test
 
 During actual use, evaluate:
