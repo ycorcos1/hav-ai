@@ -9,6 +9,7 @@ import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
 import { useRestTimer } from "@/features/workouts/components/RestTimerProvider";
+import { WorkoutOfflineBanner } from "@/features/network/components/WorkoutOfflineBanner";
 import {
   SetInputRow,
   type SetInputDraft,
@@ -323,6 +324,7 @@ export function ActiveExerciseLoggingScreen({
 
   return (
     <Screen contentContainerStyle={styles.content} scroll>
+      <WorkoutOfflineBanner />
       <SecondaryButton label="Workout Overview" onPress={onOverview} />
       <AppText color="secondary" variant="metadata">{workout.name}</AppText>
       <AppText variant="screenTitle">{exercise?.name ?? "Exercise unavailable"}</AppText>

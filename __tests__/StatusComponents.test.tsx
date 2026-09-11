@@ -25,10 +25,10 @@ describe('status components', () => {
 
   it('supports custom offline messaging and hidden state', async () => {
     const { rerender } = await render(
-      <OfflineBanner message="Offline · Workout saved locally" />,
+      <OfflineBanner message="Offline · Local changes pending" />,
     );
 
-    expect(screen.getByText('Offline · Workout saved locally')).toBeOnTheScreen();
+    expect(screen.getByText('Offline · Local changes pending')).toBeOnTheScreen();
 
     await rerender(<OfflineBanner visible={false} />);
 

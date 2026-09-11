@@ -1,6 +1,8 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { ActiveWorkoutOverviewScreen } from "@/features/workouts/screens/ActiveWorkoutOverviewScreen";
+import { NetworkStatusProvider } from "@/features/network/components/NetworkStatusProvider";
+import type { NetworkStatus, NetworkStatusService } from "@/features/network/networkStatus";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
 
 const startedAt = "2026-09-02T12:00:00.000Z";
@@ -82,6 +84,23 @@ const overview: ActiveWorkoutOverview = {
 };
 
 describe("ActiveWorkoutOverviewScreen", () => {
+  it("shows advisory offline state without blocking workout interaction", async () => {
+    const open = jest.fn();
+    const service: NetworkStatusService = {
+      getCurrentStatus: async () => "offline",
+      subscribe: () => () => {},
+    };
+    const rendered = await render(
+      <NetworkStatusProvider service={service}>
+        <ActiveWorkoutOverviewScreen loadWorkout={async () => overview} onOpenExercise={open} saveWorkoutNote={async () => overview.workout} />
+      </NetworkStatusProvider>,
+    );
+    expect(await rendered.findByText("Offline · Saved on device")).toBeTruthy();
+    const exerciseButton = rendered.getByRole("button", { name: "Open Cable Fly" });
+    expect(exerciseButton).toBeEnabled();
+    await fireEvent.press(exerciseButton);
+    expect(open).toHaveBeenCalledWith("workout-exercise-2");
+  });
   it("identifies the last active row without automatically opening the exercise", async () => {
     const open = jest.fn();
     const rendered = await render(<ActiveWorkoutOverviewScreen

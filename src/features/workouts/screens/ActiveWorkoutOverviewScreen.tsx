@@ -11,6 +11,7 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
 import { TextInput } from "@/components/TextInput";
 import { WorkoutElapsedTime } from "@/features/workouts/components/WorkoutElapsedTime";
+import { WorkoutOfflineBanner } from "@/features/network/components/WorkoutOfflineBanner";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
 import type { RecoveryWorkoutOverview } from "@/features/workouts/services/workoutRecoveryContext";
 import type { Workout } from "@/shared/contracts";
@@ -87,6 +88,7 @@ export function ActiveWorkoutOverviewScreen({
 
   return (
     <Screen contentContainerStyle={styles.content} scroll>
+      <WorkoutOfflineBanner />
       <View style={styles.header}>
         <View style={styles.heading}>
           <AppText color="secondary" variant="metadata">Workout in Progress</AppText>

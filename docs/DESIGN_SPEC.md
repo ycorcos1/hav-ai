@@ -1826,7 +1826,7 @@ Do not use disruptive alerts when connectivity disappears.
 Use a subtle status:
 
 ```text
-Offline · Workout saved locally
+Offline · Saved on device
 ```
 
 Possible location:

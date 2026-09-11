@@ -5,13 +5,16 @@ import { rootRoutingDependencies } from '@/features/routing/rootRoutingDependenc
 import '@/lib/environment';
 import '@/lib/supabase/client';
 import { RestTimerProvider } from '@/features/workouts/components/RestTimerProvider';
+import { NetworkStatusProvider } from '@/features/network/components/NetworkStatusProvider';
 
 export default function RootLayout() {
   const segments = useSegments();
 
   return (
     <RootRouteGuard {...rootRoutingDependencies} segments={segments}>
-      <RestTimerProvider><Slot /></RestTimerProvider>
+      <NetworkStatusProvider>
+        <RestTimerProvider><Slot /></RestTimerProvider>
+      </NetworkStatusProvider>
     </RootRouteGuard>
   );
 }

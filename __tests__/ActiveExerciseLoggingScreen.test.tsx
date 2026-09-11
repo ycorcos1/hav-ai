@@ -1,6 +1,8 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 
 import { ActiveExerciseLoggingScreen } from "@/features/workouts/screens/ActiveExerciseLoggingScreen";
+import { NetworkStatusProvider } from "@/features/network/components/NetworkStatusProvider";
+import type { NetworkStatus, NetworkStatusService } from "@/features/network/networkStatus";
 import type { ActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
 
 const mockImpactAsync = jest.fn();
@@ -104,6 +106,34 @@ describe("ActiveExerciseLoggingScreen", () => {
     completeSet.mockReset();
     mockImpactAsync.mockReset();
     mockImpactAsync.mockResolvedValue(undefined);
+  });
+
+  it("reacts to advisory connectivity changes without blocking the workout", async () => {
+    let listener: ((status: NetworkStatus) => void) | undefined;
+    const service: NetworkStatusService = {
+      getCurrentStatus: async () => "online",
+      subscribe: (next) => { listener = next; return () => {}; },
+    };
+    const rendered = await render(
+      <NetworkStatusProvider service={service}>
+        <ActiveExerciseLoggingScreen
+          completeSet={completeSet}
+          loadExercise={async () => activeExercise}
+          onOpenExercise={onOpenExercise}
+          onOverview={onOverview}
+        />
+      </NetworkStatusProvider>,
+    );
+    expect(await rendered.findByText("Bench Press")).toBeTruthy();
+    expect(rendered.queryByText("Offline · Saved on device")).toBeNull();
+    await act(async () => listener?.("offline"));
+    expect(rendered.getByText("Offline · Saved on device")).toBeTruthy();
+    const overviewButton = rendered.getByRole("button", { name: "Workout Overview" });
+    expect(overviewButton).toBeEnabled();
+    await fireEvent.press(overviewButton);
+    expect(onOverview).toHaveBeenCalledTimes(1);
+    await act(async () => listener?.("online"));
+    expect(rendered.queryByText("Offline · Saved on device")).toBeNull();
   });
 
   it("renders the active snapshot without claiming a set was completed", async () => {
