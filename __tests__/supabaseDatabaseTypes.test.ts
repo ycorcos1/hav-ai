@@ -1,13 +1,123 @@
 import type { Database } from "@/lib/supabase/database.types";
 
-type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type PublicTables = Database["public"]["Tables"];
+type PublicTableName = keyof PublicTables;
+type HasGeneratedShapes<Name extends PublicTableName> =
+  PublicTables[Name] extends {
+    Row: object;
+    Insert: object;
+    Update: object;
+    Relationships: readonly unknown[];
+  }
+    ? true
+    : false;
 
-const profileTableName: keyof Database["public"]["Tables"] = "profiles";
-const profileOwnerColumn: keyof ProfileRow = "user_id";
+const tableNames = [
+  "exercise_secondary_muscles",
+  "exercises",
+  "personal_records",
+  "profiles",
+  "progression_recommendations",
+  "sets",
+  "workout_exercises",
+  "workout_template_exercises",
+  "workout_templates",
+  "workouts",
+] satisfies PublicTableName[];
+
+const generatedShapes = {
+  exercise_secondary_muscles: true,
+  exercises: true,
+  personal_records: true,
+  profiles: true,
+  progression_recommendations: true,
+  sets: true,
+  workout_exercises: true,
+  workout_template_exercises: true,
+  workout_templates: true,
+  workouts: true,
+} satisfies {
+  [Name in PublicTableName]: HasGeneratedShapes<Name>;
+};
+
+const exerciseInsertWithoutServerMetadata: PublicTables["exercises"]["Insert"] = {
+  equipment_type: "barbell",
+  id: "exercise-id",
+  measurement_type: "weight_reps",
+  name: "Bench Press",
+  primary_muscle_group: "chest",
+};
+
+const nullableColumns = {
+  exerciseOwner: null as PublicTables["exercises"]["Row"]["owner_user_id"],
+  recordWeight: null as PublicTables["personal_records"]["Row"]["weight_kg"],
+  recommendationSource: null as PublicTables["progression_recommendations"]["Row"]["source_workout_id"],
+  workoutCompletion: null as PublicTables["workouts"]["Row"]["completed_at"],
+  workoutSourceTemplate: null as PublicTables["workouts"]["Row"]["source_template_id"],
+};
+
+const relationshipNames = [
+  "exercise_secondary_muscles_exercise_id_fkey",
+  "personal_records_exercise_id_fkey",
+  "personal_records_owned_workout_fkey",
+  "personal_records_source_set_fkey",
+  "progression_recommendations_exercise_id_fkey",
+  "progression_recommendations_source_ancestry_fkey",
+  "progression_recommendations_source_exercise_fkey",
+  "progression_recommendations_source_workout_fkey",
+  "sets_exercise_id_fkey",
+  "sets_owned_workout_fkey",
+  "sets_workout_exercise_identity_fkey",
+  "workout_exercises_exercise_id_fkey",
+  "workout_exercises_owned_source_recommendation_fkey",
+  "workout_exercises_owned_workout_fkey",
+  "workout_template_exercises_exercise_id_fkey",
+  "workout_template_exercises_owned_template_fkey",
+  "workouts_owned_source_template_fkey",
+] satisfies Array<
+  | PublicTables["exercise_secondary_muscles"]["Relationships"][number]["foreignKeyName"]
+  | PublicTables["personal_records"]["Relationships"][number]["foreignKeyName"]
+  | PublicTables["progression_recommendations"]["Relationships"][number]["foreignKeyName"]
+  | PublicTables["sets"]["Relationships"][number]["foreignKeyName"]
+  | PublicTables["workout_exercises"]["Relationships"][number]["foreignKeyName"]
+  | PublicTables["workout_template_exercises"]["Relationships"][number]["foreignKeyName"]
+  | PublicTables["workouts"]["Relationships"][number]["foreignKeyName"]
+>;
 
 describe("generated Supabase database types", () => {
-  it("exposes the public profiles table", () => {
-    expect(profileTableName).toBe("profiles");
-    expect(profileOwnerColumn).toBe("user_id");
+  it("exposes every cloud table implemented through Task 13.8", () => {
+    expect(tableNames).toEqual([
+      "exercise_secondary_muscles",
+      "exercises",
+      "personal_records",
+      "profiles",
+      "progression_recommendations",
+      "sets",
+      "workout_exercises",
+      "workout_template_exercises",
+      "workout_templates",
+      "workouts",
+    ]);
+    expect(tableNames).not.toContain("user_exercise_preferences");
+  });
+
+  it("provides generated Row, Insert, Update, and Relationships shapes", () => {
+    expect(Object.values(generatedShapes)).toEqual(Array(10).fill(true));
+  });
+
+  it("preserves nullable columns and optional server metadata", () => {
+    expect(nullableColumns).toEqual({
+      exerciseOwner: null,
+      recordWeight: null,
+      recommendationSource: null,
+      workoutCompletion: null,
+      workoutSourceTemplate: null,
+    });
+    expect(exerciseInsertWithoutServerMetadata).not.toHaveProperty("created_at");
+    expect(exerciseInsertWithoutServerMetadata).not.toHaveProperty("updated_at");
+  });
+
+  it("includes the relationships emitted for the current schema", () => {
+    expect(relationshipNames).toHaveLength(17);
   });
 });

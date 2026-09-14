@@ -101,7 +101,7 @@ insert into public.exercises (
   measurement_type, is_system, created_at, updated_at
 )
 values (
-  '10000000-0000-4000-8000-000000000001', null, 'Bench Press', 'chest',
+  'f1000000-0000-4000-8000-000000000001', null, 'Bench Press', 'chest',
   'barbell', 'weight_reps', true,
   '1900-01-01T00:00:00Z', '1900-01-01T00:00:00Z'
 );
@@ -121,7 +121,7 @@ values (
   '21000000-0000-4000-8000-00000000000a',
   '00000000-0000-4000-8000-00000000000a',
   '20000000-0000-4000-8000-00000000000a',
-  '10000000-0000-4000-8000-000000000001', 0, 3, 8, 10,
+  'f1000000-0000-4000-8000-000000000001', 0, 3, 8, 10,
   '1900-01-01T00:00:00Z', '1900-01-01T00:00:00Z'
 );
 insert into public.workouts (
@@ -142,7 +142,7 @@ values (
   '40000000-0000-4000-8000-00000000000a',
   '00000000-0000-4000-8000-00000000000a',
   '30000000-0000-4000-8000-00000000000a',
-  '10000000-0000-4000-8000-000000000001', 0,
+  'f1000000-0000-4000-8000-000000000001', 0,
   '1900-01-01T00:00:00Z', '1900-01-01T00:00:00Z'
 );
 insert into public.sets (
@@ -154,7 +154,7 @@ values (
   '00000000-0000-4000-8000-00000000000a',
   '30000000-0000-4000-8000-00000000000a',
   '40000000-0000-4000-8000-00000000000a',
-  '10000000-0000-4000-8000-000000000001',
+  'f1000000-0000-4000-8000-000000000001',
   0, 'working', 100, 8, '2026-09-14T12:10:00Z',
   '1900-01-01T00:00:00Z', '1900-01-01T00:00:00Z'
 );
@@ -166,7 +166,7 @@ insert into public.progression_recommendations (
 values (
   '60000000-0000-4000-8000-00000000000a',
   '00000000-0000-4000-8000-00000000000a',
-  '10000000-0000-4000-8000-000000000001',
+  'f1000000-0000-4000-8000-000000000001',
   '30000000-0000-4000-8000-00000000000a',
   '40000000-0000-4000-8000-00000000000a',
   'repeat_target', 'high', '["WITHIN_TARGET_RANGE"]',
@@ -180,7 +180,7 @@ insert into public.personal_records (
 values (
   '70000000-0000-4000-8000-00000000000a',
   '00000000-0000-4000-8000-00000000000a',
-  '10000000-0000-4000-8000-000000000001', 'max_weight',
+  'f1000000-0000-4000-8000-000000000001', 'max_weight',
   '50000000-0000-4000-8000-00000000000a',
   '30000000-0000-4000-8000-00000000000a',
   100, 8, '2026-09-14T12:10:00Z',
@@ -192,13 +192,21 @@ select is(
     select count(*)
     from (
       select created_at, updated_at from public.exercises
+      where id = 'f1000000-0000-4000-8000-000000000001'
       union all select created_at, updated_at from public.workout_templates
+      where id = '20000000-0000-4000-8000-00000000000a'
       union all select created_at, updated_at from public.workout_template_exercises
+      where id = '21000000-0000-4000-8000-00000000000a'
       union all select created_at, updated_at from public.workouts
+      where id = '30000000-0000-4000-8000-00000000000a'
       union all select created_at, updated_at from public.workout_exercises
+      where id = '40000000-0000-4000-8000-00000000000a'
       union all select created_at, updated_at from public.sets
+      where id = '50000000-0000-4000-8000-00000000000a'
       union all select created_at, updated_at from public.progression_recommendations
+      where id = '60000000-0000-4000-8000-00000000000a'
       union all select created_at, updated_at from public.personal_records
+      where id = '70000000-0000-4000-8000-00000000000a'
     ) as metadata_rows
     where created_at = updated_at
       and created_at > '1900-01-01T00:00:00Z'
@@ -217,7 +225,7 @@ insert into metadata_before
 select 'profiles', created_at, updated_at from public.profiles
 where user_id = '00000000-0000-4000-8000-00000000000a'
 union all select 'exercises', created_at, updated_at from public.exercises
-where id = '10000000-0000-4000-8000-000000000001'
+where id = 'f1000000-0000-4000-8000-000000000001'
 union all select 'workout_templates', created_at, updated_at from public.workout_templates
 where id = '20000000-0000-4000-8000-00000000000a'
 union all select 'workout_template_exercises', created_at, updated_at
@@ -242,7 +250,7 @@ set display_name = 'Updated', created_at = '1900-01-01', updated_at = '1900-01-0
 where user_id = '00000000-0000-4000-8000-00000000000a';
 update public.exercises
 set name = 'Updated Bench Press', created_at = '1900-01-01', updated_at = '1900-01-01'
-where id = '10000000-0000-4000-8000-000000000001';
+where id = 'f1000000-0000-4000-8000-000000000001';
 update public.workout_templates
 set name = 'Updated Push', created_at = '1900-01-01', updated_at = '1900-01-01'
 where id = '20000000-0000-4000-8000-00000000000a';

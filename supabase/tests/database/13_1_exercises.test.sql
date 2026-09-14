@@ -111,8 +111,8 @@ insert into public.exercises (
   is_system
 )
 values (
-  '10000000-0000-4000-8000-000000000001',
-  'Barbell Bench Press',
+  'f1000000-0000-4000-8000-000000000001',
+  'Test System Bench Press',
   'chest',
   'barbell',
   'weight_reps',
@@ -138,7 +138,7 @@ values (
 
 insert into public.exercise_secondary_muscles (exercise_id, muscle_group)
 values
-  ('10000000-0000-4000-8000-000000000001', 'triceps'),
+  ('f1000000-0000-4000-8000-000000000001', 'triceps'),
   ('20000000-0000-4000-8000-00000000000b', 'triceps');
 
 select ok(
@@ -201,7 +201,7 @@ select ok(
 select ok(
   pg_temp.statement_fails($statement$
     insert into public.exercise_secondary_muscles (exercise_id, muscle_group)
-    values ('10000000-0000-4000-8000-000000000001', 'invalid')
+    values ('f1000000-0000-4000-8000-000000000001', 'invalid')
   $statement$),
   'database rejects an invalid secondary muscle group'
 );
@@ -211,7 +211,7 @@ select ok(
       id, name, primary_muscle_group, equipment_type, measurement_type, is_system
     ) values (
       '30000000-0000-4000-8000-000000000006',
-      'barbell bench press', 'chest', 'barbell', 'weight_reps', true
+      'test system bench press', 'chest', 'barbell', 'weight_reps', true
     )
   $statement$),
   'system exercise names are unique without case sensitivity'
@@ -268,10 +268,21 @@ select ok(
   $statement$),
   'a user cannot create a custom exercise for another user'
 );
-select is((select count(*) from public.exercises), 2::bigint, 'a user sees system and own exercises');
+select is(
+  (
+    select count(*)
+    from public.exercises
+    where id in (
+      'f1000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-00000000000a'
+    )
+  ),
+  2::bigint,
+  'a user sees the system and owned fixture exercises'
+);
 select ok(
   exists (
-    select 1 from public.exercises where id = '10000000-0000-4000-8000-000000000001'
+    select 1 from public.exercises where id = 'f1000000-0000-4000-8000-000000000001'
   ),
   'a user can read a system exercise'
 );
@@ -307,7 +318,7 @@ select is(
 update public.exercises
 set is_archived = true
 where id in (
-  '10000000-0000-4000-8000-000000000001',
+  'f1000000-0000-4000-8000-000000000001',
   '20000000-0000-4000-8000-00000000000b'
 );
 delete from public.exercises
@@ -320,7 +331,7 @@ select is(
   (
     select count(*)
     from public.exercise_secondary_muscles
-    where exercise_id = '10000000-0000-4000-8000-000000000001'
+    where exercise_id = 'f1000000-0000-4000-8000-000000000001'
   ),
   1::bigint,
   'a user can read system exercise secondary muscles'
@@ -385,7 +396,7 @@ select is(
   (
     select is_archived
     from public.exercises
-    where id = '10000000-0000-4000-8000-000000000001'
+    where id = 'f1000000-0000-4000-8000-000000000001'
   ),
   false,
   'a user cannot update or archive a system exercise'
@@ -427,7 +438,7 @@ select ok(
 select ok(
   pg_temp.statement_fails($statement$
     insert into public.exercise_secondary_muscles (exercise_id, muscle_group)
-    values ('10000000-0000-4000-8000-000000000001', 'triceps')
+    values ('f1000000-0000-4000-8000-000000000001', 'triceps')
   $statement$),
   'duplicate secondary muscle relationships are rejected'
 );
