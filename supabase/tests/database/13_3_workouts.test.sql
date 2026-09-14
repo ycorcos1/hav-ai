@@ -39,13 +39,14 @@ select ok(
   'workout exercises include a nullable recommendation snapshot source'
 );
 select ok(
-  not exists (
+  exists (
     select 1
     from pg_constraint
     where conrelid = 'public.workout_exercises'::regclass
       and confrelid::regclass::text = 'progression_recommendations'
+      and confdeltype = 'n'
   ),
-  'recommendation foreign key remains deferred until its table exists'
+  'recommendation snapshot foreign key is completed after its table exists'
 );
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.workouts'::regclass),
