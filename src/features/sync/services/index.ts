@@ -2,6 +2,10 @@ export { planSyncDependencies } from "./syncDependencyGraph";
 export { PushSyncEngine, SyncPreconditionError } from "./PushSyncEngine";
 export { SyncEngineLock } from "./SyncEngineLock";
 export {
+  SyncTriggerController,
+  type AppStateSource,
+} from "./SyncTriggerController";
+export {
   classifySyncFailure,
   SyncRemoteError,
   syncRetryPolicy,

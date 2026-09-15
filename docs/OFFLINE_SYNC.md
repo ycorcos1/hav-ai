@@ -800,6 +800,16 @@ Actual remote operation success is authoritative.
 
 # 27. Sync Triggers
 
+Reconnect synchronization requires a proven `offline → online` transition.
+`unknown → online` is not a reconnect signal. The shared trigger controller owns
+one network subscription and does not poll.
+
+Foreground synchronization is requested only when AppState transitions from a
+non-active state to `active`. Repeated `active` events do not retrigger. Both
+paths delegate to the same sync processor and therefore share its single-flight
+lock. Trigger failures are non-destructive and never block local workout use;
+authentication and request readiness remain processor preconditions.
+
 Attempt synchronization when:
 
 1. local mutation occurs and network appears usable
