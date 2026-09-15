@@ -20,8 +20,8 @@ select is(
     where trigger_schema = 'public'
       and trigger_name like 'set_%metadata'
   ),
-  8::bigint,
-  'all eight new Phase 13 entity tables have metadata triggers'
+  9::bigint,
+  'all nine new Phase 13 entity tables have metadata triggers'
 );
 select is(
   (
@@ -31,7 +31,7 @@ select is(
       and trigger_name like 'set_%metadata'
       and event_manipulation in ('INSERT', 'UPDATE')
   ),
-  16::bigint,
+  18::bigint,
   'generic metadata triggers cover both inserts and updates'
 );
 select is(
@@ -343,18 +343,19 @@ select is(
         'public.workout_exercises'::regclass,
         'public.sets'::regclass,
         'public.progression_recommendations'::regclass,
-        'public.personal_records'::regclass
+        'public.personal_records'::regclass,
+        'public.user_exercise_preferences'::regclass
       )
   ),
-  9::bigint,
+  10::bigint,
   'exactly one metadata trigger is installed on every applicable entity table'
 );
 select ok(
-  not exists (
+  exists (
     select 1 from information_schema.tables
     where table_schema = 'public' and table_name = 'user_exercise_preferences'
   ),
-  'Task 13.11 preference storage remains out of scope'
+  'Task 13.11 preference storage is present'
 );
 select ok(
   not exists (
@@ -368,7 +369,7 @@ select is(
     select count(*) from information_schema.tables
     where table_schema = 'public' and table_type = 'BASE TABLE'
   ),
-  10::bigint,
+  11::bigint,
   'no unexpected public table was added'
 );
 select ok(

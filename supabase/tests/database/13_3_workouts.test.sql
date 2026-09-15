@@ -22,11 +22,14 @@ select has_table('public', 'workouts', 'workouts table exists');
 select has_table('public', 'workout_exercises', 'workout_exercises table exists');
 select has_table('public', 'sets', 'sets table exists');
 select ok(
-  not exists (
+  exists (
     select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'sets' and column_name = 'notes'
+    where table_schema = 'public'
+      and table_name = 'sets'
+      and column_name = 'notes'
+      and is_nullable = 'YES'
   ),
-  'sets.notes remains deferred to Task 13.11'
+  'sets include the nullable notes field added by Task 13.11'
 );
 select ok(
   exists (

@@ -25,7 +25,7 @@ select is(
     where contype = 'f'
       and connamespace = 'public'::regnamespace
   ),
-  26::bigint,
+  28::bigint,
   'the complete Phase 13 schema has the expected foreign-key inventory'
 );
 
@@ -189,10 +189,11 @@ select is(
       'public.workout_exercises'::regclass,
       'public.sets'::regclass,
       'public.progression_recommendations'::regclass,
-      'public.personal_records'::regclass
+      'public.personal_records'::regclass,
+      'public.user_exercise_preferences'::regclass
     ) and relrowsecurity
   ),
-  10::bigint,
+  11::bigint,
   'all current private cloud tables retain RLS'
 );
 
@@ -466,12 +467,12 @@ select ok(
   'superseded non-owned template foreign keys are absent'
 );
 select ok(
-  not exists (
+  exists (
     select 1 from information_schema.tables
     where table_schema = 'public'
       and table_name = 'user_exercise_preferences'
   ),
-  'Task 13.11 preference storage remains out of scope'
+  'Task 13.11 preference storage is present'
 );
 
 select * from finish();

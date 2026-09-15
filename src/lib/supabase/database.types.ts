@@ -280,6 +280,7 @@ export type Database = {
           created_at: string
           exercise_id: string
           id: string
+          notes: string | null
           position: number
           reps: number
           rpe: number | null
@@ -295,6 +296,7 @@ export type Database = {
           created_at?: string
           exercise_id: string
           id: string
+          notes?: string | null
           position: number
           reps: number
           rpe?: number | null
@@ -310,6 +312,7 @@ export type Database = {
           created_at?: string
           exercise_id?: string
           id?: string
+          notes?: string | null
           position?: number
           reps?: number
           rpe?: number | null
@@ -346,6 +349,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workout_exercises"
             referencedColumns: ["id", "user_id", "workout_id", "exercise_id"]
+          },
+        ]
+      }
+      user_exercise_preferences: {
+        Row: {
+          created_at: string
+          exercise_id: string
+          id: string
+          is_favorite: boolean
+          notes: string | null
+          rest_duration_seconds: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_id: string
+          id: string
+          is_favorite?: boolean
+          notes?: string | null
+          rest_duration_seconds?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          is_favorite?: boolean
+          notes?: string | null
+          rest_duration_seconds?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_exercise_preferences_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
           },
         ]
       }

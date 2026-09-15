@@ -45,11 +45,12 @@ select is(
       'public.workout_exercises'::regclass,
       'public.sets'::regclass,
       'public.progression_recommendations'::regclass,
-      'public.personal_records'::regclass
+      'public.personal_records'::regclass,
+      'public.user_exercise_preferences'::regclass
     )
       and relrowsecurity
   ),
-  10::bigint,
+  11::bigint,
   'RLS is enabled on every current cloud table'
 );
 select is(
@@ -67,10 +68,11 @@ select is(
         'workout_exercises',
         'sets',
         'progression_recommendations',
-        'personal_records'
+        'personal_records',
+        'user_exercise_preferences'
       )
   ),
-  37::bigint,
+  41::bigint,
   'all expected Phase 13 RLS policies exist'
 );
 
