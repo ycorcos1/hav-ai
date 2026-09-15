@@ -59,6 +59,7 @@ export type {
 } from "./workouts";
 export type {
   LocalSyncStatus,
+  RemoteMutationResult,
   SyncEntityType,
   SyncOperation,
   SyncQueueItem,

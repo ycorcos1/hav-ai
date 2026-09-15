@@ -11,6 +11,19 @@ import type {
   UserExercisePreference,
 } from "@/shared/contracts";
 
+export type CloudHydrationResult = "hydrated" | "preserved_dirty";
+
+export type CloudExerciseSnapshot = {
+  exercise: Exercise;
+  serverUpdatedAt: ISODateTime;
+};
+
+export type CloudTemplateSnapshot = {
+  exerciseServerUpdatedAtById: Readonly<Record<UUID, ISODateTime>>;
+  serverUpdatedAt: ISODateTime;
+  template: WorkoutTemplate;
+};
+
 export interface LocalWorkoutRepository {
   getById(userId: UUID, id: UUID): Promise<Workout | null>;
   getActiveForUser(userId: UUID): Promise<Workout | null>;
@@ -52,12 +65,26 @@ export interface LocalTemplateRepository {
   archive(userId: UUID, id: UUID): Promise<void>;
 }
 
+export interface LocalTemplateHydrationRepository {
+  hydrateFromCloud(
+    userId: UUID,
+    snapshot: CloudTemplateSnapshot,
+  ): Promise<CloudHydrationResult>;
+}
+
 export interface LocalExerciseRepository {
   getById(userId: UUID, id: UUID): Promise<Exercise | null>;
   listAccessible(userId: UUID): Promise<Exercise[]>;
   search(userId: UUID, query: string): Promise<Exercise[]>;
   upsert(exercise: Exercise): Promise<void>;
   archiveCustomExercise(userId: UUID, id: UUID): Promise<void>;
+}
+
+export interface LocalExerciseHydrationRepository {
+  hydrateFromCloud(
+    userId: UUID,
+    snapshot: CloudExerciseSnapshot,
+  ): Promise<CloudHydrationResult>;
 }
 
 export interface LocalRecommendationRepository {

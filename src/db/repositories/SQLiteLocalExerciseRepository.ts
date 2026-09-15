@@ -4,11 +4,17 @@ import { exerciseFromRow, exerciseToRow } from "../mappers";
 import type { LocalExerciseRow } from "../mappers";
 import type { TransactionalLocalDatabaseConnection } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
-import type { LocalExerciseRepository } from "./types";
+import type {
+  CloudExerciseSnapshot,
+  CloudHydrationResult,
+  LocalExerciseHydrationRepository,
+  LocalExerciseRepository,
+} from "./types";
 
 const columns = ["id", "owner_user_id", "name", "primary_muscle_group", "secondary_muscle_groups_json", "equipment_type", "measurement_type", "is_system", "is_archived", "sync_status", "created_at", "updated_at", "server_updated_at"];
 
-export class SQLiteLocalExerciseRepository implements LocalExerciseRepository {
+export class SQLiteLocalExerciseRepository
+implements LocalExerciseRepository, LocalExerciseHydrationRepository {
   constructor(private readonly database: TransactionalLocalDatabaseConnection) {}
 
   async getById(userId: string, id: string): Promise<Exercise | null> {
@@ -60,5 +66,50 @@ export class SQLiteLocalExerciseRepository implements LocalExerciseRepository {
        sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
        WHERE id=? AND owner_user_id=? AND is_system=0;`, id, userId,
     );
+  }
+
+  async hydrateFromCloud(
+    userId: string,
+    snapshot: CloudExerciseSnapshot,
+  ): Promise<CloudHydrationResult> {
+    const { exercise, serverUpdatedAt } = snapshot;
+    if ((!exercise.isSystem && exercise.ownerUserId !== userId)
+      || (exercise.isSystem && exercise.ownerUserId !== undefined)) {
+      throw new Error("Cloud exercise ownership does not match the hydration user.");
+    }
+
+    let result: CloudHydrationResult = "hydrated";
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing = await transaction.getFirstAsync<Pick<
+        LocalExerciseRow,
+        "is_system" | "owner_user_id" | "sync_status"
+      >>("SELECT is_system, owner_user_id, sync_status FROM local_exercises WHERE id=?;", exercise.id);
+
+      if (existing) {
+        const sameIdentity = existing.is_system === Number(exercise.isSystem)
+          && existing.owner_user_id === (exercise.ownerUserId ?? null);
+        if (!sameIdentity) {
+          throw new Error("Cloud exercise identity does not match the local exercise.");
+        }
+        if (!exercise.isSystem && existing.sync_status !== "synced") {
+          result = "preserved_dirty";
+          return;
+        }
+      }
+
+      const row = exerciseToRow(exercise, { syncStatus: "synced", serverUpdatedAt });
+      await transaction.runAsync(
+        `INSERT INTO local_exercises (${columns.join(", ")}) VALUES (${placeholders(columns.length)})
+         ON CONFLICT(id) DO UPDATE SET owner_user_id=excluded.owner_user_id,
+           name=excluded.name, primary_muscle_group=excluded.primary_muscle_group,
+           secondary_muscle_groups_json=excluded.secondary_muscle_groups_json,
+           equipment_type=excluded.equipment_type, measurement_type=excluded.measurement_type,
+           is_system=excluded.is_system, is_archived=excluded.is_archived,
+           sync_status='synced', created_at=excluded.created_at,
+           updated_at=excluded.updated_at, server_updated_at=excluded.server_updated_at;`,
+        ...columns.map((column) => row[column as keyof LocalExerciseRow]),
+      );
+    });
+    return result;
   }
 }

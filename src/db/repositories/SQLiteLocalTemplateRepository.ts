@@ -4,12 +4,18 @@ import { workoutTemplateExerciseFromRow, workoutTemplateExerciseToRow, workoutTe
 import type { LocalWorkoutTemplateExerciseRow, LocalWorkoutTemplateRow } from "../mappers";
 import type { LocalDatabaseTransaction, TransactionalLocalDatabaseConnection } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
-import type { LocalTemplateRepository } from "./types";
+import type {
+  CloudHydrationResult,
+  CloudTemplateSnapshot,
+  LocalTemplateHydrationRepository,
+  LocalTemplateRepository,
+} from "./types";
 
 const parentColumns = ["id", "user_id", "name", "notes", "is_archived", "sync_status", "created_at", "updated_at", "server_updated_at"];
 const childColumns = ["id", "user_id", "template_id", "exercise_id", "position", "target_sets", "target_min_reps", "target_max_reps", "notes", "sync_status", "created_at", "updated_at", "server_updated_at"];
 
-export class SQLiteLocalTemplateRepository implements LocalTemplateRepository {
+export class SQLiteLocalTemplateRepository
+implements LocalTemplateRepository, LocalTemplateHydrationRepository {
   constructor(private readonly database: TransactionalLocalDatabaseConnection) {}
 
   async getById(userId: string, id: string): Promise<WorkoutTemplate | null> {
@@ -51,6 +57,68 @@ export class SQLiteLocalTemplateRepository implements LocalTemplateRepository {
     await this.database.runAsync(`UPDATE local_workout_templates SET is_archived=1,
       sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
       WHERE id=? AND user_id=?;`, id, userId);
+  }
+
+  async hydrateFromCloud(
+    userId: string,
+    snapshot: CloudTemplateSnapshot,
+  ): Promise<CloudHydrationResult> {
+    const { template } = snapshot;
+    if (template.userId !== userId || template.exercises.some(
+      (exercise) => exercise.userId !== userId || exercise.templateId !== template.id,
+    )) {
+      throw new Error("Cloud template ownership or ancestry does not match the hydration user.");
+    }
+
+    let result: CloudHydrationResult = "hydrated";
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing = await transaction.getFirstAsync<Pick<
+        LocalWorkoutTemplateRow,
+        "sync_status" | "user_id"
+      >>("SELECT user_id, sync_status FROM local_workout_templates WHERE id=?;", template.id);
+      if (existing?.user_id !== undefined && existing.user_id !== userId) {
+        throw new Error("Cloud template identity does not match the local template.");
+      }
+
+      const children = await transaction.getAllAsync<Pick<
+        LocalWorkoutTemplateExerciseRow,
+        "sync_status"
+      >>("SELECT sync_status FROM local_workout_template_exercises WHERE template_id=? AND user_id=?;", template.id, userId);
+      if ((existing && existing.sync_status !== "synced")
+        || children.some(({ sync_status }) => sync_status !== "synced")) {
+        result = "preserved_dirty";
+        return;
+      }
+
+      const parent = workoutTemplateToRow(template, {
+        syncStatus: "synced",
+        serverUpdatedAt: snapshot.serverUpdatedAt,
+      });
+      await upsertTemplate(transaction, "local_workout_templates", parentColumns, parent, [
+        "name", "notes", "is_archived", "sync_status", "created_at", "updated_at",
+        "server_updated_at",
+      ]);
+      await transaction.runAsync(
+        "DELETE FROM local_workout_template_exercises WHERE template_id=? AND user_id=?;",
+        template.id,
+        userId,
+      );
+      for (const exercise of template.exercises) {
+        const serverUpdatedAt = snapshot.exerciseServerUpdatedAtById[exercise.id];
+        if (!serverUpdatedAt) {
+          throw new Error("Cloud template exercise metadata is incomplete.");
+        }
+        const child = workoutTemplateExerciseToRow(exercise, {
+          syncStatus: "synced",
+          serverUpdatedAt,
+        });
+        await transaction.runAsync(
+          `INSERT INTO local_workout_template_exercises (${childColumns.join(", ")}) VALUES (${placeholders(childColumns.length)});`,
+          ...childColumns.map((column) => child[column as keyof LocalWorkoutTemplateExerciseRow]),
+        );
+      }
+    });
+    return result;
   }
 }
 

@@ -37,6 +37,10 @@ export type SyncResult = {
   }[];
 };
 
+export type RemoteMutationResult = {
+  serverUpdatedAt?: ISODateTime;
+};
+
 export type LocalSyncStatus =
   | "synced"
   | "pending_create"
