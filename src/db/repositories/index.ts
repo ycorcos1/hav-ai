@@ -3,6 +3,7 @@ export { SQLiteExerciseHistoryRepository } from "./SQLiteExerciseHistoryReposito
 export { SQLiteLocalRecommendationRepository } from "./SQLiteLocalRecommendationRepository";
 export { SQLiteLocalProfileCacheRepository } from "./SQLiteLocalProfileCacheRepository";
 export { SQLiteLocalSetRepository } from "./SQLiteLocalSetRepository";
+export { SQLiteLocalSyncEntityStore } from "./SQLiteLocalSyncEntityStore";
 export { SQLiteLocalTemplateRepository } from "./SQLiteLocalTemplateRepository";
 export { SQLiteLocalWorkoutRepository } from "./SQLiteLocalWorkoutRepository";
 export { SQLiteLocalUserExercisePreferenceRepository } from "./SQLiteLocalUserExercisePreferenceRepository";

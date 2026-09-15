@@ -1099,6 +1099,11 @@ Examples:
 
 Use bounded backoff.
 
+V1 retries a transient mutation at most three times in one sync pass. Delays
+between those attempts are deterministic: 250 ms, then 1,000 ms. Persisted
+`attempt_count` records every failed request. A later reconnect, foreground, or
+manual trigger may start a new bounded pass; there is no tight infinite loop.
+
 Conceptually:
 
 ```text

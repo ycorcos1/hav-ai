@@ -1762,6 +1762,32 @@ remain processable.
 
 ---
 
+# 74B. Push Sync Boundaries
+
+The push processor depends on typed boundaries for:
+
+```text
+authenticated owner and request capability
+latest local entity loading and confirmed-success cleanup
+remote mutation application
+owner-scoped queue operations
+concrete-ID dependency resolution
+single-flight execution
+```
+
+The local entity store returns a discriminated mutation for exactly one of the
+eight canonical queue entity types. Upsert confirmation marks an entity synced
+only when its `updated_at` still matches the uploaded snapshot. A newer local
+mutation therefore remains queued. Confirmed set/preference deletes clean their
+local tombstones; no local state is removed before remote success.
+
+Transient network, timeout, and temporary server failures receive at most three
+attempts per run with deterministic 250 ms and 1,000 ms delays. Authentication,
+authorization/RLS, constraint/FK, validation, and unknown failures are retained
+without aggressive retry. Provider details are reduced to sanitized sync codes.
+
+---
+
 # 75. Remote Sync Adapter
 
 Conceptual:

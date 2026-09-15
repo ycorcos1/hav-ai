@@ -1,7 +1,7 @@
-export class SyncEngineLock {
-  private activeRun: Promise<void> | undefined;
+export class SyncEngineLock<Result = void> {
+  private activeRun: Promise<Result> | undefined;
 
-  run(processor: () => Promise<void>): Promise<void> {
+  run(processor: () => Promise<Result>): Promise<Result> {
     if (this.activeRun) return this.activeRun;
 
     const run = Promise.resolve()
