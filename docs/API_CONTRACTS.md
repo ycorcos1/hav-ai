@@ -1742,6 +1742,26 @@ and callers cannot select or override another owner through `SyncQueueItem`.
 
 ---
 
+# 74A. Sync Dependency Plan
+
+Dependency planning resolves concrete `(entityType, entityId)` references from
+the latest owner-scoped local entity state. The result separates deterministically
+ordered processable items from blocked items and reports true cycles as:
+
+```ts
+type SyncDependencyCycle = {
+  code: "SYNC_DEPENDENCY_CYCLE";
+  message: string;
+  members: SyncEntityReference[];
+};
+```
+
+The message is sanitized. Structured members support internal diagnostics without
+changing payloads or removing pending queue items. Independent acyclic components
+remain processable.
+
+---
+
 # 75. Remote Sync Adapter
 
 Conceptual:

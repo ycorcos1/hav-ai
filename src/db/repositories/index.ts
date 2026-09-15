@@ -7,6 +7,7 @@ export { SQLiteLocalTemplateRepository } from "./SQLiteLocalTemplateRepository";
 export { SQLiteLocalWorkoutRepository } from "./SQLiteLocalWorkoutRepository";
 export { SQLiteLocalUserExercisePreferenceRepository } from "./SQLiteLocalUserExercisePreferenceRepository";
 export { SQLiteSyncQueueRepository } from "./SQLiteSyncQueueRepository";
+export { SQLiteSyncDependencyResolver } from "./SQLiteSyncDependencyResolver";
 export type {
   CloudExerciseSnapshot,
   CloudHydrationResult,

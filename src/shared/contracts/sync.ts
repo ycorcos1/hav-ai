@@ -23,6 +23,27 @@ export type SyncQueueItem = {
   lastError?: string;
 };
 
+export type SyncEntityReference = {
+  entityType: SyncEntityType;
+  entityId: UUID;
+};
+
+export interface SyncDependencyResolver {
+  getDependencies(item: SyncQueueItem): Promise<SyncEntityReference[]>;
+}
+
+export type SyncDependencyCycle = {
+  code: "SYNC_DEPENDENCY_CYCLE";
+  message: string;
+  members: SyncEntityReference[];
+};
+
+export type SyncDependencyPlan = {
+  processable: SyncQueueItem[];
+  blocked: SyncQueueItem[];
+  cycles: SyncDependencyCycle[];
+};
+
 export type SyncResult = {
   success: boolean;
   processed: number;

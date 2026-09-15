@@ -986,6 +986,17 @@ then that recommendation must exist remotely before the workout exercise can saf
 
 The dependency graph must account for both directions of historical linkage.
 
+Dependencies are resolved by the concrete referenced entity IDs. A normal
+chronological chain remains acyclic: source workout data precedes its derived
+recommendation, and that recommendation precedes a later workout exercise that
+consumes it.
+
+If queued entities form a true mutual recommendation/workout-exercise cycle,
+the planner must leave the cycle members pending and report the sanitized
+`SYNC_DEPENDENCY_CYCLE` error with structured blocked-entity references. It must
+not omit, null, patch later, or otherwise mutate either relationship to break
+the cycle. Independent acyclic queue components remain processable.
+
 ---
 
 # 38. Dependency Graph Must Be Explicit
