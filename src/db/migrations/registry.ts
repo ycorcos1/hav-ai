@@ -6,6 +6,7 @@ import { createSyncQueueMigration } from "./004_create_sync_queue";
 import { createLocalExercisesAndRecentSessionCacheMigration } from "./005_create_local_exercises_and_recent_session_cache";
 import { createLocalUserExercisePreferencesMigration } from "./006_create_local_user_exercise_preferences";
 import { createLocalProfileCacheMigration } from "./007_create_local_profile_cache";
+import { addSyncQueueOwnershipMigration } from "./008_add_sync_queue_ownership";
 
 export const localMigrations: readonly LocalMigration[] = [
   createLocalWorkoutTablesMigration,
@@ -15,4 +16,5 @@ export const localMigrations: readonly LocalMigration[] = [
   createLocalExercisesAndRecentSessionCacheMigration,
   createLocalUserExercisePreferencesMigration,
   createLocalProfileCacheMigration,
+  addSyncQueueOwnershipMigration,
 ];

@@ -1737,6 +1737,9 @@ interface SyncQueueRepository {
 }
 ```
 
+The local implementation is owner-scoped. Durable queue storage includes `user_id`,
+and callers cannot select or override another owner through `SyncQueueItem`.
+
 ---
 
 # 75. Remote Sync Adapter

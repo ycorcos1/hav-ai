@@ -34,7 +34,7 @@ describe("local user exercise preferences", () => {
       const database = new NodeSQLiteConnection(new DatabaseSync(filename));
       await configureLocalDatabase(database);
       await seedExercises(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(7);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(8);
       const repository = new SQLiteLocalUserExercisePreferenceRepository(database);
       await repository.upsert(preference("user-a", "preference-a"));
       await repository.upsert({ ...preference("user-b", "preference-b"), notes: "User B", restDurationSeconds: 90 });

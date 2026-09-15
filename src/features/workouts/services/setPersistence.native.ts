@@ -32,14 +32,14 @@ export class SQLiteSetPersistence implements SetPersistence {
   async commitCompletedSet(set: WorkoutSet): Promise<void> {
     await this.database.withExclusiveTransactionAsync(async (transaction) => {
       await new SQLiteLocalSetRepository(transaction).create(set);
-      await enqueueSyncUpsert(transaction, "set", set.id, set.completedAt);
+      await enqueueSyncUpsert(transaction, set.userId, "set", set.id, set.completedAt);
     });
   }
 
   async commitEditedSet(set: WorkoutSet): Promise<void> {
     await this.database.withExclusiveTransactionAsync(async (transaction) => {
       await new SQLiteLocalSetRepository(transaction).update(set);
-      await enqueueSyncUpsert(transaction, "set", set.id, set.updatedAt);
+      await enqueueSyncUpsert(transaction, set.userId, "set", set.id, set.updatedAt);
     });
   }
 
@@ -70,7 +70,7 @@ export class SQLiteSetPersistence implements SetPersistence {
           setId,
           userId,
         );
-        await removeSyncMutation(transaction, "set", setId);
+        await removeSyncMutation(transaction, userId, "set", setId);
         result = "deleted-local";
         return;
       }
@@ -83,7 +83,7 @@ export class SQLiteSetPersistence implements SetPersistence {
         setId,
         userId,
       );
-      await enqueueSyncDelete(transaction, "set", setId, deletedAt);
+      await enqueueSyncDelete(transaction, userId, "set", setId, deletedAt);
       result = "tombstoned";
     });
     return result;

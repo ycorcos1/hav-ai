@@ -28,15 +28,16 @@ describe("sync queue table migration", () => {
     try {
       const database = new NodeSQLiteConnection(new DatabaseSync(filename));
       await configureLocalDatabase(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(7);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(8);
 
       for (const [index, entityType] of entityTypes.entries()) {
         await database.runAsync(
           `INSERT INTO sync_queue (
-            id, entity_type, entity_id, operation, attempt_count,
+            id, user_id, entity_type, entity_id, operation, attempt_count,
             last_error, last_attempt_at, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           `queue-${index}`,
+          "user-a",
           entityType,
           `entity-${index}`,
           index % 2 === 0 ? "upsert" : "delete",
@@ -84,8 +85,8 @@ describe("sync queue table migration", () => {
   it("rejects personal records, invalid operations, and duplicate logical entries", async () => {
     const database = new NodeSQLiteConnection(new DatabaseSync(":memory:"));
     const insertSql = `
-      INSERT INTO sync_queue (id, entity_type, entity_id, operation, created_at)
-      VALUES (?, ?, ?, ?, ?);
+      INSERT INTO sync_queue (id, user_id, entity_type, entity_id, operation, created_at)
+      VALUES (?, ?, ?, ?, ?, ?);
     `;
 
     try {
@@ -94,6 +95,7 @@ describe("sync queue table migration", () => {
         database.runAsync(
           insertSql,
           "personal-record-item",
+          "user-a",
           "personal_record",
           "record-1",
           "upsert",
@@ -104,6 +106,7 @@ describe("sync queue table migration", () => {
         database.runAsync(
           insertSql,
           "invalid-operation-item",
+          "user-a",
           "set",
           "set-1",
           "create",
@@ -114,6 +117,7 @@ describe("sync queue table migration", () => {
       await database.runAsync(
         insertSql,
         "queue-1",
+        "user-a",
         "set",
         "set-1",
         "upsert",
@@ -123,6 +127,7 @@ describe("sync queue table migration", () => {
         database.runAsync(
           insertSql,
           "queue-2",
+          "user-a",
           "set",
           "set-1",
           "delete",

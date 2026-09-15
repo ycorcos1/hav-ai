@@ -592,6 +592,11 @@ type SyncQueueItem = {
 };
 ```
 
+The SQLite queue row additionally stores `user_id`. The repository is constructed for
+one durable local owner and applies that owner to enqueue/coalesce, pending reads,
+attempt updates, and removal. The public item remains owner-neutral because ownership
+is fixed by the repository boundary rather than accepted from each caller.
+
 ---
 
 # 18. Queue References Entity State

@@ -39,7 +39,7 @@ describe("local workout tables migration", () => {
 
     try {
       await configureLocalDatabase(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(7);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(8);
       await insertWorkout(database);
 
       await expect(

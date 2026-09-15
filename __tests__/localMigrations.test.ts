@@ -18,13 +18,13 @@ function createConnection(filename: string = ":memory:") {
 }
 
 describe("local migration runner", () => {
-  it("applies the production registry through version seven without future tables", async () => {
+  it("applies the production registry through version eight without future tables", async () => {
     const database = createConnection();
 
     try {
       await configureLocalDatabase(database);
 
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(7);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(8);
       await expect(database.getAllAsync("PRAGMA foreign_key_check;")).resolves.toEqual([]);
       await expect(
         database.getFirstAsync<{ count: number }>(

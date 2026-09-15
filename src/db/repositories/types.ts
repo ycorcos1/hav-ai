@@ -9,6 +9,7 @@ import type {
   WorkoutSet,
   WorkoutTemplate,
   UserExercisePreference,
+  SyncQueueItem,
 } from "@/shared/contracts";
 
 export type CloudHydrationResult = "hydrated" | "preserved_dirty";
@@ -85,6 +86,13 @@ export interface LocalExerciseHydrationRepository {
     userId: UUID,
     snapshot: CloudExerciseSnapshot,
   ): Promise<CloudHydrationResult>;
+}
+
+export interface SyncQueueRepository {
+  enqueueOrCoalesce(item: SyncQueueItem): Promise<void>;
+  getPending(): Promise<SyncQueueItem[]>;
+  markAttempt(id: UUID, error?: string): Promise<void>;
+  remove(id: UUID): Promise<void>;
 }
 
 export interface LocalRecommendationRepository {

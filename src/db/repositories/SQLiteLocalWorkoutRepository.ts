@@ -53,9 +53,13 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
         throw new Error("An active workout already exists for this user.");
       }
       await this.saveInTransaction(transaction, workout);
-      await enqueueSyncUpsert(transaction, "workout", workout.id, workout.createdAt);
+      await enqueueSyncUpsert(
+        transaction, workout.userId, "workout", workout.id, workout.createdAt,
+      );
       for (const exercise of workout.exercises) {
-        await enqueueSyncUpsert(transaction, "workout_exercise", exercise.id, exercise.createdAt);
+        await enqueueSyncUpsert(
+          transaction, exercise.userId, "workout_exercise", exercise.id, exercise.createdAt,
+        );
         if (!exercise.sourceRecommendationId) continue;
         const recommendation = await transaction.getFirstAsync<{
           exercise_id: string;
@@ -85,6 +89,7 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
         );
         await enqueueSyncUpsert(
           transaction,
+          workout.userId,
           "progression_recommendation",
           exercise.sourceRecommendationId,
           workout.createdAt,
@@ -95,9 +100,13 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
   async update(workout: Workout): Promise<void> {
     await this.database.withExclusiveTransactionAsync(async (transaction) => {
       await this.saveInTransaction(transaction, workout);
-      await enqueueSyncUpsert(transaction, "workout", workout.id, workout.updatedAt);
+      await enqueueSyncUpsert(
+        transaction, workout.userId, "workout", workout.id, workout.updatedAt,
+      );
       for (const exercise of workout.exercises) {
-        await enqueueSyncUpsert(transaction, "workout_exercise", exercise.id, workout.updatedAt);
+        await enqueueSyncUpsert(
+          transaction, exercise.userId, "workout_exercise", exercise.id, workout.updatedAt,
+        );
       }
     });
   }

@@ -17,7 +17,7 @@ describe("local exercise and recent-session cache migration", () => {
     try {
       const database = new NodeSQLiteConnection(new DatabaseSync(filename));
       await configureLocalDatabase(database);
-      await expect(getLocalSchemaVersion(database)).resolves.toBe(7);
+      await expect(getLocalSchemaVersion(database)).resolves.toBe(8);
 
       const insertExerciseSql = `
         INSERT INTO local_exercises (

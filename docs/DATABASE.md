@@ -2856,6 +2856,8 @@ sync_queue
 ----------
 id text primary key
 
+user_id text not null
+
 entity_type text not null
 entity_id text not null
 
@@ -2872,8 +2874,13 @@ created_at text not null
 Recommended unique constraint:
 
 ```text
-unique(entity_type, entity_id)
+unique(user_id, entity_type, entity_id)
 ```
+
+Queue ownership is durable and explicit. Migration 008 backfills `user_id` from the
+authoritative local entity row and aborts without advancing the schema if any owner
+cannot be recovered. Queue reads, attempt updates, coalescing, and removal are scoped
+to one owner.
 
 ---
 
@@ -3842,7 +3849,7 @@ WHERE status = 'active'
 Local:
 
 ```text
-sync_queue(entity_type, entity_id)
+sync_queue(user_id, entity_type, entity_id)
 ```
 
 Potentially:
