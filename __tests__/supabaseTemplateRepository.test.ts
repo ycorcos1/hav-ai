@@ -69,15 +69,23 @@ describe("SupabaseTemplateRepository", () => {
   });
 
   it("fetches the authenticated user's template graph and ordered children", async () => {
-    const parentOrder = jest.fn().mockResolvedValue({ data: [parentRow], error: null });
+    const parentRange = jest.fn().mockResolvedValue({ data: [parentRow], error: null });
     const childOrder = jest.fn().mockResolvedValue({ data: [childRow], error: null });
-    mockFrom.mockImplementation((table: string) => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          order: table === "workout_templates" ? parentOrder : childOrder,
+    mockFrom.mockImplementation((table: string) => table === "workout_templates"
+      ? {
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            order: jest.fn(() => ({ range: parentRange })),
+          })),
         })),
-      })),
-    }));
+      }
+      : {
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            in: jest.fn(() => ({ order: childOrder })),
+          })),
+        })),
+      });
 
     await expect(new SupabaseTemplateRepository().fetchOwnTemplates()).resolves.toEqual([
       expect.objectContaining({
@@ -89,6 +97,35 @@ describe("SupabaseTemplateRepository", () => {
         serverUpdatedAt: timestamp,
       }),
     ]);
+    expect(parentRange).toHaveBeenCalledWith(0, 99);
+  });
+
+  it("paginates owned template pulls deterministically", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      ...parentRow,
+      id: `fa100000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    }));
+    const range = jest.fn()
+      .mockResolvedValueOnce({ data: firstPage, error: null })
+      .mockResolvedValueOnce({ data: [parentRow], error: null });
+    mockFrom.mockImplementation((table: string) => table === "workout_templates"
+      ? {
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({ order: jest.fn(() => ({ range })) })),
+        })),
+      }
+      : {
+        select: jest.fn(() => ({
+          eq: jest.fn(() => ({
+            in: jest.fn(() => ({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            })),
+          })),
+        })),
+      });
+
+    await expect(new SupabaseTemplateRepository().fetchOwnTemplates()).resolves.toHaveLength(101);
+    expect(range.mock.calls).toEqual([[0, 99], [100, 199]]);
   });
 
   it("upserts parent and child UUIDs with intentional payloads", async () => {

@@ -21,21 +21,34 @@ export class SupabaseTemplateRepository implements TemplateRepository {
 
   async fetchOwnTemplates() {
     const user = await this.requireUser("fetchOwnTemplates");
-    const [templateResult, childResult] = await Promise.all([
-      this.client.from("workout_templates").select("*").eq("user_id", user.id)
-        .order("updated_at", { ascending: false }),
-      this.client.from("workout_template_exercises").select("*").eq("user_id", user.id)
-        .order("position"),
-    ]);
-    if (templateResult.error || childResult.error) throw repositoryError("fetchOwnTemplates");
+    const snapshots = [];
+    for (let offset = 0; ; offset += pullPageSize) {
+      const templateResult = await this.client.from("workout_templates")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .range(offset, offset + pullPageSize - 1);
+      if (templateResult.error) throw repositoryError("fetchOwnTemplates");
 
-    try {
-      return templateResult.data.map((row) => workoutTemplateFromCloudRows(
-        row,
-        childResult.data,
-      ));
-    } catch {
-      throw repositoryError("fetchOwnTemplates");
+      const templateIds = templateResult.data.map(({ id }) => id);
+      const childResult = templateIds.length > 0
+        ? await this.client.from("workout_template_exercises")
+          .select("*")
+          .eq("user_id", user.id)
+          .in("template_id", templateIds)
+          .order("position")
+        : { data: [], error: null };
+      if (childResult.error) throw repositoryError("fetchOwnTemplates");
+
+      try {
+        snapshots.push(...templateResult.data.map((row) => workoutTemplateFromCloudRows(
+          row,
+          childResult.data,
+        )));
+      } catch {
+        throw repositoryError("fetchOwnTemplates");
+      }
+      if (templateResult.data.length < pullPageSize) return snapshots;
     }
   }
 
@@ -88,6 +101,8 @@ export class SupabaseTemplateRepository implements TemplateRepository {
     return data.user;
   }
 }
+
+const pullPageSize = 100;
 
 function repositoryError(operation: TemplateRepositoryOperation): TemplateRepositoryError {
   return new TemplateRepositoryError(operation);

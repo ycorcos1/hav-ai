@@ -55,7 +55,7 @@ describe("SupabaseExerciseRepository", () => {
   });
 
   it("fetches and maps the system and own custom exercises exposed by RLS", async () => {
-    const exerciseOrder = jest.fn().mockResolvedValue({
+    const exerciseRange = jest.fn().mockResolvedValue({
       data: [exerciseRow(systemId, null), exerciseRow(customId, userId, true)],
       error: null,
     });
@@ -63,11 +63,13 @@ describe("SupabaseExerciseRepository", () => {
       data: [{ exercise_id: systemId, muscle_group: "triceps" }],
       error: null,
     });
-    mockFrom.mockImplementation((table: string) => ({
-      select: jest.fn(() => ({
-        order: table === "exercises" ? exerciseOrder : secondaryOrder,
-      })),
-    }));
+    mockFrom.mockImplementation((table: string) => table === "exercises"
+      ? { select: jest.fn(() => ({ order: jest.fn(() => ({ range: exerciseRange })) })) }
+      : {
+        select: jest.fn(() => ({
+          in: jest.fn(() => ({ order: secondaryOrder })),
+        })),
+      });
 
     const repository = new SupabaseExerciseRepository();
     await expect(repository.fetchAccessible()).resolves.toEqual([
@@ -85,6 +87,29 @@ describe("SupabaseExerciseRepository", () => {
     ]);
     expect(mockFrom).toHaveBeenCalledWith("exercises");
     expect(mockFrom).toHaveBeenCalledWith("exercise_secondary_muscles");
+    expect(exerciseRange).toHaveBeenCalledWith(0, 99);
+  });
+
+  it("paginates accessible exercise pulls deterministically", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => (
+      exerciseRow(`10000000-0000-4000-8000-${String(index).padStart(12, "0")}`, null)
+    ));
+    const finalRow = exerciseRow(customId, userId);
+    const range = jest.fn()
+      .mockResolvedValueOnce({ data: firstPage, error: null })
+      .mockResolvedValueOnce({ data: [finalRow], error: null });
+    mockFrom.mockImplementation((table: string) => table === "exercises"
+      ? { select: jest.fn(() => ({ order: jest.fn(() => ({ range })) })) }
+      : {
+        select: jest.fn(() => ({
+          in: jest.fn(() => ({
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
+        })),
+      });
+
+    await expect(new SupabaseExerciseRepository().fetchAccessible()).resolves.toHaveLength(101);
+    expect(range.mock.calls).toEqual([[0, 99], [100, 199]]);
   });
 
   it("requires authentication and sanitizes provider and mapping failures", async () => {
@@ -94,13 +119,23 @@ describe("SupabaseExerciseRepository", () => {
     );
     expect(mockFrom).not.toHaveBeenCalled();
 
-    mockFrom.mockImplementation((table: string) => ({
-      select: jest.fn(() => ({
-        order: jest.fn().mockResolvedValue(table === "exercises"
-          ? { data: [exerciseRow(systemId, "wrong-owner")], error: null }
-          : { data: [], error: null }),
-      })),
-    }));
+    mockFrom.mockImplementation((table: string) => table === "exercises"
+      ? {
+        select: jest.fn(() => ({
+          order: jest.fn(() => ({
+            range: jest.fn().mockResolvedValue({
+              data: [exerciseRow(systemId, "wrong-owner")], error: null,
+            }),
+          })),
+        })),
+      }
+      : {
+        select: jest.fn(() => ({
+          in: jest.fn(() => ({
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
+        })),
+      });
     const request = new SupabaseExerciseRepository().fetchAccessible();
     await expect(request).rejects.toMatchObject({
       code: "EXERCISE_REPOSITORY_ERROR",
@@ -110,13 +145,23 @@ describe("SupabaseExerciseRepository", () => {
   });
 
   it("rejects a foreign custom exercise before it can reach local hydration", async () => {
-    mockFrom.mockImplementation((table: string) => ({
-      select: jest.fn(() => ({
-        order: jest.fn().mockResolvedValue(table === "exercises"
-          ? { data: [exerciseRow(customId, "foreign-user")], error: null }
-          : { data: [], error: null }),
-      })),
-    }));
+    mockFrom.mockImplementation((table: string) => table === "exercises"
+      ? {
+        select: jest.fn(() => ({
+          order: jest.fn(() => ({
+            range: jest.fn().mockResolvedValue({
+              data: [exerciseRow(customId, "foreign-user")], error: null,
+            }),
+          })),
+        })),
+      }
+      : {
+        select: jest.fn(() => ({
+          in: jest.fn(() => ({
+            order: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
+        })),
+      });
     const hydrateFromCloud = jest.fn();
 
     const hydrateFetchedExercises = async () => {

@@ -22,24 +22,37 @@ export class SupabaseExerciseRepository implements ExerciseRepository {
     const { data: authData, error: authError } = await this.client.auth.getUser();
     if (authError || !authData.user) throw repositoryError();
 
-    const [exerciseResult, secondaryResult] = await Promise.all([
-      this.client.from("exercises").select("*").order("name"),
-      this.client.from("exercise_secondary_muscles").select("*").order("muscle_group"),
-    ]);
-    if (exerciseResult.error || secondaryResult.error) throw repositoryError();
+    const snapshots = [];
+    for (let offset = 0; ; offset += pullPageSize) {
+      const exerciseResult = await this.client.from("exercises")
+        .select("*")
+        .order("name")
+        .range(offset, offset + pullPageSize - 1);
+      if (exerciseResult.error) throw repositoryError();
 
-    try {
-      const snapshots = exerciseResult.data.map(
-        (row) => exerciseFromCloudRows(row, secondaryResult.data),
-      );
-      if (snapshots.some(({ exercise }) => (
-        !exercise.isSystem && exercise.ownerUserId !== authData.user.id
-      ))) {
+      const exerciseIds = exerciseResult.data.map(({ id }) => id);
+      const secondaryResult = exerciseIds.length > 0
+        ? await this.client.from("exercise_secondary_muscles")
+          .select("*")
+          .in("exercise_id", exerciseIds)
+          .order("muscle_group")
+        : { data: [], error: null };
+      if (secondaryResult.error) throw repositoryError();
+
+      try {
+        const page = exerciseResult.data.map(
+          (row) => exerciseFromCloudRows(row, secondaryResult.data),
+        );
+        if (page.some(({ exercise }) => (
+          !exercise.isSystem && exercise.ownerUserId !== authData.user.id
+        ))) {
+          throw repositoryError();
+        }
+        snapshots.push(...page);
+      } catch {
         throw repositoryError();
       }
-      return snapshots;
-    } catch {
-      throw repositoryError();
+      if (exerciseResult.data.length < pullPageSize) return snapshots;
     }
   }
 
@@ -83,6 +96,8 @@ export class SupabaseExerciseRepository implements ExerciseRepository {
     return exerciseRemoteMutationResult(data);
   }
 }
+
+const pullPageSize = 100;
 
 function repositoryError(
   operation: "fetchAccessible" | "upsertOwnCustomExercise" = "fetchAccessible",

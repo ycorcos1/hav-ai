@@ -1,4 +1,8 @@
 export { planSyncDependencies } from "./syncDependencyGraph";
+export {
+  ExerciseTemplatePullService,
+  type ExerciseTemplatePullResult,
+} from "./ExerciseTemplatePullService";
 export { PushSyncEngine, SyncPreconditionError } from "./PushSyncEngine";
 export { SyncEngineLock } from "./SyncEngineLock";
 export {
