@@ -258,6 +258,8 @@ describe("full local workout flow", () => {
         "set",
         "workout",
         "workout_exercise",
+        "workout_template",
+        "workout_template_exercise",
       ]);
       expect(queueBeforeClose.every(({ attempt_count, last_attempt_at, last_error, operation }) => (
         attempt_count === 0 && last_attempt_at === null && last_error === null && operation === "upsert"

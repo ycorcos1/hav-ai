@@ -88,6 +88,9 @@ describe("cloud template hydration", () => {
       await configureLocalDatabase(database);
       const repository = new SQLiteLocalTemplateRepository(database);
       await repository.create({ ...snapshot("Local Dirty Push").template, updatedAt: createdAt });
+      const queueBeforeHydration = await database.getAllAsync(
+        "SELECT entity_type, entity_id, operation FROM sync_queue ORDER BY entity_type, entity_id;",
+      );
 
       await expect(repository.hydrateFromCloud(userId, snapshot())).resolves
         .toBe("preserved_dirty");
@@ -98,9 +101,9 @@ describe("cloud template hydration", () => {
           expect.objectContaining({ id: "template-child-1" }),
         ]),
       });
-      await expect(database.getFirstAsync<{ count: number }>(
-        "SELECT COUNT(*) AS count FROM sync_queue;",
-      )).resolves.toEqual({ count: 0 });
+      await expect(database.getAllAsync(
+        "SELECT entity_type, entity_id, operation FROM sync_queue ORDER BY entity_type, entity_id;",
+      )).resolves.toEqual(queueBeforeHydration);
     } finally {
       database.close();
     }

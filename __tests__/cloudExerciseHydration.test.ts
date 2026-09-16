@@ -77,6 +77,9 @@ describe("cloud exercise hydration", () => {
       const repository = new SQLiteLocalExerciseRepository(database);
       const dirty = snapshot("custom-exercise", userId).exercise;
       await repository.upsert({ ...dirty, name: "Local Dirty Press" });
+      const queueBeforeHydration = await database.getAllAsync(
+        "SELECT entity_type, entity_id, operation FROM sync_queue ORDER BY entity_type, entity_id;",
+      );
 
       await expect(repository.hydrateFromCloud(
         userId,
@@ -89,9 +92,9 @@ describe("cloud exercise hydration", () => {
         "another-user",
         snapshot("other-custom", userId),
       )).rejects.toThrow("Cloud exercise ownership does not match");
-      await expect(database.getFirstAsync<{ count: number }>(
-        "SELECT COUNT(*) AS count FROM sync_queue;",
-      )).resolves.toEqual({ count: 0 });
+      await expect(database.getAllAsync(
+        "SELECT entity_type, entity_id, operation FROM sync_queue ORDER BY entity_type, entity_id;",
+      )).resolves.toEqual(queueBeforeHydration);
     } finally {
       database.close();
     }

@@ -73,6 +73,15 @@ export class SupabaseTemplateRepository implements TemplateRepository {
     return remoteMutationResultFromRow(data);
   }
 
+  async deleteOwnTemplateExercise(id: UUID): Promise<void> {
+    const user = await this.requireUser("deleteOwnTemplateExercise");
+    const { error } = await this.client.from("workout_template_exercises")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) throw repositoryError("deleteOwnTemplateExercise");
+  }
+
   private async requireUser(operation: TemplateRepositoryOperation): Promise<User> {
     const { data, error } = await this.client.auth.getUser();
     if (error || !data.user) throw repositoryError(operation);

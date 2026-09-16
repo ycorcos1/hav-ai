@@ -4,6 +4,7 @@ import { workoutTemplateExerciseFromRow, workoutTemplateExerciseToRow, workoutTe
 import type { LocalWorkoutTemplateExerciseRow, LocalWorkoutTemplateRow } from "../mappers";
 import type { LocalDatabaseTransaction, TransactionalLocalDatabaseConnection } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
+import { enqueueSyncDelete, enqueueSyncUpsert, removeSyncMutation } from "./syncQueueUtils";
 import type {
   CloudHydrationResult,
   CloudTemplateSnapshot,
@@ -42,21 +43,78 @@ implements LocalTemplateRepository, LocalTemplateHydrationRepository {
         "SELECT user_id FROM local_workout_templates WHERE id=?;", template.id,
       );
       if (existing && existing.user_id !== template.userId) return;
+      const existingChildren = await transaction.getAllAsync<LocalWorkoutTemplateExerciseRow>(
+        "SELECT * FROM local_workout_template_exercises WHERE template_id=? AND user_id=?;",
+        template.id,
+        template.userId,
+      );
       const parent = workoutTemplateToRow(template, await metadataForUpsert(transaction, "local_workout_templates", "user_id", template.userId, template.id));
       await upsertTemplate(transaction, "local_workout_templates", parentColumns, parent, ["name", "notes", "is_archived", "sync_status", "updated_at"]);
-      await transaction.runAsync("DELETE FROM local_workout_template_exercises WHERE template_id=? AND user_id=?;", template.id, template.userId);
+      const childRows: LocalWorkoutTemplateExerciseRow[] = [];
       for (const exercise of template.exercises) {
-        if (exercise.userId !== template.userId || exercise.templateId !== template.id) throw new Error("Template exercise ownership or ancestry does not match its template.");
-        const child = workoutTemplateExerciseToRow(exercise, { syncStatus: "pending_create" });
+        if (exercise.userId !== template.userId || exercise.templateId !== template.id) {
+          throw new Error("Template exercise ownership or ancestry does not match its template.");
+        }
+        const metadata = await metadataForUpsert(
+          transaction,
+          "local_workout_template_exercises",
+          "user_id",
+          exercise.userId,
+          exercise.id,
+        );
+        childRows.push(workoutTemplateExerciseToRow(exercise, metadata));
+      }
+      await transaction.runAsync("DELETE FROM local_workout_template_exercises WHERE template_id=? AND user_id=?;", template.id, template.userId);
+      for (const child of childRows) {
         await transaction.runAsync(`INSERT INTO local_workout_template_exercises (${childColumns.join(", ")}) VALUES (${placeholders(childColumns.length)});`, ...childColumns.map((column) => child[column as keyof LocalWorkoutTemplateExerciseRow]));
+      }
+      await enqueueSyncUpsert(
+        transaction, template.userId, "workout_template", template.id, template.updatedAt,
+      );
+      for (const exercise of template.exercises) {
+        await enqueueSyncUpsert(
+          transaction,
+          exercise.userId,
+          "workout_template_exercise",
+          exercise.id,
+          exercise.updatedAt,
+        );
+      }
+      const retainedIds = new Set(template.exercises.map(({ id }) => id));
+      for (const removed of existingChildren.filter(({ id }) => !retainedIds.has(id))) {
+        if (isCloudKnown(removed)) {
+          await enqueueSyncDelete(
+            transaction,
+            template.userId,
+            "workout_template_exercise",
+            removed.id,
+            template.updatedAt,
+          );
+        } else {
+          await removeSyncMutation(
+            transaction, template.userId, "workout_template_exercise", removed.id,
+          );
+        }
       }
     });
   }
 
   async archive(userId: string, id: string): Promise<void> {
-    await this.database.runAsync(`UPDATE local_workout_templates SET is_archived=1,
-      sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
-      WHERE id=? AND user_id=?;`, id, userId);
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      await transaction.runAsync(`UPDATE local_workout_templates SET is_archived=1,
+        sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
+        WHERE id=? AND user_id=?;`, id, userId);
+      const row = await transaction.getFirstAsync<{ updated_at: string }>(
+        "SELECT updated_at FROM local_workout_templates WHERE id=? AND user_id=?;",
+        id,
+        userId,
+      );
+      if (row) {
+        await enqueueSyncUpsert(
+          transaction, userId, "workout_template", id, row.updated_at,
+        );
+      }
+    });
   }
 
   async hydrateFromCloud(
@@ -120,6 +178,13 @@ implements LocalTemplateRepository, LocalTemplateHydrationRepository {
     });
     return result;
   }
+}
+
+function isCloudKnown(row: LocalWorkoutTemplateExerciseRow): boolean {
+  return row.server_updated_at !== null
+    || row.sync_status === "synced"
+    || row.sync_status === "pending_update"
+    || row.sync_status === "pending_delete";
 }
 
 async function upsertTemplate(database: LocalDatabaseTransaction, table: string, columns: string[], row: object, updates: string[]) {

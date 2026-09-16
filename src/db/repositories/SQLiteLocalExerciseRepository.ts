@@ -4,6 +4,7 @@ import { exerciseFromRow, exerciseToRow } from "../mappers";
 import type { LocalExerciseRow } from "../mappers";
 import type { TransactionalLocalDatabaseConnection } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
+import { enqueueSyncUpsert } from "./syncQueueUtils";
 import type {
   CloudExerciseSnapshot,
   CloudHydrationResult,
@@ -41,31 +42,66 @@ implements LocalExerciseRepository, LocalExerciseHydrationRepository {
   }
 
   async upsert(exercise: Exercise): Promise<void> {
-    const metadata = exercise.isSystem
-      ? { syncStatus: "synced" as const }
-      : await metadataForUpsert(this.database, "local_exercises", "owner_user_id", exercise.ownerUserId ?? "", exercise.id);
-    const row = exerciseToRow(exercise, metadata);
-    await this.database.runAsync(
-      `INSERT INTO local_exercises (${columns.join(", ")}) VALUES (${placeholders(columns.length)})
-       ON CONFLICT(id) DO UPDATE SET name=excluded.name,
-         primary_muscle_group=excluded.primary_muscle_group,
-         secondary_muscle_groups_json=excluded.secondary_muscle_groups_json,
-         equipment_type=excluded.equipment_type, measurement_type=excluded.measurement_type,
-         is_archived=excluded.is_archived, sync_status=excluded.sync_status,
-         updated_at=excluded.updated_at
-       WHERE (local_exercises.is_system=1 AND excluded.is_system=1)
-          OR (local_exercises.is_system=0 AND excluded.is_system=0
-              AND local_exercises.owner_user_id=excluded.owner_user_id);`,
-      ...columns.map((column) => row[column as keyof LocalExerciseRow]),
-    );
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing = await transaction.getFirstAsync<Pick<
+        LocalExerciseRow,
+        "is_system" | "owner_user_id"
+      >>("SELECT is_system, owner_user_id FROM local_exercises WHERE id=?;", exercise.id);
+      if (existing && !sameExerciseOwner(existing, exercise)) return;
+
+      const metadata = exercise.isSystem
+        ? { syncStatus: "synced" as const }
+        : await metadataForUpsert(
+          transaction,
+          "local_exercises",
+          "owner_user_id",
+          exercise.ownerUserId ?? "",
+          exercise.id,
+        );
+      const row = exerciseToRow(exercise, metadata);
+      await transaction.runAsync(
+        `INSERT INTO local_exercises (${columns.join(", ")}) VALUES (${placeholders(columns.length)})
+         ON CONFLICT(id) DO UPDATE SET name=excluded.name,
+           primary_muscle_group=excluded.primary_muscle_group,
+           secondary_muscle_groups_json=excluded.secondary_muscle_groups_json,
+           equipment_type=excluded.equipment_type, measurement_type=excluded.measurement_type,
+           is_archived=excluded.is_archived, sync_status=excluded.sync_status,
+           updated_at=excluded.updated_at
+         WHERE (local_exercises.is_system=1 AND excluded.is_system=1)
+            OR (local_exercises.is_system=0 AND excluded.is_system=0
+                AND local_exercises.owner_user_id=excluded.owner_user_id);`,
+        ...columns.map((column) => row[column as keyof LocalExerciseRow]),
+      );
+      if (!exercise.isSystem && exercise.ownerUserId) {
+        await enqueueSyncUpsert(
+          transaction,
+          exercise.ownerUserId,
+          "custom_exercise",
+          exercise.id,
+          exercise.updatedAt,
+        );
+      }
+    });
   }
 
   async archiveCustomExercise(userId: string, id: string): Promise<void> {
-    await this.database.runAsync(
-      `UPDATE local_exercises SET is_archived=1,
-       sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
-       WHERE id=? AND owner_user_id=? AND is_system=0;`, id, userId,
-    );
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      await transaction.runAsync(
+        `UPDATE local_exercises SET is_archived=1,
+         sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
+         WHERE id=? AND owner_user_id=? AND is_system=0;`, id, userId,
+      );
+      const row = await transaction.getFirstAsync<{ updated_at: string }>(
+        "SELECT updated_at FROM local_exercises WHERE id=? AND owner_user_id=? AND is_system=0;",
+        id,
+        userId,
+      );
+      if (row) {
+        await enqueueSyncUpsert(
+          transaction, userId, "custom_exercise", id, row.updated_at,
+        );
+      }
+    });
   }
 
   async hydrateFromCloud(
@@ -112,4 +148,12 @@ implements LocalExerciseRepository, LocalExerciseHydrationRepository {
     });
     return result;
   }
+}
+
+function sameExerciseOwner(
+  row: Pick<LocalExerciseRow, "is_system" | "owner_user_id">,
+  exercise: Exercise,
+): boolean {
+  return row.is_system === Number(exercise.isSystem)
+    && row.owner_user_id === (exercise.ownerUserId ?? null);
 }

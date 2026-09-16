@@ -1,4 +1,8 @@
-import { exerciseFromCloudRows } from "@/lib/supabase/mappers/exerciseMapper";
+import {
+  exerciseFromCloudRows,
+  exerciseSecondaryMusclesToCloudUpserts,
+  exerciseToCloudUpsert,
+} from "@/lib/supabase/mappers/exerciseMapper";
 
 const updatedAt = "2026-09-15T13:00:00.000Z";
 const row = {
@@ -52,6 +56,30 @@ describe("Supabase exercise mapper", () => {
         isArchived: true,
       },
     });
+  });
+
+  it("maps only cloud-writable custom exercise fields and secondary muscles", () => {
+    const exercise = exerciseFromCloudRows({
+      ...row,
+      id: "custom-exercise",
+      owner_user_id: "user-1",
+      is_system: false,
+      is_archived: true,
+    }, [{ exercise_id: "custom-exercise", muscle_group: "triceps" }]).exercise;
+
+    expect(exerciseToCloudUpsert(exercise)).toEqual({
+      id: "custom-exercise",
+      owner_user_id: "user-1",
+      name: "Barbell Bench Press",
+      primary_muscle_group: "chest",
+      equipment_type: "barbell",
+      measurement_type: "weight_reps",
+      is_system: false,
+      is_archived: true,
+    });
+    expect(exerciseSecondaryMusclesToCloudUpserts(exercise)).toEqual([
+      { exercise_id: "custom-exercise", muscle_group: "triceps" },
+    ]);
   });
 
   it("rejects invalid cloud enums and ownership shapes", () => {

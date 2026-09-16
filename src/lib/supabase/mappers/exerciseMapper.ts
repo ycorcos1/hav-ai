@@ -1,9 +1,17 @@
 import type { Database } from "@/lib/supabase/database.types";
 import type { CloudExerciseSnapshot } from "@/db/repositories";
-import type { EquipmentType, MeasurementType, MuscleGroup } from "@/shared/contracts";
+import type {
+  EquipmentType,
+  Exercise,
+  MeasurementType,
+  MuscleGroup,
+  RemoteMutationResult,
+} from "@/shared/contracts";
 
-type ExerciseRow = Database["public"]["Tables"]["exercises"]["Row"];
-type SecondaryMuscleRow = Database["public"]["Tables"]["exercise_secondary_muscles"]["Row"];
+type ExerciseTable = Database["public"]["Tables"]["exercises"];
+type SecondaryMuscleTable = Database["public"]["Tables"]["exercise_secondary_muscles"];
+type ExerciseRow = ExerciseTable["Row"];
+type SecondaryMuscleRow = SecondaryMuscleTable["Row"];
 
 const muscleGroups = [
   "chest", "back", "shoulders", "biceps", "triceps", "quads", "hamstrings",
@@ -53,6 +61,34 @@ export function exerciseFromCloudRows(
     },
     serverUpdatedAt: row.updated_at,
   };
+}
+
+export function exerciseToCloudUpsert(exercise: Exercise): ExerciseTable["Insert"] {
+  return {
+    id: exercise.id,
+    owner_user_id: exercise.ownerUserId ?? null,
+    name: exercise.name,
+    primary_muscle_group: exercise.primaryMuscleGroup,
+    equipment_type: exercise.equipmentType,
+    measurement_type: exercise.measurementType,
+    is_system: exercise.isSystem,
+    is_archived: exercise.isArchived,
+  };
+}
+
+export function exerciseSecondaryMusclesToCloudUpserts(
+  exercise: Exercise,
+): SecondaryMuscleTable["Insert"][] {
+  return exercise.secondaryMuscleGroups.map((muscleGroup) => ({
+    exercise_id: exercise.id,
+    muscle_group: muscleGroup,
+  }));
+}
+
+export function exerciseRemoteMutationResult(
+  row: Pick<ExerciseRow, "updated_at">,
+): RemoteMutationResult {
+  return { serverUpdatedAt: row.updated_at };
 }
 
 function parseValue<T extends string>(

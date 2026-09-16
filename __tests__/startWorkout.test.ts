@@ -138,6 +138,10 @@ describe("StartWorkoutService", () => {
       ...workout.exercises
         .map(({ id }) => ({ entity_type: "workout_exercise", entity_id: id }))
         .sort((left, right) => left.entity_id.localeCompare(right.entity_id)),
+      { entity_type: "workout_template", entity_id: template.id },
+      ...template.exercises
+        .map(({ id }) => ({ entity_type: "workout_template_exercise", entity_id: id }))
+        .sort((left, right) => left.entity_id.localeCompare(right.entity_id)),
     ]);
     database.close();
   });
@@ -147,6 +151,9 @@ describe("StartWorkoutService", () => {
     await configureLocalDatabase(database);
     const templates = new SQLiteLocalTemplateRepository(database);
     await templates.create(structuredClone(template));
+    const queueBeforeStart = await database.getAllAsync(
+      "SELECT entity_type, entity_id, operation FROM sync_queue ORDER BY entity_type, entity_id;",
+    );
     const workouts = new SQLiteLocalWorkoutRepository(database);
     await expect(new StartWorkoutService({
       templateRepository: templates,
@@ -154,7 +161,9 @@ describe("StartWorkoutService", () => {
       workoutRepository: workouts,
     }).startFromTemplate(userId, template.id, now)).rejects.toThrow("recommendation snapshot");
     await expect(database.getFirstAsync<{ count: number }>("SELECT COUNT(*) AS count FROM local_workouts;")).resolves.toEqual({ count: 0 });
-    await expect(database.getFirstAsync<{ count: number }>("SELECT COUNT(*) AS count FROM sync_queue;")).resolves.toEqual({ count: 0 });
+    await expect(database.getAllAsync(
+      "SELECT entity_type, entity_id, operation FROM sync_queue ORDER BY entity_type, entity_id;",
+    )).resolves.toEqual(queueBeforeStart);
     database.close();
   });
 

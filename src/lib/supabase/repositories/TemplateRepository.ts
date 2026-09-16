@@ -8,6 +8,7 @@ import type {
 
 export interface TemplateRepository {
   archiveOwnTemplate(id: UUID): Promise<RemoteMutationResult>;
+  deleteOwnTemplateExercise(id: UUID): Promise<void>;
   fetchOwnTemplates(): Promise<CloudTemplateSnapshot[]>;
   upsertOwnTemplate(template: WorkoutTemplate): Promise<RemoteMutationResult>;
   upsertOwnTemplateExercise(
@@ -17,6 +18,7 @@ export interface TemplateRepository {
 
 export type TemplateRepositoryOperation =
   | "archiveOwnTemplate"
+  | "deleteOwnTemplateExercise"
   | "fetchOwnTemplates"
   | "upsertOwnTemplate"
   | "upsertOwnTemplateExercise";

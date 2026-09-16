@@ -146,6 +146,33 @@ describe("SupabaseTemplateRepository", () => {
     expect(ownerEq).toHaveBeenCalledWith("user_id", userId);
   });
 
+  it("deletes one template exercise through explicit identity and owner filters", async () => {
+    const ownerEq = jest.fn().mockResolvedValue({ error: null });
+    const idEq = jest.fn(() => ({ eq: ownerEq }));
+    const deleteExercise = jest.fn(() => ({ eq: idEq }));
+    mockFrom.mockReturnValue({ delete: deleteExercise });
+
+    await expect(
+      new SupabaseTemplateRepository().deleteOwnTemplateExercise(template.exercises[0].id),
+    ).resolves.toBeUndefined();
+    expect(idEq).toHaveBeenCalledWith("id", template.exercises[0].id);
+    expect(ownerEq).toHaveBeenCalledWith("user_id", userId);
+  });
+
+  it("sanitizes template-exercise delete failures", async () => {
+    const ownerEq = jest.fn().mockResolvedValue({ error: { message: "provider detail" } });
+    const idEq = jest.fn(() => ({ eq: ownerEq }));
+    mockFrom.mockReturnValue({ delete: jest.fn(() => ({ eq: idEq })) });
+
+    const request = new SupabaseTemplateRepository()
+      .deleteOwnTemplateExercise(template.exercises[0].id);
+    await expect(request).rejects.toMatchObject({
+      code: "TEMPLATE_REPOSITORY_ERROR",
+      operation: "deleteOwnTemplateExercise",
+    });
+    await expect(request).rejects.not.toThrow("provider detail");
+  });
+
   it("rejects unauthenticated and cross-owner writes with sanitized errors", async () => {
     const repository = new SupabaseTemplateRepository();
     mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });
