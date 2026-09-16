@@ -25,6 +25,19 @@ export type CloudTemplateSnapshot = {
   template: WorkoutTemplate;
 };
 
+export type CachedRecentExerciseSession = {
+  id: UUID;
+  userId: UUID;
+  exerciseId: UUID;
+  workoutId: UUID;
+  completedAt: ISODateTime;
+  targetSets?: number;
+  targetMinReps?: number;
+  targetMaxReps?: number;
+  workingSets: ExerciseSessionPerformance["sets"];
+  serverUpdatedAt?: ISODateTime;
+};
+
 export interface LocalWorkoutRepository {
   getById(userId: UUID, id: UUID): Promise<Workout | null>;
   getActiveForUser(userId: UUID): Promise<Workout | null>;
@@ -48,6 +61,14 @@ export interface ExerciseHistoryRepository {
     userId: UUID;
     exerciseId: UUID;
   }): Promise<WorkoutSet | null>;
+}
+
+export interface RecentExerciseSessionCacheRepository {
+  replaceForUser(
+    userId: UUID,
+    sessions: CachedRecentExerciseSession[],
+    limitPerExercise: number,
+  ): Promise<number>;
 }
 
 export interface LocalSetRepository {

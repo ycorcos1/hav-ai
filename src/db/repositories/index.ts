@@ -1,6 +1,7 @@
 export { SQLiteLocalExerciseRepository } from "./SQLiteLocalExerciseRepository";
 export { SQLiteExerciseHistoryRepository } from "./SQLiteExerciseHistoryRepository";
 export { SQLiteLocalRecommendationRepository } from "./SQLiteLocalRecommendationRepository";
+export { SQLiteRecentExerciseSessionCacheRepository } from "./SQLiteRecentExerciseSessionCacheRepository";
 export { SQLiteLocalProfileCacheRepository } from "./SQLiteLocalProfileCacheRepository";
 export { SQLiteLocalSetRepository } from "./SQLiteLocalSetRepository";
 export { SQLiteLocalSyncEntityStore } from "./SQLiteLocalSyncEntityStore";
@@ -13,6 +14,7 @@ export type {
   CloudExerciseSnapshot,
   CloudHydrationResult,
   CloudTemplateSnapshot,
+  CachedRecentExerciseSession,
   ExerciseHistoryRepository,
   LocalExerciseHydrationRepository,
   LocalExerciseRepository,
@@ -23,5 +25,6 @@ export type {
   LocalTemplateHydrationRepository,
   LocalWorkoutRepository,
   LocalUserExercisePreferenceRepository,
+  RecentExerciseSessionCacheRepository,
   SyncQueueRepository,
 } from "./types";

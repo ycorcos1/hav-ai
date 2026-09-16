@@ -4,6 +4,11 @@ export {
   type ExerciseTemplatePullResult,
 } from "./ExerciseTemplatePullService";
 export { PushSyncEngine, SyncPreconditionError } from "./PushSyncEngine";
+export {
+  RecentExerciseHistoryPullService,
+  recentSessionLimit,
+  type RecentExerciseHistoryPullResult,
+} from "./RecentExerciseHistoryPullService";
 export { SyncEngineLock } from "./SyncEngineLock";
 export {
   SyncTriggerController,

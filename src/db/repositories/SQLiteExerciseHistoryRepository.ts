@@ -1,6 +1,8 @@
 import type { ExerciseSessionPerformance, WorkoutSet } from "@/shared/contracts";
 
 import { workoutSetFromRow, type LocalWorkoutSetRow } from "../mappers";
+import { parsePersistedJson } from "../mappers/mappingUtils";
+import { exerciseSessionSetsSchema } from "../mappers/structuredSchemas";
 import type { TransactionalLocalDatabaseConnection } from "../types";
 import type { ExerciseHistoryRepository } from "./types";
 
@@ -8,6 +10,12 @@ type SessionSetRow = LocalWorkoutSetRow & {
   session_completed_at: string;
   session_workout_id: string;
   workout_exercise_position: number;
+};
+
+type CachedSessionRow = {
+  workout_id: string;
+  completed_at: string;
+  working_sets_json: string;
 };
 
 export class SQLiteExerciseHistoryRepository implements ExerciseHistoryRepository {
@@ -60,7 +68,34 @@ export class SQLiteExerciseHistoryRepository implements ExerciseHistoryRepositor
       });
       sessions.set(row.session_workout_id, session);
     });
-    return [...sessions.values()];
+    const cachedRows = await this.database.getAllAsync<CachedSessionRow>(
+      `SELECT workout_id, completed_at, working_sets_json
+       FROM cached_recent_exercise_sessions
+       WHERE user_id=? AND exercise_id=?
+       ORDER BY completed_at DESC;`,
+      userId,
+      exerciseId,
+    );
+    const canonicalWorkoutIds = new Set(sessions.keys());
+    cachedRows.forEach((row) => {
+      if (canonicalWorkoutIds.has(row.workout_id)) return;
+      const cachedSets = parsePersistedJson(
+        row.working_sets_json,
+        exerciseSessionSetsSchema,
+        "cached_recent_exercise_sessions.working_sets_json",
+      );
+      const existing = sessions.get(row.workout_id);
+      sessions.set(row.workout_id, existing
+        ? { ...existing, sets: [...existing.sets, ...cachedSets] }
+        : {
+          workoutId: row.workout_id,
+          completedAt: row.completed_at,
+          sets: cachedSets,
+        });
+    });
+    return [...sessions.values()]
+      .sort((left, right) => right.completedAt.localeCompare(left.completedAt))
+      .slice(0, limit);
   }
 
   async getBestSet({

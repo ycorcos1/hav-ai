@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import type { MuscleGroup, ProgressionReasonCode } from "@/shared/contracts";
+import type {
+  ExerciseSessionPerformance,
+  MuscleGroup,
+  ProgressionReasonCode,
+} from "@/shared/contracts";
+import { rpeSchema } from "@/shared/schemas";
 
 export const muscleGroupSchema = z.enum([
   "chest",
@@ -52,3 +57,8 @@ export const progressionReasonCodeSchema = z.enum([
 
 export const progressionReasonCodesSchema = z.array(progressionReasonCodeSchema);
 export const targetSetRepsSchema = z.array(z.number().int().positive());
+export const exerciseSessionSetsSchema = z.array(z.object({
+  weightKg: z.number().nonnegative().optional(),
+  reps: z.number().int().nonnegative(),
+  rpe: rpeSchema.optional(),
+}).strict()) satisfies z.ZodType<ExerciseSessionPerformance["sets"]>;

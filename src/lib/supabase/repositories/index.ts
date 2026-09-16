@@ -1,6 +1,7 @@
 export { SupabaseProfileRepository } from "./SupabaseProfileRepository";
 export { SupabaseExerciseRepository } from "./SupabaseExerciseRepository";
 export { SupabaseRemoteRecommendationAdapter } from "./SupabaseRemoteRecommendationAdapter";
+export { SupabaseRemoteExerciseHistoryRepository } from "./SupabaseRemoteExerciseHistoryRepository";
 export { SupabaseRemoteWorkoutAdapter } from "./SupabaseRemoteWorkoutAdapter";
 export { SupabaseTemplateRepository } from "./SupabaseTemplateRepository";
 export {
@@ -15,6 +16,10 @@ export {
   type ProfileRepositoryOperation,
   type UpdateOwnProfileInput,
 } from "./ProfileRepository";
+export {
+  RemoteExerciseHistoryRepositoryError,
+  type RemoteExerciseHistoryRepository,
+} from "./RemoteExerciseHistoryRepository";
 export {
   RemoteRecommendationAdapterError,
   type RemoteRecommendationAdapter,
