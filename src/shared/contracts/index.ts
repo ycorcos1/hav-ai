@@ -27,6 +27,7 @@ export type {
 export type {
   ExerciseSessionPerformance,
   ExerciseTrend,
+  EstimatedOneRepMaxResult,
   ProgressionConfidence,
   ProgressionInput,
   ProgressionReasonCode,

@@ -114,3 +114,10 @@ export type ExerciseTrend = {
   averageRpeChange?: number;
   plateau: "none" | "possible" | "likely";
 };
+
+export type EstimatedOneRepMaxResult = {
+  estimated1RMKg: WeightKg;
+  sourceWeightKg: WeightKg;
+  reps: number;
+  formulaVersion: string;
+};
