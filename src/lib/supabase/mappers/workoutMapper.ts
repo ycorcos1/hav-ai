@@ -1,9 +1,32 @@
 import type { Database } from "@/lib/supabase/database.types";
 import type { Workout, WorkoutExercise, WorkoutSet } from "@/shared/contracts";
+import { rpeSchema } from "@/shared/schemas";
 
 type WorkoutTable = Database["public"]["Tables"]["workouts"];
 type WorkoutExerciseTable = Database["public"]["Tables"]["workout_exercises"];
 type WorkoutSetTable = Database["public"]["Tables"]["sets"];
+
+export function workoutSetFromCloudRow(row: WorkoutSetTable["Row"]): WorkoutSet {
+  if (row.set_type !== "working" && row.set_type !== "warmup") {
+    throw new Error("Cloud workout set type is invalid.");
+  }
+  return {
+    id: row.id,
+    userId: row.user_id,
+    workoutId: row.workout_id,
+    workoutExerciseId: row.workout_exercise_id,
+    exerciseId: row.exercise_id,
+    position: row.position,
+    setType: row.set_type,
+    ...(row.weight_kg === null ? {} : { weightKg: row.weight_kg }),
+    reps: row.reps,
+    ...(row.rpe === null ? {} : { rpe: rpeSchema.parse(row.rpe) }),
+    ...(row.notes === null ? {} : { notes: row.notes }),
+    completedAt: row.completed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export function workoutToCloudUpsert(workout: Workout): WorkoutTable["Insert"] {
   return {

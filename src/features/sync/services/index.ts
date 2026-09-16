@@ -5,6 +5,11 @@ export {
 } from "./ExerciseTemplatePullService";
 export { PushSyncEngine, SyncPreconditionError } from "./PushSyncEngine";
 export {
+  PersistentPersonalRecordRecalculationError,
+  PersistentPersonalRecordRecalculationService,
+  type PersistentPersonalRecordRecalculationResult,
+} from "./PersistentPersonalRecordRecalculationService";
+export {
   RecentExerciseHistoryPullService,
   recentSessionLimit,
   type RecentExerciseHistoryPullResult,
