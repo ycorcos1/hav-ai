@@ -4,7 +4,7 @@ import { workoutSetFromRow, type LocalWorkoutSetRow } from "../mappers";
 import { parsePersistedJson } from "../mappers/mappingUtils";
 import { exerciseSessionSetsSchema } from "../mappers/structuredSchemas";
 import type { TransactionalLocalDatabaseConnection } from "../types";
-import type { ExerciseHistoryRepository } from "./types";
+import type { ExerciseHistoryRepository, ProgressHistoryRepository } from "./types";
 
 type SessionSetRow = LocalWorkoutSetRow & {
   session_completed_at: string;
@@ -18,7 +18,7 @@ type CachedSessionRow = {
   working_sets_json: string;
 };
 
-export class SQLiteExerciseHistoryRepository implements ExerciseHistoryRepository {
+export class SQLiteExerciseHistoryRepository implements ExerciseHistoryRepository, ProgressHistoryRepository {
   constructor(private readonly database: TransactionalLocalDatabaseConnection) {}
 
   async getRecentSessions({
@@ -113,6 +113,67 @@ export class SQLiteExerciseHistoryRepository implements ExerciseHistoryRepositor
       exerciseId,
     );
     return row ? workoutSetFromRow(row) : null;
+  }
+
+  async getBestEstimatedOneRepMaxSet({
+    userId,
+    exerciseId,
+  }: Parameters<ProgressHistoryRepository["getBestEstimatedOneRepMaxSet"]>[0]): Promise<WorkoutSet | null> {
+    const row = await this.database.getFirstAsync<LocalWorkoutSetRow>(
+      `SELECT s.* FROM local_sets s
+       JOIN local_workouts w ON w.id=s.workout_id AND w.user_id=s.user_id
+       WHERE s.user_id=? AND s.exercise_id=? AND s.set_type='working'
+         AND s.deleted_at IS NULL AND w.status='completed'
+         AND s.weight_kg IS NOT NULL AND s.weight_kg > 0
+         AND s.reps BETWEEN 1 AND 15
+       ORDER BY CASE WHEN s.reps=1 THEN s.weight_kg
+         ELSE s.weight_kg * (1.0 + s.reps / 30.0) END DESC,
+         s.completed_at DESC, s.id
+       LIMIT 1;`,
+      userId,
+      exerciseId,
+    );
+    return row ? workoutSetFromRow(row) : null;
+  }
+
+  async getCurrentPersonalRecordCandidates({
+    userId,
+    exerciseIds,
+  }: Parameters<ProgressHistoryRepository["getCurrentPersonalRecordCandidates"]>[0]): Promise<WorkoutSet[]> {
+    const uniqueExerciseIds = [...new Set(exerciseIds)];
+    if (uniqueExerciseIds.length === 0) return [];
+    const exercisePlaceholders = uniqueExerciseIds.map(() => "?").join(", ");
+    const rows = await this.database.getAllAsync<LocalWorkoutSetRow & {
+      estimated_rank: number;
+      weight_rank: number;
+    }>(
+      `WITH ranked AS (
+         SELECT s.*,
+           ROW_NUMBER() OVER (
+             PARTITION BY s.exercise_id
+             ORDER BY COALESCE(s.weight_kg, 0) DESC, s.reps DESC, s.completed_at DESC, s.id
+           ) AS weight_rank,
+           ROW_NUMBER() OVER (
+             PARTITION BY s.exercise_id
+             ORDER BY CASE
+               WHEN s.weight_kg > 0 AND s.reps BETWEEN 1 AND 15
+               THEN CASE WHEN s.reps=1 THEN s.weight_kg ELSE s.weight_kg * (1.0 + s.reps / 30.0) END
+               ELSE NULL
+             END DESC, s.completed_at DESC, s.id
+           ) AS estimated_rank
+         FROM local_sets s
+         JOIN local_workouts w ON w.id=s.workout_id AND w.user_id=s.user_id
+         WHERE s.user_id=? AND s.exercise_id IN (${exercisePlaceholders})
+           AND s.set_type='working' AND s.deleted_at IS NULL AND w.status='completed'
+       )
+       SELECT * FROM ranked
+       WHERE weight_rank=1
+         OR (estimated_rank=1 AND weight_kg > 0 AND reps BETWEEN 1 AND 15)
+       ORDER BY completed_at DESC, id;`,
+      userId,
+      ...uniqueExerciseIds,
+    );
+    return rows.map(workoutSetFromRow);
   }
 
   async getCompletedSetsForExercises({

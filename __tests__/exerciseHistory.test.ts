@@ -108,4 +108,29 @@ describe.each([
     })).resolves.toEqual([]);
     close();
   });
+
+  it("queries all-time best weight and canonical estimated 1RM without loading lifetime history", async () => {
+    const { close, history, workouts } = await createRepositories();
+    const heavy = workout("heavy", "completed", "2026-09-01T12:30:00.000Z");
+    heavy.exercises[0].sets[1] = { ...heavy.exercises[0].sets[1], weightKg: 100, reps: 1 };
+    const volume = workout("volume", "completed", "2026-09-02T12:30:00.000Z");
+    volume.exercises[0].sets[1] = { ...volume.exercises[0].sets[1], weightKg: 80, reps: 10 };
+    await workouts.create(heavy);
+    await workouts.create(volume);
+
+    await expect(history.getBestSet({ userId: "user-a", exerciseId: "exercise-1" }))
+      .resolves.toMatchObject({ workoutId: "heavy", weightKg: 100, reps: 1 });
+    await expect(history.getBestEstimatedOneRepMaxSet({
+      userId: "user-a",
+      exerciseId: "exercise-1",
+    })).resolves.toMatchObject({ workoutId: "volume", weightKg: 80, reps: 10 });
+    await expect(history.getCurrentPersonalRecordCandidates({
+      userId: "user-a",
+      exerciseIds: ["exercise-1"],
+    })).resolves.toEqual(expect.arrayContaining([
+      expect.objectContaining({ workoutId: "heavy", weightKg: 100, reps: 1 }),
+      expect.objectContaining({ workoutId: "volume", weightKg: 80, reps: 10 }),
+    ]));
+    close();
+  });
 });

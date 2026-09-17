@@ -12,6 +12,7 @@ import type {
   LocalExerciseRepository,
   LocalProfileCacheRepository,
   WorkoutHistoryRepository,
+  ProgressHistoryRepository,
 } from "@/db/repositories/types";
 
 import type { StartWorkoutDependencies } from "./startWorkout";
@@ -21,6 +22,7 @@ export type WorkoutPersistence = StartWorkoutDependencies & {
   exerciseRepository: LocalExerciseRepository;
   profileCacheRepository: LocalProfileCacheRepository;
   workoutHistoryRepository: WorkoutHistoryRepository;
+  progressHistoryRepository: ProgressHistoryRepository;
 };
 
 export async function createWorkoutPersistence(): Promise<WorkoutPersistence> {
@@ -33,5 +35,6 @@ export async function createWorkoutPersistence(): Promise<WorkoutPersistence> {
     templateRepository: new SQLiteLocalTemplateRepository(database),
     workoutRepository: new SQLiteLocalWorkoutRepository(database),
     workoutHistoryRepository: new SQLiteLocalWorkoutRepository(database),
+    progressHistoryRepository: new SQLiteExerciseHistoryRepository(database),
   };
 }

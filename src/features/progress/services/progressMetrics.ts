@@ -31,6 +31,10 @@ export type ExerciseProgressMetrics = {
 
 export function calculateExerciseProgressMetrics(
   sessions: readonly ExerciseSessionPerformance[],
+  allTime?: {
+    bestEstimatedOneRepMaxSet?: ProgressSetMetric;
+    bestWeightSet?: ProgressSetMetric;
+  },
 ): ExerciseProgressMetrics {
   const ordered = [...sessions]
     .filter(({ completedAt }) => Number.isFinite(new Date(completedAt).getTime()))
@@ -53,18 +57,23 @@ export function calculateExerciseProgressMetrics(
   const previousEstimated1RMKg = trend.at(-2)?.estimated1RMKg;
   const allSets = ordered.flatMap(({ sets }) => sets)
     .filter(({ reps }) => Number.isInteger(reps) && reps > 0);
-  const bestSet = [...allSets].sort(compareBestSets)[0];
+  const bestSet = allTime?.bestEstimatedOneRepMaxSet
+    ? toProgressSet(allTime.bestEstimatedOneRepMaxSet)
+    : [...allSets].sort(compareBestSets)[0];
   const weightedSets = allSets.filter(
     (set): set is ProgressSetMetric & { weightKg: number } => (
       set.weightKg !== undefined && Number.isFinite(set.weightKg) && set.weightKg >= 0
     ),
   );
-  const bestWeightKg = weightedSets.length > 0
+  const bestWeightKg = allTime?.bestWeightSet?.weightKg ?? (weightedSets.length > 0
     ? Math.max(...weightedSets.map(({ weightKg }) => weightKg))
+    : undefined);
+  const allTimeBestEstimate = allTime?.bestEstimatedOneRepMaxSet
+    ? estimate(allTime.bestEstimatedOneRepMaxSet)
     : undefined;
-  const bestEstimated1RMKg = trend.length > 0
+  const bestEstimated1RMKg = allTimeBestEstimate ?? (trend.length > 0
     ? Math.max(...trend.map(({ estimated1RMKg }) => estimated1RMKg))
-    : undefined;
+    : undefined);
   return {
     ...(currentEstimated1RMKg === undefined ? {} : { currentEstimated1RMKg }),
     ...(bestEstimated1RMKg === undefined ? {} : { bestEstimated1RMKg }),
@@ -98,4 +107,12 @@ function compareBestSets(left: ProgressSetMetric, right: ProgressSetMetric): num
 function estimate(set: ProgressSetMetric): number {
   if (set.weightKg === undefined || set.weightKg <= 0) return set.reps;
   return calculateEpleyOneRepMax(set.weightKg, set.reps)?.estimated1RMKg ?? 0;
+}
+
+function toProgressSet(set: ProgressSetMetric): ProgressSetMetric {
+  return {
+    reps: set.reps,
+    ...(set.weightKg === undefined ? {} : { weightKg: set.weightKg }),
+    ...(set.rpe === undefined ? {} : { rpe: set.rpe }),
+  };
 }

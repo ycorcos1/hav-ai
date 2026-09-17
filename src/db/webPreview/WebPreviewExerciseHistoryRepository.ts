@@ -1,10 +1,11 @@
-import type { ExerciseHistoryRepository } from "@/db/repositories/types";
+import type { ExerciseHistoryRepository, ProgressHistoryRepository } from "@/db/repositories/types";
+import { calculateEpleyOneRepMax } from "@/features/metrics";
 import type { ExerciseSessionPerformance, WorkoutSet } from "@/shared/contracts";
 
 import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
 import { readWorkoutWebPreviewState } from "./workoutStorage";
 
-export class WebPreviewExerciseHistoryRepository implements ExerciseHistoryRepository {
+export class WebPreviewExerciseHistoryRepository implements ExerciseHistoryRepository, ProgressHistoryRepository {
   constructor(private readonly storage: WebPreviewStorage = browserWebPreviewStorage()) {}
 
   async getRecentSessions({
@@ -51,6 +52,37 @@ export class WebPreviewExerciseHistoryRepository implements ExerciseHistoryRepos
     return candidates[0] ?? null;
   }
 
+  async getBestEstimatedOneRepMaxSet({
+    userId,
+    exerciseId,
+  }: Parameters<ProgressHistoryRepository["getBestEstimatedOneRepMaxSet"]>[0]): Promise<WorkoutSet | null> {
+    return this.completedWorkingSets(userId, exerciseId)
+      .filter(({ weightKg, reps }) => (
+        weightKg !== undefined && calculateEpleyOneRepMax(weightKg, reps) !== null
+      ))
+      .sort((left, right) => (
+        estimate(right) - estimate(left)
+        || right.completedAt.localeCompare(left.completedAt)
+        || left.id.localeCompare(right.id)
+      ))[0] ?? null;
+  }
+
+  async getCurrentPersonalRecordCandidates({
+    userId,
+    exerciseIds,
+  }: Parameters<ProgressHistoryRepository["getCurrentPersonalRecordCandidates"]>[0]): Promise<WorkoutSet[]> {
+    const candidates: WorkoutSet[] = [];
+    for (const exerciseId of [...new Set(exerciseIds)]) {
+      const [bestWeight, bestEstimated] = await Promise.all([
+        this.getBestSet({ userId, exerciseId }),
+        this.getBestEstimatedOneRepMaxSet({ userId, exerciseId }),
+      ]);
+      if (bestWeight) candidates.push(bestWeight);
+      if (bestEstimated && bestEstimated.id !== bestWeight?.id) candidates.push(bestEstimated);
+    }
+    return candidates;
+  }
+
   async getCompletedSetsForExercises({
     userId,
     exerciseIds,
@@ -72,10 +104,25 @@ export class WebPreviewExerciseHistoryRepository implements ExerciseHistoryRepos
           .filter(({ setType }) => setType === "working")
           .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))));
   }
+
+  private completedWorkingSets(userId: string, exerciseId: string): WorkoutSet[] {
+    return readWorkoutWebPreviewState(this.storage).workouts
+      .filter((workout) => workout.userId === userId && workout.status === "completed")
+      .flatMap((workout) => workout.exercises)
+      .filter((exercise) => exercise.exerciseId === exerciseId)
+      .flatMap((exercise) => exercise.sets)
+      .filter((set) => set.setType === "working");
+  }
 }
 
 function compareSets(left: WorkoutSet, right: WorkoutSet): number {
   return (right.weightKg ?? 0) - (left.weightKg ?? 0)
     || right.reps - left.reps
     || right.completedAt.localeCompare(left.completedAt);
+}
+
+function estimate(set: WorkoutSet): number {
+  return set.weightKg === undefined
+    ? 0
+    : calculateEpleyOneRepMax(set.weightKg, set.reps)?.estimated1RMKg ?? 0;
 }

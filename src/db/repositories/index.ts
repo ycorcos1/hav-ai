@@ -27,6 +27,7 @@ export type {
   LocalWorkoutRepository,
   LocalUserExercisePreferenceRepository,
   LocalUserExercisePreferenceHydrationRepository,
+  ProgressHistoryRepository,
   RecentExerciseSessionCacheRepository,
   SyncQueueRepository,
   UserExercisePreferenceReconciliationResult,

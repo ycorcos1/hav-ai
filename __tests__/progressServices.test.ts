@@ -64,4 +64,16 @@ describe("calculateExerciseProgressMetrics", () => {
       trend: [],
     });
   });
+
+  it("uses focused all-time aggregate candidates without inventing trend points", () => {
+    const result = calculateExerciseProgressMetrics([sessions[0]], {
+      bestEstimatedOneRepMaxSet: { weightKg: 85, reps: 10 },
+      bestWeightSet: { weightKg: 110, reps: 1 },
+    });
+    expect(result.currentEstimated1RMKg).toBeCloseTo(105);
+    expect(result.bestEstimated1RMKg).toBeCloseTo(113.33, 1);
+    expect(result.bestSet).toEqual({ weightKg: 85, reps: 10 });
+    expect(result.bestWeightKg).toBe(110);
+    expect(result.trend).toHaveLength(1);
+  });
 });

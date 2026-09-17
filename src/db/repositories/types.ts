@@ -96,6 +96,17 @@ export interface ExerciseHistoryRepository {
   }): Promise<WorkoutSet[]>;
 }
 
+export interface ProgressHistoryRepository {
+  getBestEstimatedOneRepMaxSet(params: {
+    userId: UUID;
+    exerciseId: UUID;
+  }): Promise<WorkoutSet | null>;
+  getCurrentPersonalRecordCandidates(params: {
+    userId: UUID;
+    exerciseIds: readonly UUID[];
+  }): Promise<WorkoutSet[]>;
+}
+
 export interface RecentExerciseSessionCacheRepository {
   replaceForUser(
     userId: UUID,
