@@ -1,5 +1,8 @@
 import type { ISODateTime, RPE, UUID, WeightKg } from "./common";
-import type { DetectedPersonalRecordType } from "./personalRecords";
+import type {
+  DetectedPersonalRecord,
+  DetectedPersonalRecordType,
+} from "./personalRecords";
 import type { ProgressionRecommendation } from "./progression";
 
 export type WorkoutStatus = "active" | "completed" | "discarded";
@@ -125,4 +128,11 @@ export type ExerciseWorkoutSummary = {
   };
   detectedPRs: DetectedPersonalRecordType[];
   nextRecommendation?: ProgressionRecommendation;
+};
+
+export type FinishWorkoutResult = {
+  workout: Workout;
+  summary: WorkoutSummary;
+  recommendations: ProgressionRecommendation[];
+  personalRecords: DetectedPersonalRecord[];
 };

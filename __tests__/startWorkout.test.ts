@@ -52,6 +52,7 @@ describe("StartWorkoutService", () => {
       getActiveForUser: async () => storedWorkout ?? null,
       create: async (workout) => { storedWorkout = structuredClone(workout); },
       update: async (workout) => { storedWorkout = structuredClone(workout); },
+      finish: async (workout) => { storedWorkout = structuredClone(workout); },
       delete: async () => { storedWorkout = undefined; },
     };
     const service = new StartWorkoutService({

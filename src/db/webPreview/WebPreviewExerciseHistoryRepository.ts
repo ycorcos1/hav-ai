@@ -50,6 +50,28 @@ export class WebPreviewExerciseHistoryRepository implements ExerciseHistoryRepos
       .sort(compareSets);
     return candidates[0] ?? null;
   }
+
+  async getCompletedSetsForExercises({
+    userId,
+    exerciseIds,
+    excludeWorkoutId,
+  }: Parameters<ExerciseHistoryRepository["getCompletedSetsForExercises"]>[0]): Promise<WorkoutSet[]> {
+    const allowedExercises = new Set(exerciseIds);
+    return readWorkoutWebPreviewState(this.storage).workouts
+      .filter((workout) => workout.userId === userId
+        && workout.status === "completed"
+        && workout.id !== excludeWorkoutId)
+      .sort((left, right) => (
+        (left.completedAt ?? "").localeCompare(right.completedAt ?? "")
+        || left.id.localeCompare(right.id)
+      ))
+      .flatMap((workout) => workout.exercises
+        .filter(({ exerciseId }) => allowedExercises.has(exerciseId))
+        .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))
+        .flatMap(({ sets }) => [...sets]
+          .filter(({ setType }) => setType === "working")
+          .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))));
+  }
 }
 
 function compareSets(left: WorkoutSet, right: WorkoutSet): number {

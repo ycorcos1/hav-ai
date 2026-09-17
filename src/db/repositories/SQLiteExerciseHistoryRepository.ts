@@ -114,4 +114,27 @@ export class SQLiteExerciseHistoryRepository implements ExerciseHistoryRepositor
     );
     return row ? workoutSetFromRow(row) : null;
   }
+
+  async getCompletedSetsForExercises({
+    userId,
+    exerciseIds,
+    excludeWorkoutId,
+  }: Parameters<ExerciseHistoryRepository["getCompletedSetsForExercises"]>[0]): Promise<WorkoutSet[]> {
+    if (exerciseIds.length === 0) return [];
+    const uniqueExerciseIds = [...new Set(exerciseIds)];
+    const exercisePlaceholders = uniqueExerciseIds.map(() => "?").join(", ");
+    const rows = await this.database.getAllAsync<LocalWorkoutSetRow>(
+      `SELECT s.* FROM local_sets s
+       JOIN local_workouts w ON w.id=s.workout_id AND w.user_id=s.user_id
+       WHERE s.user_id=? AND s.exercise_id IN (${exercisePlaceholders})
+         AND s.set_type='working' AND s.deleted_at IS NULL
+         AND w.status='completed'
+         ${excludeWorkoutId === undefined ? "" : "AND w.id<>?"}
+       ORDER BY w.completed_at, s.workout_id, s.position, s.id;`,
+      userId,
+      ...uniqueExerciseIds,
+      ...(excludeWorkoutId === undefined ? [] : [excludeWorkoutId]),
+    );
+    return rows.map(workoutSetFromRow);
+  }
 }

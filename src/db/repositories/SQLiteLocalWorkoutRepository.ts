@@ -111,6 +111,38 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
     });
   }
 
+  async finish(workout: Workout): Promise<void> {
+    if (workout.status !== "completed" || workout.completedAt === undefined) {
+      throw new Error("Only a completed workout can be finalized.");
+    }
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing = await transaction.getFirstAsync<{
+        status: string;
+        user_id: string;
+      }>("SELECT user_id, status FROM local_workouts WHERE id=?;", workout.id);
+      if (!existing || existing.user_id !== workout.userId || existing.status !== "active") {
+        throw new Error("The active workout could not be finalized.");
+      }
+      await this.saveInTransaction(transaction, workout);
+      await enqueueSyncUpsert(
+        transaction,
+        workout.userId,
+        "workout",
+        workout.id,
+        workout.updatedAt,
+      );
+      for (const exercise of workout.exercises) {
+        await enqueueSyncUpsert(
+          transaction,
+          exercise.userId,
+          "workout_exercise",
+          exercise.id,
+          workout.updatedAt,
+        );
+      }
+    });
+  }
+
   private async hydrate(row: LocalWorkoutRow, userId: string): Promise<Workout> {
     const exerciseRows = await this.database.getAllAsync<LocalWorkoutExerciseRow>(
       "SELECT * FROM local_workout_exercises WHERE workout_id = ? AND user_id = ? ORDER BY position;",

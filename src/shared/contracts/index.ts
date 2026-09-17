@@ -48,6 +48,7 @@ export type {
   EditSetInput,
   ExerciseWorkoutSummary,
   FinishWorkoutInput,
+  FinishWorkoutResult,
   UpdateWorkoutNoteInput,
   UndoSetCompletionInput,
   UndoSetCompletionResult,

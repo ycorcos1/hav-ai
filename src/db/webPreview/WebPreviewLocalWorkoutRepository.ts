@@ -61,6 +61,28 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
     writeWorkoutWebPreviewState(this.storage, state);
   }
 
+  async finish(workout: Workout): Promise<void> {
+    if (workout.status !== "completed" || workout.completedAt === undefined) {
+      throw new Error("Only a completed workout can be finalized.");
+    }
+    this.validateAggregate(workout);
+    const state = readWorkoutWebPreviewState(this.storage);
+    const index = state.workouts.findIndex(({ id }) => id === workout.id);
+    const existing = state.workouts[index];
+    if (!existing || existing.userId !== workout.userId || existing.status !== "active") {
+      throw new Error("The active workout could not be finalized.");
+    }
+    state.workouts[index] = workout;
+    enqueueWorkoutWebPreviewMutation(state, "workout", workout.id, workout.updatedAt);
+    workout.exercises.forEach((exercise) => enqueueWorkoutWebPreviewMutation(
+      state,
+      "workout_exercise",
+      exercise.id,
+      workout.updatedAt,
+    ));
+    writeWorkoutWebPreviewState(this.storage, state);
+  }
+
   async delete(userId: string, id: string): Promise<void> {
     const state = readWorkoutWebPreviewState(this.storage);
     state.workouts = state.workouts.filter((item) => item.id !== id || item.userId !== userId);

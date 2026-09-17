@@ -70,6 +70,7 @@ function repositories() {
     getActiveForUser: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    finish: jest.fn(),
     delete: jest.fn(),
   };
   const templateRepository: jest.Mocked<LocalTemplateRepository> = {

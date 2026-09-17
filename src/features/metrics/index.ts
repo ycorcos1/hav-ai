@@ -10,3 +10,8 @@ export {
   calculateWorkingSetCount,
   type SessionDelta,
 } from "./workoutMetrics";
+export {
+  calculateWorkoutSummary,
+  WorkoutSummaryCalculationError,
+  type WorkoutSummaryCalculation,
+} from "./workoutSummary";

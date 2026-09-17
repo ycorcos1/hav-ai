@@ -48,6 +48,7 @@ export interface LocalWorkoutRepository {
   getActiveForUser(userId: UUID): Promise<Workout | null>;
   create(workout: Workout): Promise<void>;
   update(workout: Workout): Promise<void>;
+  finish(workout: Workout): Promise<void>;
   delete(userId: UUID, id: UUID): Promise<void>;
 }
 
@@ -66,6 +67,11 @@ export interface ExerciseHistoryRepository {
     userId: UUID;
     exerciseId: UUID;
   }): Promise<WorkoutSet | null>;
+  getCompletedSetsForExercises(params: {
+    userId: UUID;
+    exerciseIds: readonly UUID[];
+    excludeWorkoutId?: UUID;
+  }): Promise<WorkoutSet[]>;
 }
 
 export interface RecentExerciseSessionCacheRepository {

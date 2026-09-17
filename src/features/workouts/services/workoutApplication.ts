@@ -13,6 +13,8 @@ import type {
   WorkoutExercise,
   WorkoutSet,
   WorkoutTemplate,
+  FinishWorkoutInput,
+  FinishWorkoutResult,
   UserExercisePreference,
   UpdateWorkoutNoteInput,
   UndoSetCompletionResult,
@@ -22,6 +24,7 @@ import type {
 import { CompleteSetService } from "./completeSet";
 import { DeleteSetService } from "./deleteSet";
 import { EditSetService } from "./editSet";
+import { FinishWorkoutService } from "./finishWorkout";
 import { createSetPersistence } from "./setPersistence";
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
 import { UndoSetCompletionService } from "./undoSetCompletion";
@@ -85,6 +88,13 @@ export async function updateCurrentUserActiveWorkoutNote(
 ): Promise<Workout> {
   const { persistence, userId } = await persistenceForCurrentUser();
   return updateActiveWorkoutNote(persistence.workoutRepository, userId, input);
+}
+
+export async function finishCurrentUserWorkout(
+  input: FinishWorkoutInput,
+): Promise<FinishWorkoutResult> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  return new FinishWorkoutService(persistence).finish(userId, input);
 }
 
 export async function completeCurrentUserSet(
