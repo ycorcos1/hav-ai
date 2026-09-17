@@ -20,6 +20,10 @@ export {
   type AppStateSource,
 } from "./SyncTriggerController";
 export {
+  UserExercisePreferencePullService,
+  type UserExercisePreferencePullResult,
+} from "./UserExercisePreferencePullService";
+export {
   classifySyncFailure,
   SyncRemoteError,
   syncRetryPolicy,

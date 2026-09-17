@@ -6,4 +6,8 @@ export {
   type SessionListener,
 } from "./AuthService";
 export { SupabaseAuthService } from "./SupabaseAuthService";
+export {
+  SupabaseRemoteSyncGateway,
+  UnsupportedRemoteSyncMutationError,
+} from "./SupabaseRemoteSyncGateway";
 export { authService } from "./instances";

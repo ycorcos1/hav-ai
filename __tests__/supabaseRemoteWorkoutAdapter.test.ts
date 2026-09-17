@@ -81,6 +81,7 @@ describe("SupabaseRemoteWorkoutAdapter", () => {
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
       id: workout.id,
       user_id: userId,
+      notes: "Workout note",
     }), { onConflict: "id" });
   });
 
@@ -115,6 +116,7 @@ describe("SupabaseRemoteWorkoutAdapter", () => {
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
       id: workout.exercises[0].sets[0].id,
       user_id: userId,
+      notes: "Set note",
     }), { onConflict: "id" });
   });
 

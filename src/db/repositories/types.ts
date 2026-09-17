@@ -25,6 +25,11 @@ export type CloudTemplateSnapshot = {
   template: WorkoutTemplate;
 };
 
+export type CloudUserExercisePreferenceSnapshot = {
+  preference: UserExercisePreference;
+  serverUpdatedAt: ISODateTime;
+};
+
 export type CachedRecentExerciseSession = {
   id: UUID;
   userId: UUID;
@@ -132,4 +137,17 @@ export interface LocalUserExercisePreferenceRepository {
   listFavorites(userId: UUID): Promise<UserExercisePreference[]>;
   upsert(preference: UserExercisePreference): Promise<void>;
   deleteOrTombstone(userId: UUID, id: UUID): Promise<void>;
+}
+
+export type UserExercisePreferenceReconciliationResult = {
+  hydrated: number;
+  removed: number;
+  preservedDirty: number;
+};
+
+export interface LocalUserExercisePreferenceHydrationRepository {
+  reconcileFromCloud(
+    userId: UUID,
+    snapshots: readonly CloudUserExercisePreferenceSnapshot[],
+  ): Promise<UserExercisePreferenceReconciliationResult>;
 }

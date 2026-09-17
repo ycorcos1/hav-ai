@@ -12,6 +12,7 @@ export { SQLiteSyncQueueRepository } from "./SQLiteSyncQueueRepository";
 export { SQLiteSyncDependencyResolver } from "./SQLiteSyncDependencyResolver";
 export type {
   CloudExerciseSnapshot,
+  CloudUserExercisePreferenceSnapshot,
   CloudHydrationResult,
   CloudTemplateSnapshot,
   CachedRecentExerciseSession,
@@ -25,6 +26,8 @@ export type {
   LocalTemplateHydrationRepository,
   LocalWorkoutRepository,
   LocalUserExercisePreferenceRepository,
+  LocalUserExercisePreferenceHydrationRepository,
   RecentExerciseSessionCacheRepository,
   SyncQueueRepository,
+  UserExercisePreferenceReconciliationResult,
 } from "./types";
