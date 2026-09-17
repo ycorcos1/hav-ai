@@ -198,6 +198,8 @@ function tableLookup(entityType: SyncEntityType): {
 
 function deletableTable(entityType: SyncEntityType): string {
   switch (entityType) {
+    case "workout":
+      return "local_workouts";
     case "workout_template_exercise":
       return "local_workout_template_exercises";
     case "set":

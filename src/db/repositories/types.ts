@@ -71,6 +71,7 @@ export interface WorkoutHistoryRepository {
     limit: number;
     cursor?: WorkoutHistoryCursor;
   }): Promise<WorkoutHistoryPage>;
+  getLatestCompletedForExercise(userId: UUID, exerciseId: UUID): Promise<Workout | null>;
 }
 
 export interface LocalProfileCacheRepository {

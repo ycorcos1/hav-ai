@@ -1,2 +1,5 @@
-export { generateWorkoutRecommendations } from "./generateWorkoutRecommendations";
+export {
+  generateExerciseRecommendation,
+  generateWorkoutRecommendations,
+} from "./generateWorkoutRecommendations";
 export type { GenerateWorkoutRecommendationsDependencies } from "./generateWorkoutRecommendations";

@@ -40,6 +40,22 @@ export async function generateWorkoutRecommendations(
   return recommendations;
 }
 
+export async function generateExerciseRecommendation(
+  dependencies: GenerateWorkoutRecommendationsDependencies,
+  workout: Workout,
+  workoutExercise: WorkoutExercise,
+): Promise<ProgressionRecommendation | null> {
+  const profile = await dependencies.profileCacheRepository.get(workout.userId);
+  if (!profile || workout.completedAt === undefined) return null;
+  return recommendationForExercise(
+    dependencies,
+    workout,
+    workoutExercise,
+    profile.primaryGoal,
+    profile.progressionStyle,
+  );
+}
+
 async function recommendationForExercise(
   dependencies: GenerateWorkoutRecommendationsDependencies,
   workout: Workout,
@@ -59,7 +75,7 @@ async function recommendationForExercise(
     workout.completedAt === undefined
   ) return null;
 
-  const [exercise, recentSessions] = await Promise.all([
+  const [exercise, loadedRecentSessions] = await Promise.all([
     dependencies.exerciseRepository.getById(workout.userId, workoutExercise.exerciseId),
     dependencies.exerciseHistoryRepository.getRecentSessions({
       userId: workout.userId,
@@ -68,6 +84,7 @@ async function recommendationForExercise(
     }),
   ]);
   if (!exercise) return null;
+  const recentSessions = loadedRecentSessions.filter(({ workoutId }) => workoutId !== workout.id);
 
   const result = calculateProgression({
     exercise: {

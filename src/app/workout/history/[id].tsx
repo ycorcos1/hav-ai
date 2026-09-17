@@ -1,11 +1,23 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 
 import { WorkoutHistoryDetailScreen } from "@/features/workouts/screens/WorkoutHistoryDetailScreen";
-import { loadCurrentUserWorkoutHistoryDetail } from "@/features/workouts/services/workoutApplication";
+import {
+  deleteCurrentUserHistoricalWorkout,
+  editCurrentUserHistoricalSet,
+  loadCurrentUserWorkoutHistoryDetail,
+} from "@/features/workouts/services/workoutApplication";
 
 export default function WorkoutHistoryDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const loadWorkout = useCallback(() => loadCurrentUserWorkoutHistoryDetail(id), [id]);
-  return <WorkoutHistoryDetailScreen loadWorkout={loadWorkout} />;
+  return (
+    <WorkoutHistoryDetailScreen
+      deleteWorkout={() => deleteCurrentUserHistoricalWorkout(id)}
+      editSet={editCurrentUserHistoricalSet}
+      loadWorkout={loadWorkout}
+      onDeleted={() => router.replace("/workout/history")}
+    />
+  );
 }

@@ -34,6 +34,11 @@ import { CompleteSetService } from "./completeSet";
 import { DeleteSetService } from "./deleteSet";
 import { EditSetService } from "./editSet";
 import { FinishWorkoutService } from "./finishWorkout";
+import { createHistoricalWorkoutPersistence } from "./historicalWorkoutPersistence";
+import {
+  HistoricalWorkoutMutationService,
+  type HistoricalSetEditResult,
+} from "./historicalWorkoutMutations";
 import { createSetPersistence } from "./setPersistence";
 import { StartWorkoutService, type StartWorkoutResult } from "./startWorkout";
 import { UndoSetCompletionService } from "./undoSetCompletion";
@@ -80,6 +85,7 @@ export type WorkoutHistoryDetail = {
     workoutExercise: WorkoutExercise;
   }[];
   weightUnit: WeightUnit;
+  rpePreference: UserProfile["rpePreference"];
   workout: Workout;
 };
 
@@ -136,7 +142,12 @@ export async function loadCurrentUserWorkoutHistoryDetail(
       })),
   );
   const profile = await persistence.profileCacheRepository.get(userId);
-  return { exercises, weightUnit: profile?.weightUnit ?? "kg", workout };
+  return {
+    exercises,
+    rpePreference: profile?.rpePreference ?? "optional",
+    weightUnit: profile?.weightUnit ?? "kg",
+    workout,
+  };
 }
 
 export async function updateCurrentUserActiveWorkoutNote(
@@ -167,6 +178,38 @@ export async function editCurrentUserSet(input: EditSetInput): Promise<WorkoutSe
   const persistence = await createSetPersistence();
   owner.assertCurrent();
   return new EditSetService(persistence).edit(owner.userId, input);
+}
+
+export async function editCurrentUserHistoricalSet(
+  input: EditSetInput,
+): Promise<HistoricalSetEditResult> {
+  const owner = await requireCurrentLocalOwner();
+  const [persistence, setPersistence, historicalWorkoutPersistence] = await Promise.all([
+    createWorkoutPersistence(),
+    createSetPersistence(),
+    createHistoricalWorkoutPersistence(),
+  ]);
+  owner.assertCurrent();
+  return new HistoricalWorkoutMutationService({
+    ...persistence,
+    historicalWorkoutPersistence,
+    setPersistence,
+  }).editSet(owner.userId, input);
+}
+
+export async function deleteCurrentUserHistoricalWorkout(workoutId: UUID): Promise<void> {
+  const owner = await requireCurrentLocalOwner();
+  const [persistence, setPersistence, historicalWorkoutPersistence] = await Promise.all([
+    createWorkoutPersistence(),
+    createSetPersistence(),
+    createHistoricalWorkoutPersistence(),
+  ]);
+  owner.assertCurrent();
+  await new HistoricalWorkoutMutationService({
+    ...persistence,
+    historicalWorkoutPersistence,
+    setPersistence,
+  }).deleteWorkout(owner.userId, workoutId);
 }
 
 export async function deleteCurrentUserSet(setId: UUID): Promise<void> {

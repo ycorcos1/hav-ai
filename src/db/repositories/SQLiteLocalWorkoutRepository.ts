@@ -86,6 +86,20 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository, Wor
     };
   }
 
+  async getLatestCompletedForExercise(userId: string, exerciseId: string): Promise<Workout | null> {
+    const row = await this.database.getFirstAsync<LocalWorkoutRow>(
+      `SELECT w.* FROM local_workouts w
+       JOIN local_workout_exercises we ON we.workout_id=w.id AND we.user_id=w.user_id
+       WHERE w.user_id=? AND w.status='completed' AND w.completed_at IS NOT NULL
+         AND we.exercise_id=?
+       ORDER BY w.completed_at DESC, w.id DESC
+       LIMIT 1;`,
+      userId,
+      exerciseId,
+    );
+    return row ? this.hydrate(row, userId) : null;
+  }
+
   async create(workout: Workout): Promise<void> {
     await this.database.withExclusiveTransactionAsync(async (transaction) => {
       const active = await transaction.getFirstAsync<{ id: string }>(

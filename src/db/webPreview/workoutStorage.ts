@@ -20,6 +20,7 @@ export type WorkoutWebPreviewState = {
   recommendations: ProgressionRecommendation[];
   setSyncMetadata: Record<string, WebPreviewSetSyncMetadata>;
   version: 1;
+  workoutSyncMetadata?: Record<string, WebPreviewSetSyncMetadata>;
   workouts: Workout[];
 };
 
@@ -38,6 +39,7 @@ export function readWorkoutWebPreviewState(
       recommendations: [],
       setSyncMetadata: {},
       version: 1,
+      workoutSyncMetadata: {},
       workouts: [],
     };
   }
@@ -48,8 +50,10 @@ export function readWorkoutWebPreviewState(
       ...parsed,
       deletedSets: parsed.deletedSets ?? [],
       setSyncMetadata: parsed.setSyncMetadata ?? {},
+      workoutSyncMetadata: parsed.workoutSyncMetadata ?? {},
     };
     normalizeLegacySetSyncMetadata(state);
+    normalizeLegacyWorkoutSyncMetadata(state);
     return state;
   } catch {
     throw new Error("The development workout preview data could not be read.");
@@ -145,10 +149,18 @@ function isWorkoutState(value: unknown): value is WorkoutWebPreviewState {
     && (value.deletedSets === undefined
       || (Array.isArray(value.deletedSets) && value.deletedSets.every(isSet)))
     && (value.setSyncMetadata === undefined || isSetSyncMetadata(value.setSyncMetadata))
+    && (value.workoutSyncMetadata === undefined || isSetSyncMetadata(value.workoutSyncMetadata))
     && Array.isArray(value.recommendations)
     && value.recommendations.every(isRecommendation)
     && Array.isArray(value.queue)
     && value.queue.every(isQueueItem);
+}
+
+function normalizeLegacyWorkoutSyncMetadata(state: WorkoutWebPreviewState): void {
+  state.workoutSyncMetadata ??= {};
+  for (const workout of state.workouts) {
+    state.workoutSyncMetadata[workout.id] ??= { cloudKnown: true };
+  }
 }
 
 function normalizeLegacySetSyncMetadata(state: WorkoutWebPreviewState): void {

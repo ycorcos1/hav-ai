@@ -54,6 +54,17 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository,
     };
   }
 
+  async getLatestCompletedForExercise(userId: string, exerciseId: string): Promise<Workout | null> {
+    return readWorkoutWebPreviewState(this.storage).workouts
+      .filter((workout) => workout.userId === userId
+        && workout.status === "completed"
+        && workout.completedAt !== undefined
+        && workout.exercises.some((exercise) => exercise.exerciseId === exerciseId))
+      .sort((left, right) => (
+        right.completedAt!.localeCompare(left.completedAt!) || right.id.localeCompare(left.id)
+      ))[0] ?? null;
+  }
+
   async create(workout: Workout): Promise<void> {
     this.validateAggregate(workout);
     const state = readWorkoutWebPreviewState(this.storage);
@@ -65,7 +76,11 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository,
     if (existing && existing.userId !== workout.userId) return;
     this.consumeRecommendations(state, workout);
     if (existing) state.workouts[state.workouts.indexOf(existing)] = workout;
-    else state.workouts.push(workout);
+    else {
+      state.workouts.push(workout);
+      state.workoutSyncMetadata ??= {};
+      state.workoutSyncMetadata[workout.id] = { cloudKnown: false };
+    }
     enqueueWorkoutWebPreviewMutation(state, "workout", workout.id, workout.createdAt);
     workout.exercises.forEach((exercise) => {
       enqueueWorkoutWebPreviewMutation(state, "workout_exercise", exercise.id, exercise.createdAt);
