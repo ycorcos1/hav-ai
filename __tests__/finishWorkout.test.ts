@@ -13,7 +13,12 @@ import {
   FinishWorkoutError,
   FinishWorkoutService,
 } from "@/features/workouts/services/finishWorkout";
-import type { ExerciseHistoryRepository, LocalWorkoutRepository } from "@/db/repositories";
+import type {
+  ExerciseHistoryRepository,
+  LocalExerciseRepository,
+  LocalProfileCacheRepository,
+  LocalWorkoutRepository,
+} from "@/db/repositories";
 import type { Workout, WorkoutSet } from "@/shared/contracts";
 
 import { NodeSQLiteConnection } from "../test-utils/NodeSQLiteConnection";
@@ -21,6 +26,22 @@ import { NodeSQLiteConnection } from "../test-utils/NodeSQLiteConnection";
 const userId = "user-a";
 const startedAt = "2026-09-17T12:00:00.000Z";
 const completedAt = "2026-09-17T13:04:00.000Z";
+const noRecommendationDependencies: {
+  exerciseRepository: LocalExerciseRepository;
+  profileCacheRepository: LocalProfileCacheRepository;
+} = {
+  exerciseRepository: {
+    getById: async () => null,
+    listAccessible: async () => [],
+    search: async () => [],
+    upsert: async () => undefined,
+    archiveCustomExercise: async () => undefined,
+  },
+  profileCacheRepository: {
+    get: async () => null,
+    upsert: async () => undefined,
+  },
+};
 
 class MemoryStorage implements WebPreviewStorage {
   private readonly values = new Map<string, string>();
@@ -41,6 +62,7 @@ describe("finishWorkout", () => {
     await workoutRepository.create(activeWorkout());
 
     const result = await new FinishWorkoutService({
+      ...noRecommendationDependencies,
       exerciseHistoryRepository: historyRepository,
       workoutRepository,
     }).finish(userId, { workoutId: "workout-current", completedAt });
@@ -86,6 +108,7 @@ describe("finishWorkout", () => {
       END;
     `);
     const service = new FinishWorkoutService({
+      ...noRecommendationDependencies,
       exerciseHistoryRepository: new SQLiteExerciseHistoryRepository(database),
       workoutRepository,
     });
@@ -103,6 +126,7 @@ describe("finishWorkout", () => {
     await workoutRepository.create(previousWorkout());
     await workoutRepository.create(activeWorkout());
     const service = new FinishWorkoutService({
+      ...noRecommendationDependencies,
       exerciseHistoryRepository: new WebPreviewExerciseHistoryRepository(storage),
       workoutRepository,
     });
@@ -124,15 +148,16 @@ describe("finishWorkout", () => {
   });
 
   it("rejects missing, foreign, completed, invalid-time, and duplicate in-flight finishes", async () => {
-    let resolveFinish: (() => void) | undefined;
+    let resolveFinish: () => void = () => undefined;
+    const pendingFinish = new Promise<void>((resolve) => {
+      resolveFinish = resolve;
+    });
     const repository: jest.Mocked<LocalWorkoutRepository> = {
       getById: jest.fn().mockResolvedValue(activeWorkout()),
       getActiveForUser: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
-      finish: jest.fn((_workout: Workout) => new Promise<void>((resolve) => {
-        resolveFinish = resolve;
-      })),
+      finish: jest.fn((_workout: Workout) => pendingFinish),
       delete: jest.fn(),
     };
     const history: jest.Mocked<ExerciseHistoryRepository> = {
@@ -141,6 +166,7 @@ describe("finishWorkout", () => {
       getCompletedSetsForExercises: jest.fn().mockResolvedValue([]),
     };
     const service = new FinishWorkoutService({
+      ...noRecommendationDependencies,
       exerciseHistoryRepository: history,
       workoutRepository: repository,
     });
@@ -148,7 +174,7 @@ describe("finishWorkout", () => {
     await Promise.resolve();
     await expect(service.finish(userId, { workoutId: "workout-current", completedAt }))
       .rejects.toBeInstanceOf(FinishWorkoutError);
-    resolveFinish?.();
+    resolveFinish();
     await expect(first).resolves.toMatchObject({ workout: { status: "completed" } });
 
     repository.getById.mockResolvedValue(null);

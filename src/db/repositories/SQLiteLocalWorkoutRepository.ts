@@ -1,4 +1,9 @@
-import type { Workout, WorkoutExercise, WorkoutSet } from "@/shared/contracts";
+import type {
+  ProgressionRecommendation,
+  Workout,
+  WorkoutExercise,
+  WorkoutSet,
+} from "@/shared/contracts";
 
 import {
   workoutExerciseFromRow,
@@ -18,6 +23,7 @@ import type {
   TransactionalLocalDatabaseConnection,
 } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
+import { upsertRecommendationInTransaction } from "./SQLiteLocalRecommendationRepository";
 import { enqueueSyncUpsert } from "./syncQueueUtils";
 import type { LocalWorkoutRepository } from "./types";
 
@@ -111,7 +117,10 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
     });
   }
 
-  async finish(workout: Workout): Promise<void> {
+  async finish(
+    workout: Workout,
+    recommendations: readonly ProgressionRecommendation[] = [],
+  ): Promise<void> {
     if (workout.status !== "completed" || workout.completedAt === undefined) {
       throw new Error("Only a completed workout can be finalized.");
     }
@@ -139,6 +148,20 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
           exercise.id,
           workout.updatedAt,
         );
+      }
+      for (const recommendation of recommendations) {
+        if (
+          recommendation.userId !== workout.userId ||
+          recommendation.sourceWorkoutId !== workout.id ||
+          !workout.exercises.some(
+            (exercise) =>
+              exercise.id === recommendation.sourceWorkoutExerciseId &&
+              exercise.exerciseId === recommendation.exerciseId,
+          )
+        ) {
+          throw new Error("Workout recommendation ownership or source does not match completion.");
+        }
+        await upsertRecommendationInTransaction(transaction, recommendation);
       }
     });
   }

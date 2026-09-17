@@ -48,7 +48,10 @@ export interface LocalWorkoutRepository {
   getActiveForUser(userId: UUID): Promise<Workout | null>;
   create(workout: Workout): Promise<void>;
   update(workout: Workout): Promise<void>;
-  finish(workout: Workout): Promise<void>;
+  finish(
+    workout: Workout,
+    recommendations?: readonly ProgressionRecommendation[],
+  ): Promise<void>;
   delete(userId: UUID, id: UUID): Promise<void>;
 }
 
@@ -133,6 +136,10 @@ export interface LocalRecommendationRepository {
     userId: UUID,
     exerciseId: UUID,
   ): Promise<ProgressionRecommendation | null>;
+  getForSourceWorkout(
+    userId: UUID,
+    workoutId: UUID,
+  ): Promise<ProgressionRecommendation[]>;
   upsert(recommendation: ProgressionRecommendation): Promise<void>;
   markConsumed(userId: UUID, id: UUID, consumedAt: ISODateTime): Promise<void>;
   supersede(userId: UUID, id: UUID): Promise<void>;

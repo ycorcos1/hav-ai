@@ -1,8 +1,11 @@
 import type {
   ExerciseHistoryRepository,
+  LocalExerciseRepository,
+  LocalProfileCacheRepository,
   LocalWorkoutRepository,
 } from "@/db/repositories";
 import { calculateWorkoutSummary } from "@/features/metrics";
+import { generateWorkoutRecommendations } from "@/features/recommendations/services";
 import type {
   FinishWorkoutInput,
   FinishWorkoutResult,
@@ -12,6 +15,8 @@ import type {
 
 export type FinishWorkoutDependencies = {
   exerciseHistoryRepository: ExerciseHistoryRepository;
+  exerciseRepository: LocalExerciseRepository;
+  profileCacheRepository: LocalProfileCacheRepository;
   workoutRepository: LocalWorkoutRepository;
 };
 
@@ -51,11 +56,24 @@ export class FinishWorkoutService {
       } catch {
         throw finishError();
       }
-      await this.dependencies.workoutRepository.finish(completedWorkout);
+      const recommendations = await generateWorkoutRecommendations(
+        this.dependencies,
+        completedWorkout,
+      );
+      const summary = {
+        ...calculation.summary,
+        exerciseSummaries: calculation.summary.exerciseSummaries.map((exerciseSummary) => ({
+          ...exerciseSummary,
+          nextRecommendation: recommendations.find(
+            ({ exerciseId }) => exerciseId === exerciseSummary.exerciseId,
+          ),
+        })),
+      };
+      await this.dependencies.workoutRepository.finish(completedWorkout, recommendations);
       return {
         workout: completedWorkout,
-        summary: calculation.summary,
-        recommendations: [],
+        summary,
+        recommendations,
         personalRecords: calculation.personalRecords,
       };
     } catch (error) {

@@ -44,12 +44,17 @@ function weightChangeDecision(
 export function applyBalancedPolicy(context: ProgressionContext): ProgressionDecision {
   const { input, classification } = context;
   if (classification === "irregular") {
-    return { recommendationType: "maintain_weight", reasonCodes: ["MIXED_WORKING_LOADS"] };
+    return {
+      recommendationType: "maintain_weight",
+      recommendedWeightKg: context.input.currentTarget.targetWeightKg,
+      reasonCodes: ["MIXED_WORKING_LOADS"],
+    };
   }
   if (context.repeatedUnderperformance) return weightChangeDecision(context, "decrease");
   if (classification === "partial_underperformance" || classification === "severe_underperformance") {
     return {
       recommendationType: "repeat_target",
+      recommendedWeightKg: input.currentTarget.targetWeightKg,
       targetSetReps: input.currentTarget.targetSetReps,
       reasonCodes: ["BELOW_TARGET_RANGE", "SINGLE_SESSION_UNDERPERFORMANCE"],
     };
@@ -79,5 +84,9 @@ export function applyBalancedPolicy(context: ProgressionContext): ProgressionDec
       reasonCodes: ["WITHIN_TARGET_RANGE"],
     };
   }
-  return { recommendationType: "repeat_target", reasonCodes: ["PERFORMANCE_REPEATED"] };
+  return {
+    recommendationType: "repeat_target",
+    recommendedWeightKg: input.currentTarget.targetWeightKg,
+    reasonCodes: ["PERFORMANCE_REPEATED"],
+  };
 }

@@ -85,6 +85,7 @@ function repositories() {
   const recommendationRepository: jest.Mocked<LocalRecommendationRepository> = {
     getById: jest.fn(),
     getActiveForExercise: jest.fn(),
+    getForSourceWorkout: jest.fn().mockResolvedValue([]),
     upsert: jest.fn(),
     markConsumed: jest.fn(),
     supersede: jest.fn(),
@@ -102,10 +103,15 @@ function repositories() {
     upsert: jest.fn(),
     deleteOrTombstone: jest.fn(),
   };
+  const profileCacheRepository = {
+    get: jest.fn().mockResolvedValue({ weightUnit: "kg" }),
+    upsert: jest.fn(),
+  };
   return {
     exerciseHistoryRepository,
     exerciseRepository,
     preferenceRepository,
+    profileCacheRepository,
     recommendationRepository,
     templateRepository,
     workoutRepository,

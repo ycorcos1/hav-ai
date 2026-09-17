@@ -2,8 +2,27 @@ import { fireEvent, render } from "@testing-library/react-native";
 
 import { WorkoutSummaryScreen } from "@/features/workouts/screens/WorkoutSummaryScreen";
 import type { CompletedWorkoutSummary } from "@/features/workouts/services/workoutApplication";
+import type { ProgressionRecommendation } from "@/shared/contracts";
 
 const time = "2026-09-17T12:00:00.000Z";
+const recommendation: ProgressionRecommendation = {
+  id: "recommendation-a",
+  userId: "user-a",
+  exerciseId: "exercise-a",
+  sourceWorkoutId: "workout-a",
+  recommendationType: "increase_reps",
+  recommendedWeightKg: 82.5,
+  targetSets: 3,
+  targetMinReps: 6,
+  targetMaxReps: 8,
+  targetSetReps: [8, 8, 7],
+  confidence: "high",
+  reasonCodes: ["WITHIN_TARGET_RANGE", "TOTAL_REPS_IMPROVED"],
+  status: "active",
+  engineVersion: "progression-v1",
+  createdAt: time,
+  updatedAt: time,
+};
 const result: CompletedWorkoutSummary = {
   workout: {
     id: "workout-a",
@@ -30,6 +49,7 @@ const result: CompletedWorkoutSummary = {
         repDelta: 2,
         bestSet: { weightKg: 82.5, reps: 8 },
         detectedPRs: [],
+        nextRecommendation: recommendation,
       },
       {
         exerciseId: "exercise-b",
@@ -61,6 +81,7 @@ const result: CompletedWorkoutSummary = {
         repDelta: 2,
         bestSet: { weightKg: 82.5, reps: 8 },
         detectedPRs: [],
+        nextRecommendation: recommendation,
       },
     },
     {
@@ -74,10 +95,11 @@ const result: CompletedWorkoutSummary = {
     },
   ],
   personalRecords: [],
+  weightUnit: "kg",
 };
 
 describe("WorkoutSummaryScreen", () => {
-  it("shows completion metrics, exercise progress, PR events, and the next-target placeholder", async () => {
+  it("shows completion metrics, exercise progress, PR events, and the next target", async () => {
     const onDone = jest.fn();
     const screen = await render(
       <WorkoutSummaryScreen loadSummary={async () => result} onDone={onDone} />,
@@ -87,13 +109,17 @@ describe("WorkoutSummaryScreen", () => {
     expect(screen.getByText("Push")).toBeOnTheScreen();
     expect(screen.getByText("1h 04m")).toBeOnTheScreen();
     expect(screen.getByText("5")).toBeOnTheScreen();
-    expect(screen.getByText("Incline Bench")).toBeOnTheScreen();
+    expect(screen.getAllByText("Incline Bench")).toHaveLength(2);
     expect(screen.getByText("↑ +2 total reps")).toBeOnTheScreen();
     expect(screen.getByText("Exercise unavailable")).toBeOnTheScreen();
     expect(screen.getByText("No previous session comparison")).toBeOnTheScreen();
     expect(screen.getByText("NEW REP PR")).toBeOnTheScreen();
     expect(screen.getByText("NEW ESTIMATED 1RM PR")).toBeOnTheScreen();
-    expect(screen.getByText("Next targets will appear after progression is available.")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Next target for Incline Bench")).toBeOnTheScreen();
+    expect(screen.getByText("82.5 kg")).toBeOnTheScreen();
+    expect(screen.getByText("8 / 8 / 7")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Why?" }));
+    expect(screen.getByText("Add reps at the same load")).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Done" }));
     expect(onDone).toHaveBeenCalledTimes(1);
   });

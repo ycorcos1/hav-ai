@@ -25,6 +25,7 @@ export type {
   UserExercisePreference,
 } from "./exercises";
 export type {
+  BasicRecommendationExplanation,
   ExerciseSessionPerformance,
   ExerciseTrend,
   EstimatedOneRepMaxResult,

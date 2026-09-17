@@ -1,5 +1,5 @@
 import type { LocalWorkoutRepository } from "@/db/repositories/types";
-import type { Workout } from "@/shared/contracts";
+import type { ProgressionRecommendation, Workout } from "@/shared/contracts";
 
 import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
 import {
@@ -61,7 +61,10 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
     writeWorkoutWebPreviewState(this.storage, state);
   }
 
-  async finish(workout: Workout): Promise<void> {
+  async finish(
+    workout: Workout,
+    recommendations: readonly ProgressionRecommendation[] = [],
+  ): Promise<void> {
     if (workout.status !== "completed" || workout.completedAt === undefined) {
       throw new Error("Only a completed workout can be finalized.");
     }
@@ -80,6 +83,45 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
       exercise.id,
       workout.updatedAt,
     ));
+    for (const recommendation of recommendations) {
+      if (
+        recommendation.userId !== workout.userId ||
+        recommendation.sourceWorkoutId !== workout.id ||
+        !workout.exercises.some(
+          (exercise) =>
+            exercise.id === recommendation.sourceWorkoutExerciseId &&
+            exercise.exerciseId === recommendation.exerciseId,
+        )
+      ) {
+        throw new Error("Workout recommendation ownership or source does not match completion.");
+      }
+      state.recommendations = state.recommendations.map((item) => {
+        if (
+          item.id === recommendation.id ||
+          item.userId !== recommendation.userId ||
+          item.exerciseId !== recommendation.exerciseId ||
+          item.status !== "active"
+        ) return item;
+        enqueueWorkoutWebPreviewMutation(
+          state,
+          "progression_recommendation",
+          item.id,
+          recommendation.updatedAt,
+        );
+        return { ...item, status: "superseded", updatedAt: recommendation.updatedAt };
+      });
+      const recommendationIndex = state.recommendations.findIndex(
+        ({ id }) => id === recommendation.id,
+      );
+      if (recommendationIndex >= 0) state.recommendations[recommendationIndex] = recommendation;
+      else state.recommendations.push(recommendation);
+      enqueueWorkoutWebPreviewMutation(
+        state,
+        "progression_recommendation",
+        recommendation.id,
+        recommendation.updatedAt,
+      );
+    }
     writeWorkoutWebPreviewState(this.storage, state);
   }
 

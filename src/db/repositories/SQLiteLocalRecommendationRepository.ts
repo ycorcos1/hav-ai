@@ -2,7 +2,7 @@ import type { ISODateTime, ProgressionRecommendation } from "@/shared/contracts"
 
 import { progressionRecommendationFromRow, progressionRecommendationToRow } from "../mappers";
 import type { LocalProgressionRecommendationRow } from "../mappers";
-import type { TransactionalLocalDatabaseConnection } from "../types";
+import type { LocalDatabaseTransaction, TransactionalLocalDatabaseConnection } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
 import { enqueueSyncUpsert } from "./syncQueueUtils";
 import type { LocalRecommendationRepository } from "./types";
@@ -23,52 +23,22 @@ export class SQLiteLocalRecommendationRepository implements LocalRecommendationR
     return row ? progressionRecommendationFromRow(row) : null;
   }
 
+  async getForSourceWorkout(
+    userId: string,
+    workoutId: string,
+  ): Promise<ProgressionRecommendation[]> {
+    const rows = await this.database.getAllAsync<LocalProgressionRecommendationRow>(
+      `SELECT * FROM local_progression_recommendations
+       WHERE user_id=? AND source_workout_id=? ORDER BY created_at, id;`,
+      userId,
+      workoutId,
+    );
+    return rows.map(progressionRecommendationFromRow);
+  }
+
   async upsert(recommendation: ProgressionRecommendation): Promise<void> {
     await this.database.withExclusiveTransactionAsync(async (transaction) => {
-      if (recommendation.sourceWorkoutId) {
-        const source = await transaction.getFirstAsync<{ id: string }>(
-          "SELECT id FROM local_workouts WHERE id=? AND user_id=?;",
-          recommendation.sourceWorkoutId, recommendation.userId,
-        );
-        if (!source) {
-          throw new Error("Recommendation source workout is not accessible to its user.");
-        }
-      }
-      if (recommendation.sourceWorkoutExerciseId) {
-        const source = await transaction.getFirstAsync<{ id: string }>(
-          "SELECT id FROM local_workout_exercises WHERE id=? AND user_id=?;",
-          recommendation.sourceWorkoutExerciseId, recommendation.userId,
-        );
-        if (!source) {
-          throw new Error("Recommendation source exercise is not accessible to its user.");
-        }
-      }
-      const metadata = await metadataForUpsert(
-        transaction,
-        "local_progression_recommendations",
-        "user_id",
-        recommendation.userId,
-        recommendation.id,
-      );
-      const row = progressionRecommendationToRow(recommendation, metadata);
-      await transaction.runAsync(`INSERT INTO local_progression_recommendations (${columns.join(", ")}) VALUES (${placeholders(columns.length)})
-        ON CONFLICT(id) DO UPDATE SET exercise_id=excluded.exercise_id,
-        source_workout_id=excluded.source_workout_id, source_workout_exercise_id=excluded.source_workout_exercise_id,
-        recommendation_type=excluded.recommendation_type, recommended_weight_kg=excluded.recommended_weight_kg,
-        target_sets=excluded.target_sets, target_min_reps=excluded.target_min_reps,
-        target_max_reps=excluded.target_max_reps, target_set_reps_json=excluded.target_set_reps_json,
-        confidence=excluded.confidence, reason_codes_json=excluded.reason_codes_json,
-        status=excluded.status, engine_version=excluded.engine_version, consumed_at=excluded.consumed_at,
-        sync_status=excluded.sync_status, updated_at=excluded.updated_at
-        WHERE local_progression_recommendations.user_id=excluded.user_id;`,
-        ...columns.map((column) => row[column as keyof LocalProgressionRecommendationRow]));
-      await enqueueSyncUpsert(
-        transaction,
-        recommendation.userId,
-        "progression_recommendation",
-        recommendation.id,
-        recommendation.updatedAt,
-      );
+      await upsertRecommendationInTransaction(transaction, recommendation);
     });
   }
 
@@ -90,6 +60,80 @@ export class SQLiteLocalRecommendationRepository implements LocalRecommendationR
       await enqueueRecommendationIfPresent(transaction, userId, id, now);
     });
   }
+}
+
+export async function upsertRecommendationInTransaction(
+  transaction: LocalDatabaseTransaction,
+  recommendation: ProgressionRecommendation,
+): Promise<void> {
+  if (recommendation.sourceWorkoutId) {
+    const source = await transaction.getFirstAsync<{ id: string }>(
+      "SELECT id FROM local_workouts WHERE id=? AND user_id=?;",
+      recommendation.sourceWorkoutId,
+      recommendation.userId,
+    );
+    if (!source) throw new Error("Recommendation source workout is not accessible to its user.");
+  }
+  if (recommendation.sourceWorkoutExerciseId) {
+    const source = await transaction.getFirstAsync<{ id: string }>(
+      "SELECT id FROM local_workout_exercises WHERE id=? AND user_id=?;",
+      recommendation.sourceWorkoutExerciseId,
+      recommendation.userId,
+    );
+    if (!source) throw new Error("Recommendation source exercise is not accessible to its user.");
+  }
+  if (recommendation.status === "active") {
+    const activeRows = await transaction.getAllAsync<{ id: string }>(
+      `SELECT id FROM local_progression_recommendations
+       WHERE user_id=? AND exercise_id=? AND status='active' AND id<>?;`,
+      recommendation.userId,
+      recommendation.exerciseId,
+      recommendation.id,
+    );
+    for (const active of activeRows) {
+      await transaction.runAsync(
+        `UPDATE local_progression_recommendations SET status='superseded', updated_at=?,
+         sync_status=CASE WHEN sync_status='pending_create' THEN 'pending_create' ELSE 'pending_update' END
+         WHERE id=? AND user_id=?;`,
+        recommendation.updatedAt,
+        active.id,
+        recommendation.userId,
+      );
+      await enqueueSyncUpsert(
+        transaction,
+        recommendation.userId,
+        "progression_recommendation",
+        active.id,
+        recommendation.updatedAt,
+      );
+    }
+  }
+  const metadata = await metadataForUpsert(
+    transaction,
+    "local_progression_recommendations",
+    "user_id",
+    recommendation.userId,
+    recommendation.id,
+  );
+  const row = progressionRecommendationToRow(recommendation, metadata);
+  await transaction.runAsync(`INSERT INTO local_progression_recommendations (${columns.join(", ")}) VALUES (${placeholders(columns.length)})
+    ON CONFLICT(id) DO UPDATE SET exercise_id=excluded.exercise_id,
+    source_workout_id=excluded.source_workout_id, source_workout_exercise_id=excluded.source_workout_exercise_id,
+    recommendation_type=excluded.recommendation_type, recommended_weight_kg=excluded.recommended_weight_kg,
+    target_sets=excluded.target_sets, target_min_reps=excluded.target_min_reps,
+    target_max_reps=excluded.target_max_reps, target_set_reps_json=excluded.target_set_reps_json,
+    confidence=excluded.confidence, reason_codes_json=excluded.reason_codes_json,
+    status=excluded.status, engine_version=excluded.engine_version, consumed_at=excluded.consumed_at,
+    sync_status=excluded.sync_status, updated_at=excluded.updated_at
+    WHERE local_progression_recommendations.user_id=excluded.user_id;`,
+    ...columns.map((column) => row[column as keyof LocalProgressionRecommendationRow]));
+  await enqueueSyncUpsert(
+    transaction,
+    recommendation.userId,
+    "progression_recommendation",
+    recommendation.id,
+    recommendation.updatedAt,
+  );
 }
 
 async function enqueueRecommendationIfPresent(

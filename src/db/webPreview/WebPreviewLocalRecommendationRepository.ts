@@ -2,7 +2,11 @@ import type { LocalRecommendationRepository } from "@/db/repositories/types";
 import type { ProgressionRecommendation } from "@/shared/contracts";
 
 import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
-import { readWorkoutWebPreviewState, writeWorkoutWebPreviewState } from "./workoutStorage";
+import {
+  enqueueWorkoutWebPreviewMutation,
+  readWorkoutWebPreviewState,
+  writeWorkoutWebPreviewState,
+} from "./workoutStorage";
 
 export class WebPreviewLocalRecommendationRepository implements LocalRecommendationRepository {
   constructor(private readonly storage: WebPreviewStorage = browserWebPreviewStorage()) {}
@@ -18,12 +22,44 @@ export class WebPreviewLocalRecommendationRepository implements LocalRecommendat
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null;
   }
 
+  async getForSourceWorkout(
+    userId: string,
+    workoutId: string,
+  ): Promise<ProgressionRecommendation[]> {
+    return readWorkoutWebPreviewState(this.storage).recommendations
+      .filter((item) => item.userId === userId && item.sourceWorkoutId === workoutId)
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+  }
+
   async upsert(recommendation: ProgressionRecommendation): Promise<void> {
     const state = readWorkoutWebPreviewState(this.storage);
+    if (recommendation.status === "active") {
+      state.recommendations = state.recommendations.map((item) => {
+        if (
+          item.id === recommendation.id ||
+          item.userId !== recommendation.userId ||
+          item.exerciseId !== recommendation.exerciseId ||
+          item.status !== "active"
+        ) return item;
+        enqueueWorkoutWebPreviewMutation(
+          state,
+          "progression_recommendation",
+          item.id,
+          recommendation.updatedAt,
+        );
+        return { ...item, status: "superseded", updatedAt: recommendation.updatedAt };
+      });
+    }
     const index = state.recommendations.findIndex(({ id }) => id === recommendation.id);
     if (index >= 0 && state.recommendations[index].userId !== recommendation.userId) return;
     if (index >= 0) state.recommendations[index] = recommendation;
     else state.recommendations.push(recommendation);
+    enqueueWorkoutWebPreviewMutation(
+      state,
+      "progression_recommendation",
+      recommendation.id,
+      recommendation.updatedAt,
+    );
     writeWorkoutWebPreviewState(this.storage, state);
   }
 
@@ -50,6 +86,7 @@ export class WebPreviewLocalRecommendationRepository implements LocalRecommendat
       ...(status === "consumed" ? { consumedAt: updatedAt } : {}),
       updatedAt,
     };
+    enqueueWorkoutWebPreviewMutation(state, "progression_recommendation", id, updatedAt);
     writeWorkoutWebPreviewState(this.storage, state);
   }
 }

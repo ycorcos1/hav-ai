@@ -106,6 +106,11 @@ export type ProgressionResult = {
   engineVersion: string;
 };
 
+export type BasicRecommendationExplanation = {
+  title: string;
+  reasons: string[];
+};
+
 export type ExerciseTrend = {
   direction: "improving" | "flat" | "declining" | "insufficient_data";
   sessionsAnalyzed: number;

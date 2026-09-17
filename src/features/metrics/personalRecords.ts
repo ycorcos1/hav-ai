@@ -10,6 +10,23 @@ type RecordSet = Pick<
   "completedAt" | "exerciseId" | "id" | "reps" | "setType" | "weightKg" | "workoutId"
 >;
 
+export type LocalPersonalRecordState = {
+  persistedState: DetectedPersonalRecord[];
+  repEvents: DetectedPersonalRecord[];
+};
+
+export function calculateLocalPersonalRecordState(
+  currentSets: readonly RecordSet[],
+  historicalSets: readonly RecordSet[],
+): LocalPersonalRecordState {
+  const currentEvents = detectPersonalRecords(currentSets, historicalSets);
+  return {
+    persistedState: detectPersonalRecords([...historicalSets, ...currentSets], [])
+      .filter(({ type }) => type === "max_weight" || type === "estimated_1rm"),
+    repEvents: currentEvents.filter(({ type }) => type === "rep_pr"),
+  };
+}
+
 export function detectPersonalRecords(
   currentSets: readonly RecordSet[],
   historicalSets: readonly RecordSet[],

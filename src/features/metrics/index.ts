@@ -3,7 +3,11 @@ export {
   epleyFormulaVersion,
   maximumReliableEpleyReps,
 } from "./epley";
-export { detectPersonalRecords } from "./personalRecords";
+export {
+  calculateLocalPersonalRecordState,
+  detectPersonalRecords,
+  type LocalPersonalRecordState,
+} from "./personalRecords";
 export {
   calculateSessionDelta,
   calculateTotalReps,

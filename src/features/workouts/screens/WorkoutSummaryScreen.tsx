@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { RecommendationCard } from "@/features/recommendations/components/RecommendationCard";
 import type { CompletedWorkoutSummary } from "@/features/workouts/services/workoutApplication";
 import type { DetectedPersonalRecordType, ExerciseWorkoutSummary } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
@@ -101,10 +102,21 @@ export function WorkoutSummaryScreen({ loadSummary, onDone }: WorkoutSummaryScre
           </Card>
         ))}
       </View>
-      <Card style={styles.section}>
+      <View style={styles.section}>
         <AppText variant="sectionHeading">Next Targets</AppText>
-        <AppText color="muted">Next targets will appear after progression is available.</AppText>
-      </Card>
+        {result.exercises.some(({ summary }) => summary.nextRecommendation) ? (
+          result.exercises.map(({ exercise, summary }) => summary.nextRecommendation ? (
+            <RecommendationCard
+              exerciseName={exercise?.name ?? "Exercise unavailable"}
+              key={summary.nextRecommendation.id}
+              recommendation={summary.nextRecommendation}
+              weightUnit={result.weightUnit}
+            />
+          ) : null)
+        ) : (
+          <AppText color="muted">No next target is available for this workout.</AppText>
+        )}
+      </View>
       <PrimaryButton label="Done" onPress={onDone} />
     </Screen>
   );

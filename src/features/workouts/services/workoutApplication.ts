@@ -23,6 +23,7 @@ import type {
   UpdateWorkoutNoteInput,
   UndoSetCompletionResult,
   UserProfile,
+  WeightUnit,
 } from "@/shared/contracts";
 
 import { CompleteSetService } from "./completeSet";
@@ -65,6 +66,7 @@ export type CompletedWorkoutSummary = {
   }[];
   personalRecords: DetectedPersonalRecord[];
   summary: WorkoutSummary;
+  weightUnit: WeightUnit;
   workout: Workout;
 };
 
@@ -173,16 +175,31 @@ export async function loadCurrentUserCompletedWorkoutSummary(
     excludeWorkoutId: workout.id,
   });
   const calculated = calculateWorkoutSummary(workout, historicalSets);
+  const recommendations = await persistence.recommendationRepository.getForSourceWorkout(
+    userId,
+    workout.id,
+  );
+  const summary: WorkoutSummary = {
+    ...calculated.summary,
+    exerciseSummaries: calculated.summary.exerciseSummaries.map((exerciseSummary) => ({
+      ...exerciseSummary,
+      nextRecommendation: recommendations.find(
+        ({ exerciseId }) => exerciseId === exerciseSummary.exerciseId,
+      ),
+    })),
+  };
   const { exerciseRepository } = await createExercisePersistence();
   await populateExerciseFixture(exerciseRepository);
-  const exercises = await Promise.all(calculated.summary.exerciseSummaries.map(async (summary) => ({
-    exercise: await exerciseRepository.getById(userId, summary.exerciseId),
-    summary,
+  const exercises = await Promise.all(summary.exerciseSummaries.map(async (exerciseSummary) => ({
+    exercise: await exerciseRepository.getById(userId, exerciseSummary.exerciseId),
+    summary: exerciseSummary,
   })));
+  const profile = await persistence.profileCacheRepository.get(userId);
   return {
     exercises,
     personalRecords: calculated.personalRecords,
-    summary: calculated.summary,
+    summary,
+    weightUnit: profile?.weightUnit ?? "kg",
     workout,
   };
 }
