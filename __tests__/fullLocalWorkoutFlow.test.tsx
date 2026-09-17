@@ -313,8 +313,10 @@ describe("full local workout flow", () => {
       const overviewScreen = await render(
         <NetworkStatusProvider service={offlineNetwork}>
           <ActiveWorkoutOverviewScreen
+            finishWorkout={jest.fn()}
             loadWorkout={async () => recoveredOverview}
             onOpenExercise={jest.fn()}
+            onWorkoutFinished={jest.fn()}
             saveWorkoutNote={(notes) => updateCurrentUserActiveWorkoutNote({
               workoutId: workout.id,
               notes,
@@ -324,7 +326,7 @@ describe("full local workout flow", () => {
       );
       expect(await overviewScreen.findByText("Offline · Saved on device")).toBeOnTheScreen();
       expect(overviewScreen.getByText("Bench Press")).toBeOnTheScreen();
-      expect(overviewScreen.getByRole("button", { name: "Finish Workout" })).toBeDisabled();
+      expect(overviewScreen.getByRole("button", { name: "Finish Workout" })).toBeEnabled();
       await overviewScreen.unmount();
 
       expect(remoteProfile.getOwnProfile).not.toHaveBeenCalled();

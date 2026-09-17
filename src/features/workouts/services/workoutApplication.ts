@@ -1,18 +1,22 @@
 import { requireCurrentLocalOwner } from "@/features/routing/localRecovery";
+import { calculateWorkoutSummary } from "@/features/metrics";
 import { createExercisePersistence } from "@/features/exercises/services/exercisePersistence";
 import { populateExerciseFixture } from "@/features/exercises/services/populateExerciseFixture";
 import { createProfileCachePersistence } from "@/features/profile/services/profileCachePersistence";
 import type {
   CompleteSetInput,
   CompleteSetResult,
+  DetectedPersonalRecord,
   EditSetInput,
   Exercise,
+  ExerciseWorkoutSummary,
   ExerciseSessionPerformance,
   UUID,
   Workout,
   WorkoutExercise,
   WorkoutSet,
   WorkoutTemplate,
+  WorkoutSummary,
   FinishWorkoutInput,
   FinishWorkoutResult,
   UserExercisePreference,
@@ -52,6 +56,16 @@ export type ActiveWorkoutExercise = {
   previousPerformance: ExerciseSessionPerformance | null;
   workout: Workout;
   workoutExercise: WorkoutExercise;
+};
+
+export type CompletedWorkoutSummary = {
+  exercises: {
+    exercise: Exercise | null;
+    summary: ExerciseWorkoutSummary;
+  }[];
+  personalRecords: DetectedPersonalRecord[];
+  summary: WorkoutSummary;
+  workout: Workout;
 };
 
 export async function loadCurrentUserWorkoutHome(): Promise<WorkoutHomeState> {
@@ -145,6 +159,32 @@ export async function loadCurrentUserWorkoutOverview(
   })));
 
   return { exercises, workout };
+}
+
+export async function loadCurrentUserCompletedWorkoutSummary(
+  id: UUID,
+): Promise<CompletedWorkoutSummary | null> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  const workout = await persistence.workoutRepository.getById(userId, id);
+  if (!workout || workout.status !== "completed" || workout.completedAt === undefined) return null;
+  const historicalSets = await persistence.exerciseHistoryRepository.getCompletedSetsForExercises({
+    userId,
+    exerciseIds: workout.exercises.map(({ exerciseId }) => exerciseId),
+    excludeWorkoutId: workout.id,
+  });
+  const calculated = calculateWorkoutSummary(workout, historicalSets);
+  const { exerciseRepository } = await createExercisePersistence();
+  await populateExerciseFixture(exerciseRepository);
+  const exercises = await Promise.all(calculated.summary.exerciseSummaries.map(async (summary) => ({
+    exercise: await exerciseRepository.getById(userId, summary.exerciseId),
+    summary,
+  })));
+  return {
+    exercises,
+    personalRecords: calculated.personalRecords,
+    summary: calculated.summary,
+    workout,
+  };
 }
 
 export async function loadCurrentUserActiveWorkoutExercise(

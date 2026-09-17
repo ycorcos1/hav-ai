@@ -14,19 +14,23 @@ import { WorkoutElapsedTime } from "@/features/workouts/components/WorkoutElapse
 import { WorkoutOfflineBanner } from "@/features/network/components/WorkoutOfflineBanner";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
 import type { RecoveryWorkoutOverview } from "@/features/workouts/services/workoutRecoveryContext";
-import type { Workout } from "@/shared/contracts";
+import type { FinishWorkoutResult, Workout } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type ActiveWorkoutOverviewScreenProps = {
   loadWorkout: () => Promise<RecoveryWorkoutOverview | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
+  onWorkoutFinished: (result: FinishWorkoutResult) => void;
   saveWorkoutNote: (notes?: string) => Promise<Workout>;
+  finishWorkout: () => Promise<FinishWorkoutResult>;
 };
 
 export function ActiveWorkoutOverviewScreen({
   loadWorkout,
   onOpenExercise,
+  onWorkoutFinished,
   saveWorkoutNote,
+  finishWorkout,
 }: ActiveWorkoutOverviewScreenProps) {
   const [overview, setOverview] = useState<RecoveryWorkoutOverview | null>();
   const [failed, setFailed] = useState(false);
@@ -36,6 +40,10 @@ export function ActiveWorkoutOverviewScreen({
   const [noteSaveFailed, setNoteSaveFailed] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
   const noteSavingRef = useRef(false);
+  const [finishConfirmationVisible, setFinishConfirmationVisible] = useState(false);
+  const [finishFailed, setFinishFailed] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const finishingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +70,13 @@ export function ActiveWorkoutOverviewScreen({
   }
 
   const completedExercises = overview.exercises.filter(({ workoutExercise }) => isExerciseComplete(workoutExercise)).length;
+  const incompletePlannedExercises = overview.exercises.filter(({ workoutExercise }) => (
+    hasIncompletePlannedWork(workoutExercise)
+  )).length;
+  const workingSetCount = overview.exercises.reduce(
+    (total, { workoutExercise }) => total + completedWorkingSets(workoutExercise),
+    0,
+  );
 
   function openNoteEditor(): void {
     setNoteDraft(overview?.workout.notes ?? "");
@@ -83,6 +98,32 @@ export function ActiveWorkoutOverviewScreen({
     } finally {
       noteSavingRef.current = false;
       setNoteSaving(false);
+    }
+  }
+
+  function requestFinish(): void {
+    setFinishFailed(false);
+    if (incompletePlannedExercises > 0) {
+      setFinishConfirmationVisible(true);
+      return;
+    }
+    void completeWorkout();
+  }
+
+  async function completeWorkout(): Promise<void> {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    setFinishing(true);
+    setFinishFailed(false);
+    try {
+      const result = await finishWorkout();
+      setFinishConfirmationVisible(false);
+      onWorkoutFinished(result);
+    } catch {
+      setFinishFailed(true);
+    } finally {
+      finishingRef.current = false;
+      setFinishing(false);
     }
   }
 
@@ -132,7 +173,41 @@ export function ActiveWorkoutOverviewScreen({
         ))}
       </View>
       <SecondaryButton accessibilityHint="Exercise changes are enabled in a later task." disabled label="Add Exercise" />
-      <PrimaryButton accessibilityHint="Workout completion is enabled in a later task." disabled label="Finish Workout" />
+      <SecondaryButton label="Finish Workout" loading={finishing} onPress={requestFinish} />
+      {finishFailed && !finishConfirmationVisible ? (
+        <AppText accessibilityRole="alert" style={styles.noteError} variant="metadata">
+          Unable to finish the workout. Your local workout is still available.
+        </AppText>
+      ) : null}
+      <BottomSheet
+        accessibilityLabel="Finish workout confirmation"
+        dismissOnBackdropPress={!finishing}
+        onDismiss={() => {
+          if (!finishingRef.current) setFinishConfirmationVisible(false);
+        }}
+        showCloseAction={!finishing}
+        title="Finish workout?"
+        visible={finishConfirmationVisible}
+      >
+        <AppText>You still have planned sets/exercises remaining.</AppText>
+        <AppText color="secondary">
+          {workingSetCount} working sets · {overview.exercises.length} exercises
+        </AppText>
+        <AppText color="secondary">
+          {incompletePlannedExercises} planned {incompletePlannedExercises === 1 ? "exercise" : "exercises"} incomplete
+        </AppText>
+        {finishFailed ? (
+          <AppText accessibilityRole="alert" style={styles.noteError} variant="metadata">
+            Unable to finish the workout. Your local workout is still available.
+          </AppText>
+        ) : null}
+        <PrimaryButton label="Finish Workout" loading={finishing} onPress={() => { void completeWorkout(); }} />
+        <SecondaryButton
+          disabled={finishing}
+          label="Keep Training"
+          onPress={() => setFinishConfirmationVisible(false)}
+        />
+      </BottomSheet>
       <BottomSheet
         accessibilityLabel="Workout note editor"
         dismissOnBackdropPress={!noteSaving}
@@ -169,6 +244,13 @@ function isExerciseComplete(exercise: ActiveWorkoutOverview["exercises"][number]
   return exercise.targetSets !== undefined
     && exercise.targetSets > 0
     && completedWorkingSets(exercise) >= exercise.targetSets;
+}
+
+function hasIncompletePlannedWork(
+  exercise: ActiveWorkoutOverview["exercises"][number]["workoutExercise"],
+): boolean {
+  return exercise.targetSets !== undefined
+    && exercise.targetSets > completedWorkingSets(exercise);
 }
 
 function exerciseProgressLabel(exercise: ActiveWorkoutOverview["exercises"][number]["workoutExercise"]): string {

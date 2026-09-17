@@ -36,6 +36,7 @@ jest.mock("@/features/profile/services/profileCachePersistence", () => ({
 }));
 
 import {
+  loadCurrentUserCompletedWorkoutSummary,
   loadCurrentUserActiveWorkoutExercise,
   loadCurrentUserWorkoutOverview,
   updateCurrentUserActiveWorkoutNote,
@@ -64,6 +65,7 @@ function repositories() {
   const exerciseHistoryRepository = {
     getRecentSessions: jest.fn().mockResolvedValue([]),
     getBestSet: jest.fn(),
+    getCompletedSetsForExercises: jest.fn().mockResolvedValue([]),
   };
   const workoutRepository: jest.Mocked<LocalWorkoutRepository> = {
     getById: jest.fn().mockResolvedValue(workout),
@@ -193,6 +195,51 @@ describe("workout application overview", () => {
     dependencies.workoutRepository.getById.mockResolvedValue(workout);
     await expect(loadCurrentUserActiveWorkoutExercise(workout.id, "other-child")).resolves.toBeNull();
     expect(mockCreateExercisePersistence).not.toHaveBeenCalled();
+  });
+
+  it("loads a completed summary through local history and exercise repositories", async () => {
+    const dependencies = repositories();
+    const completed = {
+      ...workout,
+      status: "completed" as const,
+      completedAt: "2026-09-02T13:00:00.000Z",
+      exercises: [{
+        ...workout.exercises[1],
+        sets: [{
+          id: "set-a",
+          userId: "user-a",
+          workoutId: workout.id,
+          workoutExerciseId: workout.exercises[1].id,
+          exerciseId: workout.exercises[1].exerciseId,
+          position: 0,
+          setType: "working" as const,
+          reps: 10,
+          completedAt: "2026-09-02T12:30:00.000Z",
+          createdAt: "2026-09-02T12:30:00.000Z",
+          updatedAt: "2026-09-02T12:30:00.000Z",
+        }],
+      }],
+    };
+    dependencies.workoutRepository.getById.mockResolvedValue(completed);
+    mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
+    mockCreateExercisePersistence.mockResolvedValue({
+      exerciseRepository: dependencies.exerciseRepository,
+      preferenceRepository: dependencies.preferenceRepository,
+    });
+
+    const summary = await loadCurrentUserCompletedWorkoutSummary(workout.id);
+
+    expect(summary).toMatchObject({
+      workout: { id: workout.id, status: "completed" },
+      summary: { durationSeconds: 3600, exerciseCount: 1, workingSetCount: 1 },
+      exercises: [{ exercise: { name: "Bench Press" }, summary: { totalReps: 10 } }],
+    });
+    expect(dependencies.exerciseHistoryRepository.getCompletedSetsForExercises)
+      .toHaveBeenCalledWith({
+        userId: "user-a",
+        exerciseIds: ["exercise-1"],
+        excludeWorkoutId: workout.id,
+      });
   });
 
   it("updates only the authenticated user's active workout note", async () => {

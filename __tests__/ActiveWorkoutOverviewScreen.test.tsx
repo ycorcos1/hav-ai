@@ -1,9 +1,10 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, within } from "@testing-library/react-native";
 
 import { ActiveWorkoutOverviewScreen } from "@/features/workouts/screens/ActiveWorkoutOverviewScreen";
 import { NetworkStatusProvider } from "@/features/network/components/NetworkStatusProvider";
 import type { NetworkStatus, NetworkStatusService } from "@/features/network/networkStatus";
 import type { ActiveWorkoutOverview } from "@/features/workouts/services/workoutApplication";
+import type { FinishWorkoutResult } from "@/shared/contracts";
 
 const startedAt = "2026-09-02T12:00:00.000Z";
 const overview: ActiveWorkoutOverview = {
@@ -84,6 +85,15 @@ const overview: ActiveWorkoutOverview = {
 };
 
 describe("ActiveWorkoutOverviewScreen", () => {
+  const finishWorkout = jest.fn<Promise<FinishWorkoutResult>, []>();
+  const onWorkoutFinished = jest.fn();
+
+  beforeEach(() => {
+    finishWorkout.mockReset();
+    finishWorkout.mockResolvedValue(finishedResult());
+    onWorkoutFinished.mockClear();
+  });
+
   it("shows advisory offline state without blocking workout interaction", async () => {
     const open = jest.fn();
     const service: NetworkStatusService = {
@@ -92,7 +102,13 @@ describe("ActiveWorkoutOverviewScreen", () => {
     };
     const rendered = await render(
       <NetworkStatusProvider service={service}>
-        <ActiveWorkoutOverviewScreen loadWorkout={async () => overview} onOpenExercise={open} saveWorkoutNote={async () => overview.workout} />
+        <ActiveWorkoutOverviewScreen
+          finishWorkout={finishWorkout}
+          loadWorkout={async () => overview}
+          onOpenExercise={open}
+          onWorkoutFinished={onWorkoutFinished}
+          saveWorkoutNote={async () => overview.workout}
+        />
       </NetworkStatusProvider>,
     );
     expect(await rendered.findByText("Offline · Saved on device")).toBeTruthy();
@@ -104,8 +120,12 @@ describe("ActiveWorkoutOverviewScreen", () => {
   it("identifies the last active row without automatically opening the exercise", async () => {
     const open = jest.fn();
     const rendered = await render(<ActiveWorkoutOverviewScreen
+      finishWorkout={finishWorkout}
       loadWorkout={async () => ({ ...overview, lastActiveWorkoutExerciseId: "workout-exercise-2" })}
-      onOpenExercise={open} saveWorkoutNote={async () => overview.workout} />);
+      onOpenExercise={open}
+      onWorkoutFinished={onWorkoutFinished}
+      saveWorkoutNote={async () => overview.workout}
+    />);
     expect(await rendered.findByText("Last active")).toBeTruthy();
     expect(open).not.toHaveBeenCalled();
     await fireEvent.press(rendered.getByRole("button", { name: "Open Cable Fly" }));
@@ -131,8 +151,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
     jest.spyOn(Date, "now").mockReturnValue(Date.parse(startedAt) + 42 * 60 * 1000 + 18 * 1000);
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={async () => overview}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -145,9 +167,108 @@ describe("ActiveWorkoutOverviewScreen", () => {
     expect(rendered.getByText("Complete")).toBeTruthy();
     expect(rendered.getByText("0/3 sets")).toBeTruthy();
     expect(rendered.getByRole("button", { name: "Add Exercise" })).toBeDisabled();
-    expect(rendered.getByRole("button", { name: "Finish Workout" })).toBeDisabled();
+    expect(rendered.getByRole("button", { name: "Finish Workout" })).toBeEnabled();
     await fireEvent.press(rendered.getByRole("button", { name: "Open Cable Fly" }));
     expect(onOpenExercise).toHaveBeenCalledWith("workout-exercise-2");
+  });
+
+  it("requires confirmation for incomplete planned work and allows keeping training", async () => {
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await rendered.findByText("Push");
+    await fireEvent.press(rendered.getByRole("button", { name: "Finish Workout" }));
+    expect(rendered.getByLabelText("Finish workout confirmation")).toBeOnTheScreen();
+    expect(rendered.getByText("You still have planned sets/exercises remaining.")).toBeOnTheScreen();
+    expect(rendered.getByText("1 planned exercise incomplete")).toBeOnTheScreen();
+    expect(finishWorkout).not.toHaveBeenCalled();
+    await fireEvent.press(rendered.getByRole("button", { name: "Keep Training" }));
+    expect(rendered.queryByLabelText("Finish workout confirmation")).toBeNull();
+  });
+
+  it("finishes incomplete work only after confirmation and navigates after local success", async () => {
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await rendered.findByText("Push");
+    await fireEvent.press(rendered.getByRole("button", { name: "Finish Workout" }));
+    const confirmation = rendered.getByLabelText("Finish workout confirmation");
+    await fireEvent.press(within(confirmation).getByRole("button", { name: "Finish Workout" }));
+    expect(finishWorkout).toHaveBeenCalledTimes(1);
+    expect(onWorkoutFinished).toHaveBeenCalledWith(finishedResult());
+  });
+
+  it("finishes complete planned work immediately without showing confirmation", async () => {
+    const completeOverview: ActiveWorkoutOverview = {
+      ...overview,
+      exercises: overview.exercises.map(({ exercise, workoutExercise }) => ({
+        exercise,
+        workoutExercise: {
+          ...workoutExercise,
+          targetSets: 1,
+          sets: workoutExercise.sets.length > 0
+            ? workoutExercise.sets
+            : [{ ...overview.exercises[0].workoutExercise.sets[0], id: "set-2", exerciseId: workoutExercise.exerciseId, workoutExerciseId: workoutExercise.id }],
+        },
+      })),
+    };
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => completeOverview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await rendered.findByText("Push");
+    await fireEvent.press(rendered.getByRole("button", { name: "Finish Workout" }));
+    expect(finishWorkout).toHaveBeenCalledTimes(1);
+    expect(rendered.queryByLabelText("Finish workout confirmation")).toBeNull();
+    expect(onWorkoutFinished).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the confirmation recoverable and blocks duplicate finish submissions", async () => {
+    let rejectFinish: ((reason?: unknown) => void) | undefined;
+    finishWorkout.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectFinish = reject;
+    }));
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await rendered.findByText("Push");
+    await fireEvent.press(rendered.getByRole("button", { name: "Finish Workout" }));
+    const confirmation = rendered.getByLabelText("Finish workout confirmation");
+    const confirm = within(confirmation).getByRole("button", { name: "Finish Workout" });
+    await fireEvent.press(confirm);
+    await fireEvent.press(confirm);
+    expect(finishWorkout).toHaveBeenCalledTimes(1);
+    await act(async () => rejectFinish?.(new Error("private storage failure")));
+    expect(await rendered.findByText("Unable to finish the workout. Your local workout is still available.")).toBeOnTheScreen();
+    expect(rendered.queryByText("private storage failure")).toBeNull();
+    expect(onWorkoutFinished).not.toHaveBeenCalled();
   });
 
   it("shows a recoverable sanitized load failure", async () => {
@@ -156,8 +277,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
       .mockResolvedValueOnce(overview);
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={loadWorkout}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -172,8 +295,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
   it("handles a missing workout without inventing state", async () => {
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={async () => null}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -189,8 +314,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
     };
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={async () => withNote}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -209,8 +336,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
   it("supports an empty note state and clearing a saved note", async () => {
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={async () => overview}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -226,8 +355,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
     saveWorkoutNote.mockRejectedValueOnce(new Error("private storage detail"));
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={async () => overview}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -249,8 +380,10 @@ describe("ActiveWorkoutOverviewScreen", () => {
     }));
     const rendered = await render(
       <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
         loadWorkout={async () => overview}
         onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
         saveWorkoutNote={saveWorkoutNote}
       />,
     );
@@ -270,3 +403,18 @@ describe("ActiveWorkoutOverviewScreen", () => {
     await rendered.unmount();
   });
 });
+
+function finishedResult(): FinishWorkoutResult {
+  return {
+    workout: { ...overview.workout, status: "completed", completedAt: startedAt },
+    summary: {
+      workoutId: overview.workout.id,
+      durationSeconds: 0,
+      exerciseCount: 2,
+      workingSetCount: 1,
+      exerciseSummaries: [],
+    },
+    recommendations: [],
+    personalRecords: [],
+  };
+}
