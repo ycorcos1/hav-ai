@@ -1,4 +1,8 @@
-import type { LocalWorkoutRepository } from "@/db/repositories/types";
+import type {
+  LocalWorkoutRepository,
+  WorkoutHistoryPage,
+  WorkoutHistoryRepository,
+} from "@/db/repositories/types";
 import type { ProgressionRecommendation, Workout } from "@/shared/contracts";
 
 import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
@@ -9,7 +13,7 @@ import {
   type WorkoutWebPreviewState,
 } from "./workoutStorage";
 
-export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository {
+export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository, WorkoutHistoryRepository {
   constructor(private readonly storage: WebPreviewStorage = browserWebPreviewStorage()) {}
 
   async getById(userId: string, id: string): Promise<Workout | null> {
@@ -21,6 +25,33 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository 
     return readWorkoutWebPreviewState(this.storage).workouts
       .filter((item) => item.userId === userId && item.status === "active")
       .sort((left, right) => right.startedAt.localeCompare(left.startedAt))[0] ?? null;
+  }
+
+  async listCompleted(params: {
+    userId: string;
+    limit: number;
+    cursor?: { completedAt: string; id: string };
+  }): Promise<WorkoutHistoryPage> {
+    const limit = Math.max(1, Math.floor(params.limit));
+    const sorted = readWorkoutWebPreviewState(this.storage).workouts
+      .filter((item) => item.userId === params.userId && item.status === "completed" && item.completedAt)
+      .sort((left, right) => {
+        const byCompletion = right.completedAt!.localeCompare(left.completedAt!);
+        return byCompletion || right.id.localeCompare(left.id);
+      });
+    const afterCursor = params.cursor
+      ? sorted.filter((item) =>
+        item.completedAt! < params.cursor!.completedAt
+        || (item.completedAt === params.cursor!.completedAt && item.id < params.cursor!.id))
+      : sorted;
+    const items = afterCursor.slice(0, limit);
+    const last = items.at(-1);
+    return {
+      items,
+      nextCursor: afterCursor.length > limit && last?.completedAt
+        ? { completedAt: last.completedAt, id: last.id }
+        : undefined,
+    };
   }
 
   async create(workout: Workout): Promise<void> {

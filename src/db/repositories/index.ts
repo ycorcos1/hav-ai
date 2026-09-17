@@ -30,4 +30,7 @@ export type {
   RecentExerciseSessionCacheRepository,
   SyncQueueRepository,
   UserExercisePreferenceReconciliationResult,
+  WorkoutHistoryCursor,
+  WorkoutHistoryPage,
+  WorkoutHistoryRepository,
 } from "./types";

@@ -25,13 +25,17 @@ import type {
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
 import { upsertRecommendationInTransaction } from "./SQLiteLocalRecommendationRepository";
 import { enqueueSyncUpsert } from "./syncQueueUtils";
-import type { LocalWorkoutRepository } from "./types";
+import type {
+  LocalWorkoutRepository,
+  WorkoutHistoryPage,
+  WorkoutHistoryRepository,
+} from "./types";
 
 const workoutColumns = ["id", "user_id", "source_template_id", "name", "status", "started_at", "completed_at", "notes", "sync_status", "created_at", "updated_at", "server_updated_at"];
 const exerciseColumns = ["id", "user_id", "workout_id", "exercise_id", "position", "target_sets", "target_min_reps", "target_max_reps", "target_weight_kg", "source_recommendation_id", "notes", "sync_status", "created_at", "updated_at", "server_updated_at"];
 const setColumns = ["id", "user_id", "workout_id", "workout_exercise_id", "exercise_id", "position", "set_type", "weight_kg", "reps", "rpe", "notes", "completed_at", "sync_status", "deleted_at", "created_at", "updated_at", "server_updated_at"];
 
-export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
+export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository, WorkoutHistoryRepository {
   constructor(private readonly database: TransactionalLocalDatabaseConnection) {}
 
   async getById(userId: string, id: string): Promise<Workout | null> {
@@ -47,6 +51,39 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository {
        ORDER BY started_at DESC LIMIT 1;`, userId,
     );
     return row ? this.hydrate(row, userId) : null;
+  }
+
+  async listCompleted(params: {
+    userId: string;
+    limit: number;
+    cursor?: { completedAt: string; id: string };
+  }): Promise<WorkoutHistoryPage> {
+    const limit = Math.max(1, Math.floor(params.limit));
+    const cursorClause = params.cursor
+      ? "AND (completed_at < ? OR (completed_at = ? AND id < ?))"
+      : "";
+    const cursorValues = params.cursor
+      ? [params.cursor.completedAt, params.cursor.completedAt, params.cursor.id]
+      : [];
+    const rows = await this.database.getAllAsync<LocalWorkoutRow>(
+      `SELECT * FROM local_workouts
+       WHERE user_id = ? AND status = 'completed' AND completed_at IS NOT NULL
+       ${cursorClause}
+       ORDER BY completed_at DESC, id DESC
+       LIMIT ?;`,
+      params.userId,
+      ...cursorValues,
+      limit + 1,
+    );
+    const pageRows = rows.slice(0, limit);
+    const items = await Promise.all(pageRows.map((row) => this.hydrate(row, params.userId)));
+    const last = pageRows.at(-1);
+    return {
+      items,
+      nextCursor: rows.length > limit && last?.completed_at
+        ? { completedAt: last.completed_at, id: last.id }
+        : undefined,
+    };
   }
 
   async create(workout: Workout): Promise<void> {

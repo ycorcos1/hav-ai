@@ -25,6 +25,10 @@ import type {
   UserProfile,
   WeightUnit,
 } from "@/shared/contracts";
+import type {
+  WorkoutHistoryCursor,
+  WorkoutHistoryPage,
+} from "@/db/repositories";
 
 import { CompleteSetService } from "./completeSet";
 import { DeleteSetService } from "./deleteSet";
@@ -70,6 +74,15 @@ export type CompletedWorkoutSummary = {
   workout: Workout;
 };
 
+export type WorkoutHistoryDetail = {
+  exercises: {
+    exercise: Exercise | null;
+    workoutExercise: WorkoutExercise;
+  }[];
+  weightUnit: WeightUnit;
+  workout: Workout;
+};
+
 export async function loadCurrentUserWorkoutHome(): Promise<WorkoutHomeState> {
   const { persistence, userId } = await persistenceForCurrentUser();
   const [activeWorkout, templates] = await Promise.all([
@@ -97,6 +110,33 @@ export async function getCurrentUserActiveWorkout(): Promise<Workout | null> {
 export async function getCurrentUserWorkout(id: UUID): Promise<Workout | null> {
   const { persistence, userId } = await persistenceForCurrentUser();
   return persistence.workoutRepository.getById(userId, id);
+}
+
+export async function loadCurrentUserWorkoutHistory(
+  cursor?: WorkoutHistoryCursor,
+  limit = 20,
+): Promise<WorkoutHistoryPage> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  return persistence.workoutHistoryRepository.listCompleted({ cursor, limit, userId });
+}
+
+export async function loadCurrentUserWorkoutHistoryDetail(
+  id: UUID,
+): Promise<WorkoutHistoryDetail | null> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  const workout = await persistence.workoutRepository.getById(userId, id);
+  if (!workout || workout.status !== "completed" || !workout.completedAt) return null;
+  await populateExerciseFixture(persistence.exerciseRepository);
+  const exercises = await Promise.all(
+    [...workout.exercises]
+      .sort((left, right) => left.position - right.position)
+      .map(async (workoutExercise) => ({
+        exercise: await persistence.exerciseRepository.getById(userId, workoutExercise.exerciseId),
+        workoutExercise,
+      })),
+  );
+  const profile = await persistence.profileCacheRepository.get(userId);
+  return { exercises, weightUnit: profile?.weightUnit ?? "kg", workout };
 }
 
 export async function updateCurrentUserActiveWorkoutNote(

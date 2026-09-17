@@ -55,6 +55,24 @@ export interface LocalWorkoutRepository {
   delete(userId: UUID, id: UUID): Promise<void>;
 }
 
+export type WorkoutHistoryCursor = {
+  completedAt: ISODateTime;
+  id: UUID;
+};
+
+export type WorkoutHistoryPage = {
+  items: Workout[];
+  nextCursor?: WorkoutHistoryCursor;
+};
+
+export interface WorkoutHistoryRepository {
+  listCompleted(params: {
+    userId: UUID;
+    limit: number;
+    cursor?: WorkoutHistoryCursor;
+  }): Promise<WorkoutHistoryPage>;
+}
+
 export interface LocalProfileCacheRepository {
   get(userId: UUID): Promise<UserProfile | null>;
   upsert(profile: UserProfile): Promise<void>;

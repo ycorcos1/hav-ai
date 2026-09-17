@@ -15,9 +15,10 @@ export type WorkoutsScreenProps = {
   loadTemplates: () => Promise<WorkoutTemplate[]>;
   onCreate: () => void;
   onOpen: (id: string) => void;
+  onOpenHistory?: () => void;
 };
 
-export function WorkoutsScreen({ loadTemplates, onCreate, onOpen }: WorkoutsScreenProps) {
+export function WorkoutsScreen({ loadTemplates, onCreate, onOpen, onOpenHistory }: WorkoutsScreenProps) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [attempt, setAttempt] = useState(0);
@@ -41,6 +42,7 @@ export function WorkoutsScreen({ loadTemplates, onCreate, onOpen }: WorkoutsScre
   return (
     <Screen contentContainerStyle={styles.container} scroll>
       <AppText variant="screenTitle">Workouts</AppText>
+      {onOpenHistory ? <SecondaryButton label="Workout History" onPress={onOpenHistory} /> : null}
       {status === 'loading' ? (
         <View accessibilityLabel="Loading workouts" style={styles.feedback}>
           <ActivityIndicator color={colors.accent.primary} />

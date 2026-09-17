@@ -10,6 +10,7 @@ export default function WorkoutsRoute() {
       loadTemplates={listCurrentUserTemplates}
       onCreate={() => router.push('/template/new')}
       onOpen={(id) => router.push(`/template/${id}`)}
+      onOpenHistory={() => router.push('/workout/history')}
     />
   );
 }
