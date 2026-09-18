@@ -1,8 +1,41 @@
-import { AIProviderFailure } from "./ai";
-import { AIContextFailure } from "./context";
-import { errorResponse } from "./http";
+import { AIProviderFailure } from "./ai/index.ts";
+import { AIContextFailure } from "./context/index.ts";
+import { errorResponse } from "./http.ts";
+
+export type AIFunctionFailureCode = "UNAUTHORIZED" | "FORBIDDEN" | "INVALID_REQUEST";
+
+export class AIFunctionFailure extends Error {
+  constructor(readonly code: AIFunctionFailureCode) {
+    super("The AI request could not be authorized or validated.");
+    this.name = "AIFunctionFailure";
+  }
+}
 
 export function mapAIFunctionError(error: unknown, requestId: string): Response {
+  if (error instanceof AIFunctionFailure) {
+    const mapping = {
+      UNAUTHORIZED: {
+        status: 401,
+        message: "Authentication is required.",
+      },
+      FORBIDDEN: {
+        status: 403,
+        message: "You do not have access to this resource.",
+      },
+      INVALID_REQUEST: {
+        status: 400,
+        message: "The request is invalid.",
+      },
+    } as const;
+    const selected = mapping[error.code];
+    return errorResponse({
+      code: error.code,
+      message: selected.message,
+      retryable: false,
+      status: selected.status,
+      requestId,
+    });
+  }
   if (error instanceof AIProviderFailure) {
     if (error.code === "TIMEOUT") {
       return errorResponse({
@@ -49,4 +82,3 @@ export function mapAIFunctionError(error: unknown, requestId: string): Response 
     requestId,
   });
 }
-

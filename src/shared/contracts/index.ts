@@ -5,7 +5,7 @@ export type {
   RPE,
   UUID,
   WeightKg,
-} from "./common";
+} from "./common.ts";
 export type {
   AuthErrorCode,
   AuthResult,
@@ -16,14 +16,14 @@ export type {
   RpePreference,
   UserProfile,
   WeightUnit,
-} from "./auth";
+} from "./auth.ts";
 export type {
   EquipmentType,
   Exercise,
   MeasurementType,
   MuscleGroup,
   UserExercisePreference,
-} from "./exercises";
+} from "./exercises.ts";
 export type {
   BasicRecommendationExplanation,
   ExerciseSessionPerformance,
@@ -35,14 +35,14 @@ export type {
   ProgressionRecommendation,
   ProgressionRecommendationType,
   ProgressionResult,
-} from "./progression";
+} from "./progression.ts";
 export type {
   DetectedPersonalRecord,
   DetectedPersonalRecordType,
   PersistedPersonalRecordType,
   PersonalRecord,
-} from "./personalRecords";
-export type { WorkoutTemplate, WorkoutTemplateExercise } from "./templates";
+} from "./personalRecords.ts";
+export type { WorkoutTemplate, WorkoutTemplateExercise } from "./templates.ts";
 export type {
   CompleteSetInput,
   CompleteSetResult,
@@ -59,7 +59,7 @@ export type {
   WorkoutSetType,
   WorkoutStatus,
   WorkoutSummary,
-} from "./workouts";
+} from "./workouts.ts";
 export type {
   LocalSyncStatus,
   RemoteMutationResult,
@@ -72,7 +72,7 @@ export type {
   SyncQueueItem,
   SyncResult,
   UserFacingSyncStatus,
-} from "./sync";
+} from "./sync.ts";
 export type {
   ApiErrorCode,
   ApiErrorResponse,
@@ -83,4 +83,4 @@ export type {
   ParseWorkoutRequestV1,
   ParseWorkoutResponseV1,
   RecommendationExplanationV1,
-} from "./ai";
+} from "./ai.ts";

@@ -1,4 +1,9 @@
-import { AIContextFailure } from "./errors";
+import { AIContextFailure } from "./errors.ts";
+import {
+  buildMinimizedNoteContext,
+  stripNotesFromSessions,
+  type SubjectiveNoteContext,
+} from "./noteContext.ts";
 import type {
   AIExercise,
   AIProfilePreferences,
@@ -7,7 +12,7 @@ import type {
   AITrendMetrics,
   CoachContextDataSource,
   ValidatedLocalCurrentSession,
-} from "./types";
+} from "./types.ts";
 
 export const COACH_RECENT_SESSION_LIMIT = 5;
 
@@ -22,6 +27,7 @@ export type CoachContext = {
   recentSessions: AIRecentSession[];
   currentRecommendation?: AIRecommendation;
   trendMetrics?: AITrendMetrics;
+  subjectiveNotes: SubjectiveNoteContext;
   localCurrentSession?: ValidatedLocalCurrentSession;
 };
 
@@ -46,6 +52,10 @@ export async function buildCoachContext(input: {
       authority: authorityLabels,
       userPreferences: profile,
       recentSessions: [],
+      subjectiveNotes: buildMinimizedNoteContext({
+        localCurrentSession: input.localCurrentSession,
+        recentSessions: [],
+      }),
       ...(input.localCurrentSession ? { localCurrentSession: input.localCurrentSession } : {}),
     };
   }
@@ -53,10 +63,14 @@ export async function buildCoachContext(input: {
   const exercise = await input.dataSource.getAccessibleExercise(input.userId, exerciseId);
   if (!exercise) throw new AIContextFailure("RESOURCE_NOT_FOUND");
 
-  const recentSessions = (
+  const recentSessionsWithNotes = (
     await input.dataSource.getRecentSessions(input.userId, exerciseId, COACH_RECENT_SESSION_LIMIT)
   ).slice(0, COACH_RECENT_SESSION_LIMIT);
-  const recommendation = await input.dataSource.getActiveRecommendation(input.userId, exerciseId);
+  const [recommendation, exercisePreferenceNote] = await Promise.all([
+    input.dataSource.getActiveRecommendation(input.userId, exerciseId),
+    input.dataSource.getExercisePreferenceNote(input.userId, exerciseId),
+  ]);
+  const recentSessions = stripNotesFromSessions(recentSessionsWithNotes);
 
   return {
     authority: authorityLabels,
@@ -65,6 +79,11 @@ export async function buildCoachContext(input: {
     recentSessions,
     currentRecommendation: recommendation ?? undefined,
     trendMetrics: input.dataSource.getTrendMetrics(recentSessions),
+    subjectiveNotes: buildMinimizedNoteContext({
+      exercisePreferenceNote,
+      localCurrentSession: input.localCurrentSession,
+      recentSessions: recentSessionsWithNotes,
+    }),
     ...(input.localCurrentSession ? { localCurrentSession: input.localCurrentSession } : {}),
   };
 }

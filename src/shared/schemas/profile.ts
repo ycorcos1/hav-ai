@@ -8,7 +8,7 @@ import type {
   WeightUnit,
 } from "@/shared/contracts";
 
-import { isoDateTimeSchema, uuidSchema } from "./common";
+import { isoDateTimeSchema, uuidSchema } from "./common.ts";
 
 export const weightUnitSchema = z.enum(["lb", "kg"]) satisfies z.ZodType<WeightUnit>;
 

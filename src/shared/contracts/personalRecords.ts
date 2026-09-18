@@ -1,4 +1,4 @@
-import type { ISODateTime, UUID, WeightKg } from "./common";
+import type { ISODateTime, UUID, WeightKg } from "./common.ts";
 
 export type DetectedPersonalRecordType = "max_weight" | "estimated_1rm" | "rep_pr";
 

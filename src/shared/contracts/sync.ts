@@ -1,4 +1,4 @@
-import type { ISODateTime, UUID } from "./common";
+import type { ISODateTime, UUID } from "./common.ts";
 
 export type SyncEntityType =
   | "workout_template"

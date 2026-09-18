@@ -2,10 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/database.types";
 
-import { createAIProvider, loadAIConfig } from "../_shared/ai";
-import { createAIRequestAuthenticator } from "../_shared/auth";
-import { SupabaseAIContextDataSource } from "../_shared/context";
-import { createCoachHandler } from "./handler";
+import { createAIProvider, loadAIConfig } from "../_shared/ai/index.ts";
+import { createAIRequestAuthenticator } from "../_shared/auth.ts";
+import { SupabaseAIContextDataSource } from "../_shared/context/index.ts";
+import { createCoachHandler } from "./handler.ts";
 
 type EdgeRuntime = typeof globalThis & {
   Deno: {

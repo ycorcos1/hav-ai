@@ -1,0 +1,12 @@
+{
+  "imports": {
+    "@/features/progression/metrics": "../../../src/features/progression/metrics/index.ts",
+    "@/lib/supabase/database.types": "../../../src/lib/supabase/database.types.ts",
+    "@/shared/contracts": "../../../src/shared/contracts/index.ts",
+    "@/shared/schemas": "../../../src/shared/schemas/index.ts",
+    "@/": "../../../src/",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.4",
+    "zod": "npm:zod@4.5.2"
+  },
+  "unstable": ["sloppy-imports"]
+}

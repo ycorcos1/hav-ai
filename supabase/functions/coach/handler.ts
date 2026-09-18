@@ -4,14 +4,14 @@ import {
   coachProviderJSONSchema,
   coachProviderOutputSchema,
   type AIProvider,
-} from "../_shared/ai";
-import type { AIConfig } from "../_shared/ai";
-import type { AuthenticateAIRequest } from "../_shared/auth";
-import { buildCoachContext, type CoachContextDataSource } from "../_shared/context";
-import { mapAIFunctionError } from "../_shared/functionErrors";
-import { errorResponse, optionsResponse, successResponse } from "../_shared/http";
-import { COACH_PROMPT_VERSION, coachSystemPrompt } from "../_shared/prompts";
-import { parseCoachRequest } from "../_shared/requestValidation";
+} from "../_shared/ai/index.ts";
+import type { AIConfig } from "../_shared/ai/index.ts";
+import type { AuthenticateAIRequest } from "../_shared/auth.ts";
+import { buildCoachContext, type CoachContextDataSource } from "../_shared/context/index.ts";
+import { mapAIFunctionError } from "../_shared/functionErrors.ts";
+import { errorResponse, optionsResponse, successResponse } from "../_shared/http.ts";
+import { COACH_PROMPT_VERSION, coachSystemPrompt } from "../_shared/prompts/index.ts";
+import { parseCoachRequest } from "../_shared/requestValidation.ts";
 
 export type CoachHandlerDependencies = {
   authenticate: AuthenticateAIRequest;
@@ -96,9 +96,9 @@ export function createCoachHandler(dependencies: CoachHandlerDependencies) {
           ...(context.exercise ? { exerciseId: context.exercise.id } : {}),
           recentSessionsUsed: context.recentSessions.length,
           subjectiveNotesUsed: {
-            exercisePreference: Boolean(context.localCurrentSession?.exercisePreferenceNotes),
-            workout: Boolean(context.localCurrentSession?.workoutNotes),
-            setCount: context.localCurrentSession?.completedSets.filter(({ notes }) => Boolean(notes)).length ?? 0,
+            exercisePreference: Boolean(context.subjectiveNotes.exercisePreference),
+            workout: context.subjectiveNotes.workoutNotes.length > 0,
+            setCount: context.subjectiveNotes.setNotes.length,
           },
         },
         meta: { promptVersion: COACH_PROMPT_VERSION },

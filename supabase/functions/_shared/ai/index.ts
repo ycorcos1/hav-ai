@@ -1,11 +1,11 @@
-export { loadAIConfig } from "./config";
-export type { AIConfig, AIProviderName, ServerEnvironment } from "./config";
-export { AIProviderFailure } from "./errors";
-export type { AIProviderFailureCode } from "./errors";
-export { MockAIProvider } from "./mockProvider";
-export type { MockAIResolver } from "./mockProvider";
-export { OpenAIProvider } from "./openAIProvider";
-export { createAIProvider } from "./provider";
+export { loadAIConfig } from "./config.ts";
+export type { AIConfig, AIProviderName, ServerEnvironment } from "./config.ts";
+export { AIProviderFailure } from "./errors.ts";
+export type { AIProviderFailureCode } from "./errors.ts";
+export { MockAIProvider } from "./mockProvider.ts";
+export type { MockAIResolver } from "./mockProvider.ts";
+export { OpenAIProvider } from "./openAIProvider.ts";
+export { createAIProvider } from "./provider.ts";
 export {
   coachProviderJSONSchema,
   coachProviderOutputSchema,
@@ -13,10 +13,10 @@ export {
   explanationProviderOutputSchema,
   parserProviderJSONSchema,
   parserProviderOutputSchema,
-} from "./responseSchemas";
+} from "./responseSchemas.ts";
 export type {
   CoachProviderOutput,
   ExplanationProviderOutput,
   ParserProviderOutput,
-} from "./responseSchemas";
-export type { AIFeature, AIProvider, AIRequest, JSONSchema } from "./types";
+} from "./responseSchemas.ts";
+export type { AIFeature, AIProvider, AIRequest, JSONSchema } from "./types.ts";

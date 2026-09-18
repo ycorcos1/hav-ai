@@ -1,5 +1,5 @@
-import type { WeightUnit } from "./auth";
-import type { RPE, UUID, WeightKg } from "./common";
+import type { WeightUnit } from "./auth.ts";
+import type { RPE, UUID, WeightKg } from "./common.ts";
 
 export type ApiSuccess<T> = {
   ok: true;

@@ -28,6 +28,7 @@ function dataSource(overrides: Partial<CoachContextDataSource> = {}): CoachConte
       measurementType: "weighted_reps",
     }),
     getOwnedWorkout: jest.fn().mockResolvedValue({ id: "workout-id" }),
+    getExercisePreferenceNote: jest.fn().mockResolvedValue(null),
     getRecentSessions: jest.fn().mockResolvedValue([]),
     getActiveRecommendation: jest.fn().mockResolvedValue(null),
     getTrendMetrics: jest.fn().mockReturnValue({

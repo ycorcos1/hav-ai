@@ -1,9 +1,9 @@
-import { progressionConfig } from "@/features/progression/config";
+import { progressionConfig } from "@/features/progression/config/index.ts";
 import type {
   MeaningfulRpeChange,
   ProgressionSetPerformance,
   RpeMetrics,
-} from "@/features/progression/types";
+} from "@/features/progression/types/index.ts";
 
 export function calculateRpeMetrics(sets: ProgressionSetPerformance[]): RpeMetrics {
   const rpeValues = sets.flatMap((set) => (set.rpe === undefined ? [] : [set.rpe]));

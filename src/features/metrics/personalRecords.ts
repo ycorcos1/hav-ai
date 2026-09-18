@@ -3,7 +3,7 @@ import type {
   WorkoutSet,
 } from "@/shared/contracts";
 
-import { calculateEpleyOneRepMax } from "./epley";
+import { calculateEpleyOneRepMax } from "./epley.ts";
 
 type RecordSet = Pick<
   WorkoutSet,

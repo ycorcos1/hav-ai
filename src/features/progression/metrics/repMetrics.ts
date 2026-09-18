@@ -1,4 +1,4 @@
-import type { ProgressionSetPerformance, RepMetrics } from "@/features/progression/types";
+import type { ProgressionSetPerformance, RepMetrics } from "@/features/progression/types/index.ts";
 
 export function calculateRepMetrics(sets: ProgressionSetPerformance[]): RepMetrics {
   const totalReps = sets.reduce((total, set) => total + set.reps, 0);

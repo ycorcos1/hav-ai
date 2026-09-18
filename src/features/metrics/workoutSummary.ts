@@ -6,12 +6,12 @@ import type {
   WorkoutSummary,
 } from "@/shared/contracts";
 
-import { detectPersonalRecords } from "./personalRecords";
+import { detectPersonalRecords } from "./personalRecords.ts";
 import {
   calculateSessionDelta,
   calculateTotalReps,
   calculateWorkingSetCount,
-} from "./workoutMetrics";
+} from "./workoutMetrics.ts";
 
 export type WorkoutSummaryCalculation = {
   personalRecords: DetectedPersonalRecord[];

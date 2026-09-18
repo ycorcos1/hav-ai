@@ -5,13 +5,13 @@ import {
   parserProviderOutputSchema,
   type AIConfig,
   type AIProvider,
-} from "../_shared/ai";
-import type { AuthenticateAIRequest } from "../_shared/auth";
-import { AIContextFailure, type CoachContextDataSource } from "../_shared/context";
-import { mapAIFunctionError } from "../_shared/functionErrors";
-import { errorResponse, optionsResponse, successResponse } from "../_shared/http";
-import { PARSER_PROMPT_VERSION, workoutParserSystemPrompt } from "../_shared/prompts";
-import { parseWorkoutRequest } from "../_shared/requestValidation";
+} from "../_shared/ai/index.ts";
+import type { AuthenticateAIRequest } from "../_shared/auth.ts";
+import { AIContextFailure, type CoachContextDataSource } from "../_shared/context/index.ts";
+import { mapAIFunctionError } from "../_shared/functionErrors.ts";
+import { errorResponse, optionsResponse, successResponse } from "../_shared/http.ts";
+import { PARSER_PROMPT_VERSION, workoutParserSystemPrompt } from "../_shared/prompts/index.ts";
+import { parseWorkoutRequest } from "../_shared/requestValidation.ts";
 
 export type ParserHandlerDependencies = {
   authenticate: AuthenticateAIRequest;

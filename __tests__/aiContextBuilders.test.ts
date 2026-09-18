@@ -41,6 +41,7 @@ function coachSource(overrides: Partial<CoachContextDataSource> = {}): CoachCont
     getProfilePreferences: jest.fn().mockResolvedValue(profile),
     getAccessibleExercise: jest.fn().mockResolvedValue(exercise),
     getOwnedWorkout: jest.fn().mockResolvedValue({ id: "workout-id" }),
+    getExercisePreferenceNote: jest.fn().mockResolvedValue(null),
     getRecentSessions: jest.fn().mockResolvedValue(sessions),
     getActiveRecommendation: jest.fn().mockResolvedValue(recommendation),
     getTrendMetrics: jest.fn().mockReturnValue(trend),
@@ -57,6 +58,7 @@ function recommendationSource(
     getRecentSessions: jest.fn().mockResolvedValue(sessions),
     getSourceSession: jest.fn().mockResolvedValue(sessions[0]),
     getProfilePreferences: jest.fn().mockResolvedValue(profile),
+    getExercisePreferenceNote: jest.fn().mockResolvedValue(null),
     getTrendMetrics: jest.fn().mockReturnValue(trend),
     ...overrides,
   };

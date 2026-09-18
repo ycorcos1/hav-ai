@@ -4,7 +4,7 @@ import { analyzeExerciseTrend } from "@/features/progression/metrics";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import type { ExerciseSessionPerformance, RPE } from "@/shared/contracts";
 
-import { AIContextFailure } from "./errors";
+import { AIContextFailure } from "./errors.ts";
 import type {
   AIExercise,
   AIProfilePreferences,
@@ -13,7 +13,7 @@ import type {
   AITrendMetrics,
   CoachContextDataSource,
   RecommendationContextDataSource,
-} from "./types";
+} from "./types.ts";
 
 type WorkoutExerciseContextRow = {
   id: string;
@@ -69,6 +69,17 @@ export class SupabaseAIContextDataSource
       .maybeSingle();
     if (error) throw new AIContextFailure("CONTEXT_UNAVAILABLE");
     return data;
+  }
+
+  async getExercisePreferenceNote(userId: string, exerciseId: string): Promise<string | null> {
+    const { data, error } = await this.client
+      .from("user_exercise_preferences")
+      .select("notes")
+      .eq("user_id", userId)
+      .eq("exercise_id", exerciseId)
+      .maybeSingle();
+    if (error) throw new AIContextFailure("CONTEXT_UNAVAILABLE");
+    return data?.notes ?? null;
   }
 
   async getRecentSessions(

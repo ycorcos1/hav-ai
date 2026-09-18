@@ -1,5 +1,5 @@
-import { AIProviderFailure } from "./errors";
-import type { AIProvider, AIRequest } from "./types";
+import { AIProviderFailure } from "./errors.ts";
+import type { AIProvider, AIRequest } from "./types.ts";
 
 type AIHttpResponse = {
   ok: boolean;

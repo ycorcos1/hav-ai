@@ -71,6 +71,7 @@ export interface CoachContextDataSource {
   getProfilePreferences(userId: string): Promise<AIProfilePreferences | null>;
   getAccessibleExercise(userId: string, exerciseId: string): Promise<AIExercise | null>;
   getOwnedWorkout(userId: string, workoutId: string): Promise<{ id: string } | null>;
+  getExercisePreferenceNote(userId: string, exerciseId: string): Promise<string | null>;
   getRecentSessions(userId: string, exerciseId: string, limit: number): Promise<AIRecentSession[]>;
   getActiveRecommendation(userId: string, exerciseId: string): Promise<AIRecommendation | null>;
   getTrendMetrics(sessions: readonly AIRecentSession[]): AITrendMetrics;
@@ -85,5 +86,6 @@ export interface RecommendationContextDataSource {
     recommendation: AIRecommendation,
   ): Promise<AIRecentSession | null>;
   getProfilePreferences(userId: string): Promise<AIProfilePreferences | null>;
+  getExercisePreferenceNote(userId: string, exerciseId: string): Promise<string | null>;
   getTrendMetrics(sessions: readonly AIRecentSession[]): AITrendMetrics;
 }

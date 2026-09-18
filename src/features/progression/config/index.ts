@@ -1,2 +1,2 @@
-export { progressionConfig } from "./progressionConfig";
-export { getDefaultWeightIncrementKg } from "./weightIncrements";
+export { progressionConfig } from "./progressionConfig.ts";
+export { getDefaultWeightIncrementKg } from "./weightIncrements.ts";

@@ -1,4 +1,9 @@
-import { AIContextFailure } from "./errors";
+import { AIContextFailure } from "./errors.ts";
+import {
+  buildMinimizedNoteContext,
+  stripNotesFromSessions,
+  type SubjectiveNoteContext,
+} from "./noteContext.ts";
 import type {
   AIExercise,
   AIProfilePreferences,
@@ -6,7 +11,7 @@ import type {
   AIRecommendation,
   AITrendMetrics,
   RecommendationContextDataSource,
-} from "./types";
+} from "./types.ts";
 
 export const EXPLANATION_RECENT_SESSION_LIMIT = 5;
 
@@ -23,6 +28,7 @@ export type RecommendationExplanationContext = {
   sourceSession?: AIRecentSession;
   recentSessions: AIRecentSession[];
   trendMetrics: AITrendMetrics;
+  subjectiveNotes: SubjectiveNoteContext;
 };
 
 export async function buildRecommendationExplanationContext(input: {
@@ -36,7 +42,7 @@ export async function buildRecommendationExplanationContext(input: {
   );
   if (!recommendation) throw new AIContextFailure("RESOURCE_NOT_FOUND");
 
-  const [exercise, profile, sourceSession, recentSessionsResult] = await Promise.all([
+  const [exercise, profile, sourceSession, recentSessionsResult, exercisePreferenceNote] = await Promise.all([
     input.dataSource.getAccessibleExercise(input.userId, recommendation.exerciseId),
     input.dataSource.getProfilePreferences(input.userId),
     input.dataSource.getSourceSession(input.userId, recommendation),
@@ -45,11 +51,13 @@ export async function buildRecommendationExplanationContext(input: {
       recommendation.exerciseId,
       EXPLANATION_RECENT_SESSION_LIMIT,
     ),
+    input.dataSource.getExercisePreferenceNote(input.userId, recommendation.exerciseId),
   ]);
   if (!exercise) throw new AIContextFailure("RESOURCE_NOT_FOUND");
   if (!profile) throw new AIContextFailure("PROFILE_NOT_FOUND");
 
-  const recentSessions = recentSessionsResult.slice(0, EXPLANATION_RECENT_SESSION_LIMIT);
+  const recentSessionsWithNotes = recentSessionsResult.slice(0, EXPLANATION_RECENT_SESSION_LIMIT);
+  const recentSessions = stripNotesFromSessions(recentSessionsWithNotes);
   return {
     authority: {
       deterministicRecommendation: "authoritative",
@@ -63,6 +71,9 @@ export async function buildRecommendationExplanationContext(input: {
     sourceSession: sourceSession ?? undefined,
     recentSessions,
     trendMetrics: input.dataSource.getTrendMetrics(recentSessions),
+    subjectiveNotes: buildMinimizedNoteContext({
+      exercisePreferenceNote,
+      recentSessions: recentSessionsWithNotes,
+    }),
   };
 }
-

@@ -2,20 +2,20 @@ export {
   calculateEpleyOneRepMax,
   epleyFormulaVersion,
   maximumReliableEpleyReps,
-} from "./epley";
+} from "./epley.ts";
 export {
   calculateLocalPersonalRecordState,
   detectPersonalRecords,
   type LocalPersonalRecordState,
-} from "./personalRecords";
+} from "./personalRecords.ts";
 export {
   calculateSessionDelta,
   calculateTotalReps,
   calculateWorkingSetCount,
   type SessionDelta,
-} from "./workoutMetrics";
+} from "./workoutMetrics.ts";
 export {
   calculateWorkoutSummary,
   WorkoutSummaryCalculationError,
   type WorkoutSummaryCalculation,
-} from "./workoutSummary";
+} from "./workoutSummary.ts";

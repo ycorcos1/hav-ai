@@ -1,8 +1,8 @@
-import { progressionConfig } from "@/features/progression/config";
-import { calculateEstimatedOneRepMaxTrendMetrics } from "./estimatedOneRepMaxTrend";
-import { calculateRepMetrics } from "./repMetrics";
-import { calculateRpeMetrics, classifyMeaningfulRpeChange } from "./rpeMetrics";
-import { detectPlateau } from "@/features/progression/metrics/plateauDetection";
+import { progressionConfig } from "@/features/progression/config/index.ts";
+import { calculateEstimatedOneRepMaxTrendMetrics } from "./estimatedOneRepMaxTrend.ts";
+import { calculateRepMetrics } from "./repMetrics.ts";
+import { calculateRpeMetrics, classifyMeaningfulRpeChange } from "./rpeMetrics.ts";
+import { detectPlateau } from "@/features/progression/metrics/plateauDetection.ts";
 import type { ExerciseSessionPerformance, ExerciseTrend } from "@/shared/contracts";
 
 export function analyzeExerciseTrend(sessions: ExerciseSessionPerformance[]): ExerciseTrend {

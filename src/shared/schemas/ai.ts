@@ -10,8 +10,8 @@ import type {
   RecommendationExplanationV1,
 } from "@/shared/contracts";
 
-import { rpeSchema, uuidSchema, weightKgSchema } from "./common";
-import { weightUnitSchema } from "./profile";
+import { rpeSchema, uuidSchema, weightKgSchema } from "./common.ts";
+import { weightUnitSchema } from "./profile.ts";
 
 const nonNegativeIntegerSchema = z.number().int().nonnegative();
 const positiveIntegerSchema = z.number().int().positive();

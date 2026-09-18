@@ -1,4 +1,4 @@
-import { progressionConfig } from "@/features/progression/config";
+import { progressionConfig } from "@/features/progression/config/index.ts";
 
 export type PlateauDetectionInput = {
   comparableSessionCount: number;

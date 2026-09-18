@@ -1,9 +1,9 @@
-import type { ISODateTime, RPE, UUID, WeightKg } from "./common";
+import type { ISODateTime, RPE, UUID, WeightKg } from "./common.ts";
 import type {
   DetectedPersonalRecord,
   DetectedPersonalRecordType,
-} from "./personalRecords";
-import type { ProgressionRecommendation } from "./progression";
+} from "./personalRecords.ts";
+import type { ProgressionRecommendation } from "./progression.ts";
 
 export type WorkoutStatus = "active" | "completed" | "discarded";
 

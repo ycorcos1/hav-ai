@@ -4,14 +4,14 @@ export {
   rpeSchema,
   uuidSchema,
   weightKgSchema,
-} from "./common";
+} from "./common.ts";
 export {
   primaryGoalSchema,
   progressionStyleSchema,
   rpePreferenceSchema,
   userProfileSchema,
   weightUnitSchema,
-} from "./profile";
+} from "./profile.ts";
 export {
   apiErrorResponseSchema,
   apiSuccessSchema,
@@ -21,4 +21,4 @@ export {
   parseWorkoutRequestV1Schema,
   parseWorkoutResponseV1Schema,
   recommendationExplanationV1Schema,
-} from "./ai";
+} from "./ai.ts";

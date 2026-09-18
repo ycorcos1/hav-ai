@@ -1,7 +1,7 @@
-import { MockAIProvider, type MockAIResolver } from "./mockProvider";
-import { OpenAIProvider } from "./openAIProvider";
-import type { AIConfig } from "./config";
-import type { AIProvider } from "./types";
+import { MockAIProvider, type MockAIResolver } from "./mockProvider.ts";
+import { OpenAIProvider } from "./openAIProvider.ts";
+import type { AIConfig } from "./config.ts";
+import type { AIProvider } from "./types.ts";
 
 export function createAIProvider(config: AIConfig, mockResolver?: MockAIResolver): AIProvider {
   if (config.provider === "mock") {

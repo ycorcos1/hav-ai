@@ -1,6 +1,6 @@
-import type { PrimaryGoal, ProgressionStyle } from "./auth";
-import type { ISODateTime, RPE, UUID, WeightKg } from "./common";
-import type { EquipmentType, MeasurementType } from "./exercises";
+import type { PrimaryGoal, ProgressionStyle } from "./auth.ts";
+import type { ISODateTime, RPE, UUID, WeightKg } from "./common.ts";
+import type { EquipmentType, MeasurementType } from "./exercises.ts";
 
 export type ProgressionRecommendationType =
   | "increase_weight"

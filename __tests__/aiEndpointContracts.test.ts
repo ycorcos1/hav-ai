@@ -46,6 +46,7 @@ function explanationSource(): RecommendationContextDataSource {
       weightUnit: "lb",
       rpePreference: "optional",
     }),
+    getExercisePreferenceNote: jest.fn().mockResolvedValue(null),
     getTrendMetrics: jest.fn().mockReturnValue({
       direction: "insufficient_data",
       sessionsAnalyzed: 0,

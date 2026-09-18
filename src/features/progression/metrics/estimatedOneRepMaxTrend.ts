@@ -1,9 +1,9 @@
-import { progressionConfig } from "@/features/progression/config";
+import { progressionConfig } from "@/features/progression/config/index.ts";
 import type {
   EstimatedOneRepMaxTrendMetrics,
   ProgressionSetPerformance,
-} from "@/features/progression/types";
-import { calculateEpleyOneRepMax } from "@/features/metrics";
+} from "@/features/progression/types/index.ts";
+import { calculateEpleyOneRepMax } from "@/features/metrics/index.ts";
 
 function bestEstimatedOneRepMax(sets: ProgressionSetPerformance[]): number | null {
   const estimates = sets.flatMap((set) => {

@@ -5,19 +5,19 @@ import {
   explanationProviderOutputSchema,
   type AIConfig,
   type AIProvider,
-} from "../_shared/ai";
-import type { AuthenticateAIRequest } from "../_shared/auth";
+} from "../_shared/ai/index.ts";
+import type { AuthenticateAIRequest } from "../_shared/auth.ts";
 import {
   buildRecommendationExplanationContext,
   type RecommendationContextDataSource,
-} from "../_shared/context";
-import { mapAIFunctionError } from "../_shared/functionErrors";
-import { errorResponse, optionsResponse, successResponse } from "../_shared/http";
+} from "../_shared/context/index.ts";
+import { mapAIFunctionError } from "../_shared/functionErrors.ts";
+import { errorResponse, optionsResponse, successResponse } from "../_shared/http.ts";
 import {
   EXPLANATION_PROMPT_VERSION,
   recommendationExplanationSystemPrompt,
-} from "../_shared/prompts";
-import { parseExplanationRequest } from "../_shared/requestValidation";
+} from "../_shared/prompts/index.ts";
+import { parseExplanationRequest } from "../_shared/requestValidation.ts";
 
 export type ExplanationHandlerDependencies = {
   authenticate: AuthenticateAIRequest;
