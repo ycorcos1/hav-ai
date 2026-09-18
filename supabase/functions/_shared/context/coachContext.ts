@@ -27,12 +27,18 @@ export type CoachContext = {
 
 export async function buildCoachContext(input: {
   userId: string;
+  activeWorkoutId?: string;
   exerciseId?: string;
   localCurrentSession?: ValidatedLocalCurrentSession;
   dataSource: CoachContextDataSource;
 }): Promise<CoachContext> {
   const profile = await input.dataSource.getProfilePreferences(input.userId);
   if (!profile) throw new AIContextFailure("PROFILE_NOT_FOUND");
+
+  if (input.activeWorkoutId && !input.localCurrentSession) {
+    const workout = await input.dataSource.getOwnedWorkout(input.userId, input.activeWorkoutId);
+    if (!workout) throw new AIContextFailure("RESOURCE_NOT_FOUND");
+  }
 
   const exerciseId = input.exerciseId ?? input.localCurrentSession?.exerciseId;
   if (!exerciseId) {
@@ -68,4 +74,3 @@ const authorityLabels = {
   userAuthoredNotes: "subjective",
   aiInterpretation: "advisory",
 } as const;
-

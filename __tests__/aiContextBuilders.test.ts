@@ -40,6 +40,7 @@ function coachSource(overrides: Partial<CoachContextDataSource> = {}): CoachCont
   return {
     getProfilePreferences: jest.fn().mockResolvedValue(profile),
     getAccessibleExercise: jest.fn().mockResolvedValue(exercise),
+    getOwnedWorkout: jest.fn().mockResolvedValue({ id: "workout-id" }),
     getRecentSessions: jest.fn().mockResolvedValue(sessions),
     getActiveRecommendation: jest.fn().mockResolvedValue(recommendation),
     getTrendMetrics: jest.fn().mockReturnValue(trend),
@@ -98,6 +99,19 @@ describe("AI context builders", () => {
     expect(dataSource.getAccessibleExercise).not.toHaveBeenCalled();
     expect(dataSource.getRecentSessions).not.toHaveBeenCalled();
     expect(dataSource.getActiveRecommendation).not.toHaveBeenCalled();
+  });
+
+  it("verifies a referenced cloud workout when no local session supplies it", async () => {
+    const dataSource = coachSource({ getOwnedWorkout: jest.fn().mockResolvedValue(null) });
+    await expect(buildCoachContext({
+      userId,
+      activeWorkoutId: "44444444-4444-4444-8444-444444444444",
+      dataSource,
+    })).rejects.toMatchObject({ code: "RESOURCE_NOT_FOUND" });
+    expect(dataSource.getOwnedWorkout).toHaveBeenCalledWith(
+      userId,
+      "44444444-4444-4444-8444-444444444444",
+    );
   });
 
   it("rejects inaccessible coach resources with a sanitized context error", async () => {

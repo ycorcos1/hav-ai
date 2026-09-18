@@ -1,4 +1,7 @@
-export type AIContextFailureCode = "PROFILE_NOT_FOUND" | "RESOURCE_NOT_FOUND";
+export type AIContextFailureCode =
+  | "PROFILE_NOT_FOUND"
+  | "RESOURCE_NOT_FOUND"
+  | "CONTEXT_UNAVAILABLE";
 
 export class AIContextFailure extends Error {
   readonly code: AIContextFailureCode;
@@ -9,4 +12,3 @@ export class AIContextFailure extends Error {
     this.code = code;
   }
 }
-

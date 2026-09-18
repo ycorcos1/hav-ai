@@ -7,6 +7,7 @@ export {
   EXPLANATION_RECENT_SESSION_LIMIT,
 } from "./recommendationContext";
 export type { RecommendationExplanationContext } from "./recommendationContext";
+export { SupabaseAIContextDataSource } from "./supabaseContextDataSource";
 export type {
   AIExercise,
   AIProfilePreferences,
@@ -18,4 +19,3 @@ export type {
   RecommendationContextDataSource,
   ValidatedLocalCurrentSession,
 } from "./types";
-
