@@ -63,12 +63,29 @@ export function RecommendationCard({
     }
   }
 
+  if (recommendation.recommendationType === "insufficient_data") {
+    return (
+      <Card accessibilityLabel={`Recommendation status for ${exerciseName}`} style={styles.card}>
+        <AppText variant="exerciseName">{exerciseName}</AppText>
+        <AppText color="secondary" variant="metadata">KEEP BUILDING HISTORY</AppText>
+        <AppText color="secondary">
+          havAI needs more comparable sessions before recommending a progression change.
+        </AppText>
+      </Card>
+    );
+  }
+
   return (
     <Card accessibilityLabel={`Next target for ${exerciseName}`} style={styles.card}>
       <AppText variant="exerciseName">{exerciseName}</AppText>
       <AppText color="secondary" variant="metadata">{directionLabel(recommendation)}</AppText>
       <AppText variant="sectionHeading">{targetLabel(recommendation, weightUnit)}</AppText>
       <AppText color="secondary">{repTargetLabel(recommendation)}</AppText>
+      {recommendation.reasonCodes.includes("MIXED_WORKING_LOADS") ? (
+        <AppText color="muted">
+          Your sets used different loads, so havAI is keeping the target broad for now.
+        </AppText>
+      ) : null}
       <TextButton
         label={showReasons ? "Hide Why" : "Why?"}
         onPress={toggleReasons}

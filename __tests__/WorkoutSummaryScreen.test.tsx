@@ -214,4 +214,74 @@ describe("WorkoutSummaryScreen", () => {
     expect(screen.getByText("AI explanation requires an internet connection.")).toBeOnTheScreen();
     expect(loadAIExplanation).not.toHaveBeenCalled();
   });
+
+  it("shows broad mixed-load guidance without claiming a precise rep target", async () => {
+    const mixedRecommendation: ProgressionRecommendation = {
+      ...recommendation,
+      recommendationType: "maintain_weight",
+      targetSetReps: undefined,
+      confidence: "low",
+      reasonCodes: ["MIXED_WORKING_LOADS"],
+    };
+    const screen = await render(
+      <WorkoutSummaryScreen
+        loadSummary={async () => summaryWithRecommendation(mixedRecommendation)}
+        onDone={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("MAINTAIN")).toBeOnTheScreen();
+    expect(screen.getByText("3 × 6-8")).toBeOnTheScreen();
+    expect(screen.getByText(
+      "Your sets used different loads, so havAI is keeping the target broad for now.",
+    )).toBeOnTheScreen();
+    expect(screen.queryByText("8 / 8 / 7")).toBeNull();
+  });
+
+  it("explains insufficient data without inventing a load or rep target", async () => {
+    const insufficientRecommendation: ProgressionRecommendation = {
+      ...recommendation,
+      recommendationType: "insufficient_data",
+      recommendedWeightKg: undefined,
+      targetSets: undefined,
+      targetMinReps: undefined,
+      targetMaxReps: undefined,
+      targetSetReps: undefined,
+      confidence: "low",
+      reasonCodes: ["INSUFFICIENT_HISTORY"],
+    };
+    const screen = await render(
+      <WorkoutSummaryScreen
+        loadSummary={async () => summaryWithRecommendation(insufficientRecommendation)}
+        onDone={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("KEEP BUILDING HISTORY")).toBeOnTheScreen();
+    expect(screen.getByText(
+      "havAI needs more comparable sessions before recommending a progression change.",
+    )).toBeOnTheScreen();
+    expect(screen.queryByText("Bodyweight")).toBeNull();
+    expect(screen.queryByText("No precise rep target yet")).toBeNull();
+    expect(screen.queryByLabelText("Next target for Incline Bench")).toBeNull();
+  });
 });
+
+function summaryWithRecommendation(
+  nextRecommendation: ProgressionRecommendation,
+): CompletedWorkoutSummary {
+  return {
+    ...result,
+    summary: {
+      ...result.summary,
+      exerciseSummaries: result.summary.exerciseSummaries.map((summary) => (
+        summary.exerciseId === "exercise-a" ? { ...summary, nextRecommendation } : summary
+      )),
+    },
+    exercises: result.exercises.map((entry) => (
+      entry.summary.exerciseId === "exercise-a"
+        ? { ...entry, summary: { ...entry.summary, nextRecommendation } }
+        : entry
+    )),
+  };
+}

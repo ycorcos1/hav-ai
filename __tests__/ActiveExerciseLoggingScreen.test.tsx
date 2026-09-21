@@ -415,4 +415,48 @@ describe("ActiveExerciseLoggingScreen", () => {
     expect(await rendered.findByText("Set 1: 82.5 kg × 6")).toBeTruthy();
     expect(rendered.queryByText("This set could not be saved. Check your entries and try again.")).toBeNull();
   });
+
+  it("accepts a manual load override and mixed working loads without warning or blocking", async () => {
+    completeSet.mockImplementation(async (input) => ({
+      set: {
+        id: `set-${completeSet.mock.calls.length}`,
+        userId: "user-a",
+        workoutId: input.workoutId,
+        workoutExerciseId: input.workoutExerciseId,
+        exerciseId: input.exerciseId,
+        position: completeSet.mock.calls.length - 1,
+        setType: input.setType,
+        weightKg: input.weightKg,
+        reps: input.reps,
+        completedAt: time,
+        createdAt: time,
+        updatedAt: time,
+      },
+    }));
+    const rendered = await render(
+      <ActiveExerciseLoggingScreen
+        completeSet={completeSet}
+        loadExercise={async () => activeExercise}
+        onOpenExercise={onOpenExercise}
+        onOverview={onOverview}
+      />,
+    );
+
+    await rendered.findByText("Bench Press");
+    for (const [weight, reps] of [["86.18", "6"], ["83.91", "8"], ["83.91", "7"]]) {
+      await fireEvent.changeText(rendered.getByLabelText("Weight (kg)"), weight);
+      await fireEvent.changeText(rendered.getByLabelText("Reps"), reps);
+      await fireEvent.press(rendered.getByRole("button", { name: "Complete Set" }));
+    }
+
+    expect(completeSet.mock.calls.map(([input]) => [input.weightKg, input.reps])).toEqual([
+      [86.18, 6],
+      [83.91, 8],
+      [83.91, 7],
+    ]);
+    expect(rendered.getByText("Set 1: 86.18 kg × 6")).toBeOnTheScreen();
+    expect(rendered.getByText("Set 2: 83.91 kg × 8")).toBeOnTheScreen();
+    expect(rendered.getByText("Set 3: 83.91 kg × 7")).toBeOnTheScreen();
+    expect(rendered.queryByText(/different load/i)).toBeNull();
+  });
 });
