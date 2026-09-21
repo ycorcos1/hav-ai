@@ -13,6 +13,7 @@ import { WebPreviewLocalTemplateRepository } from "@/db/webPreview/WebPreviewLoc
 import { WebPreviewLocalWorkoutRepository } from "@/db/webPreview/WebPreviewLocalWorkoutRepository";
 
 import type { StartWorkoutDependencies } from "./startWorkout";
+import type { ActiveWorkoutStructureRepository } from "./activeWorkoutMutations";
 
 export type WorkoutPersistence = StartWorkoutDependencies & {
   exerciseHistoryRepository: ExerciseHistoryRepository;
@@ -20,6 +21,7 @@ export type WorkoutPersistence = StartWorkoutDependencies & {
   profileCacheRepository: LocalProfileCacheRepository;
   workoutHistoryRepository: WorkoutHistoryRepository;
   progressHistoryRepository: ProgressHistoryRepository;
+  workoutRepository: ActiveWorkoutStructureRepository;
 };
 
 export async function createWorkoutPersistence(): Promise<WorkoutPersistence> {

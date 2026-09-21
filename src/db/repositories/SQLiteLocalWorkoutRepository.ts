@@ -24,7 +24,11 @@ import type {
 } from "../types";
 import { metadataForUpsert, placeholders } from "./repositoryUtils";
 import { upsertRecommendationInTransaction } from "./SQLiteLocalRecommendationRepository";
-import { enqueueSyncUpsert } from "./syncQueueUtils";
+import {
+  enqueueSyncDelete,
+  enqueueSyncUpsert,
+  removeSyncMutation,
+} from "./syncQueueUtils";
 import type {
   LocalWorkoutRepository,
   WorkoutHistoryPage,
@@ -168,6 +172,99 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository, Wor
     });
   }
 
+  async updateActiveWorkoutStructure(
+    workout: Workout,
+    removedExerciseId?: string,
+  ): Promise<void> {
+    if (workout.status !== "active") throw new Error("Only an active workout can be changed.");
+    await this.database.withExclusiveTransactionAsync(async (transaction) => {
+      const existing = await transaction.getFirstAsync<{ status: string; user_id: string }>(
+        "SELECT user_id, status FROM local_workouts WHERE id=?;",
+        workout.id,
+      );
+      if (!existing || existing.user_id !== workout.userId || existing.status !== "active") {
+        throw new Error("The active workout is not accessible to its user.");
+      }
+      await transaction.runAsync(
+        "UPDATE local_workout_exercises SET position=position + 1000000 WHERE workout_id=? AND user_id=?;",
+        workout.id,
+        workout.userId,
+      );
+      if (removedExerciseId) {
+        const removed = await transaction.getFirstAsync<{
+          server_updated_at: string | null;
+          sync_status: string;
+          user_id: string;
+        }>(
+          "SELECT user_id, sync_status, server_updated_at FROM local_workout_exercises WHERE id=? AND workout_id=?;",
+          removedExerciseId,
+          workout.id,
+        );
+        if (!removed || removed.user_id !== workout.userId) {
+          throw new Error("Workout exercise ancestry is not accessible to its user.");
+        }
+        const setRows = await transaction.getAllAsync<{ id: string }>(
+          "SELECT id FROM local_sets WHERE workout_exercise_id=? AND user_id=?;",
+          removedExerciseId,
+          workout.userId,
+        );
+        for (const set of setRows) {
+          await removeSyncMutation(transaction, workout.userId, "set", set.id);
+        }
+        const cloudKnown = removed.server_updated_at !== null
+          || removed.sync_status === "synced"
+          || removed.sync_status === "pending_update"
+          || removed.sync_status === "pending_delete";
+        if (cloudKnown) {
+          await transaction.runAsync(
+            `UPDATE local_workout_exercises
+             SET sync_status='pending_delete', updated_at=?
+             WHERE id=? AND user_id=?;`,
+            workout.updatedAt,
+            removedExerciseId,
+            workout.userId,
+          );
+          await enqueueSyncDelete(
+            transaction,
+            workout.userId,
+            "workout_exercise",
+            removedExerciseId,
+            workout.updatedAt,
+          );
+        } else {
+          await removeSyncMutation(
+            transaction,
+            workout.userId,
+            "workout_exercise",
+            removedExerciseId,
+          );
+          await transaction.runAsync(
+            "DELETE FROM local_workout_exercises WHERE id=? AND user_id=?;",
+            removedExerciseId,
+            workout.userId,
+          );
+        }
+      }
+      await this.saveInTransaction(transaction, workout);
+      await enqueueSyncUpsert(
+        transaction,
+        workout.userId,
+        "workout",
+        workout.id,
+        workout.updatedAt,
+      );
+      for (const exercise of workout.exercises) {
+        await enqueueSyncUpsert(
+          transaction,
+          exercise.userId,
+          "workout_exercise",
+          exercise.id,
+          workout.updatedAt,
+        );
+      }
+    });
+  }
+
   async finish(
     workout: Workout,
     recommendations: readonly ProgressionRecommendation[] = [],
@@ -219,7 +316,9 @@ export class SQLiteLocalWorkoutRepository implements LocalWorkoutRepository, Wor
 
   private async hydrate(row: LocalWorkoutRow, userId: string): Promise<Workout> {
     const exerciseRows = await this.database.getAllAsync<LocalWorkoutExerciseRow>(
-      "SELECT * FROM local_workout_exercises WHERE workout_id = ? AND user_id = ? ORDER BY position;",
+      `SELECT * FROM local_workout_exercises
+       WHERE workout_id = ? AND user_id = ? AND sync_status <> 'pending_delete'
+       ORDER BY position;`,
       row.id, userId,
     );
     const exercises: WorkoutExercise[] = [];

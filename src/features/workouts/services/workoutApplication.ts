@@ -31,6 +31,7 @@ import type {
 } from "@/db/repositories";
 
 import { CompleteSetService } from "./completeSet";
+import { ActiveWorkoutMutationService } from "./activeWorkoutMutations";
 import { DeleteSetService } from "./deleteSet";
 import { EditSetService } from "./editSet";
 import { FinishWorkoutService } from "./finishWorkout";
@@ -157,6 +158,37 @@ export async function updateCurrentUserActiveWorkoutNote(
   return updateActiveWorkoutNote(persistence.workoutRepository, userId, input);
 }
 
+export async function addCurrentUserActiveWorkoutExercise(
+  workoutId: UUID,
+  exerciseId: UUID,
+): Promise<ActiveWorkoutOverview> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  const workout = await new ActiveWorkoutMutationService(persistence)
+    .addExercise(userId, workoutId, exerciseId);
+  return overviewForWorkout(workout, persistence.exerciseRepository);
+}
+
+export async function removeCurrentUserActiveWorkoutExercise(
+  workoutId: UUID,
+  workoutExerciseId: UUID,
+): Promise<ActiveWorkoutOverview> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  const workout = await new ActiveWorkoutMutationService(persistence)
+    .removeExercise(userId, workoutId, workoutExerciseId);
+  return overviewForWorkout(workout, persistence.exerciseRepository);
+}
+
+export async function moveCurrentUserActiveWorkoutExercise(
+  workoutId: UUID,
+  workoutExerciseId: UUID,
+  direction: "down" | "up",
+): Promise<ActiveWorkoutOverview> {
+  const { persistence, userId } = await persistenceForCurrentUser();
+  const workout = await new ActiveWorkoutMutationService(persistence)
+    .moveExercise(userId, workoutId, workoutExerciseId, direction);
+  return overviewForWorkout(workout, persistence.exerciseRepository);
+}
+
 export async function finishCurrentUserWorkout(
   input: FinishWorkoutInput,
 ): Promise<FinishWorkoutResult> {
@@ -235,15 +267,7 @@ export async function loadCurrentUserWorkoutOverview(
   const workout = await persistence.workoutRepository.getById(userId, id);
   if (!workout) return null;
 
-  const { exerciseRepository } = await createExercisePersistence();
-  await populateExerciseFixture(exerciseRepository);
-  const orderedExercises = [...workout.exercises].sort((left, right) => left.position - right.position);
-  const exercises = await Promise.all(orderedExercises.map(async (workoutExercise) => ({
-    exercise: await exerciseRepository.getById(userId, workoutExercise.exerciseId),
-    workoutExercise,
-  })));
-
-  return { exercises, workout };
+  return overviewForWorkout(workout, persistence.exerciseRepository);
 }
 
 export async function loadCurrentUserCompletedWorkoutSummary(
@@ -328,4 +352,20 @@ async function persistenceForCurrentUser() {
   const persistence = await createWorkoutPersistence();
   owner.assertCurrent();
   return { persistence, userId: owner.userId };
+}
+
+async function overviewForWorkout(
+  workout: Workout,
+  exerciseRepository: import("@/db/repositories").LocalExerciseRepository,
+): Promise<ActiveWorkoutOverview> {
+  await populateExerciseFixture(exerciseRepository);
+  const exercises = await Promise.all(
+    [...workout.exercises]
+      .sort((left, right) => left.position - right.position)
+      .map(async (workoutExercise) => ({
+        exercise: await exerciseRepository.getById(workout.userId, workoutExercise.exerciseId),
+        workoutExercise,
+      })),
+  );
+  return { exercises, workout };
 }

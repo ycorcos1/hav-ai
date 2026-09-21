@@ -135,6 +135,21 @@ describe("SupabaseRemoteWorkoutAdapter", () => {
     expect(ownerEq).toHaveBeenCalledWith("user_id", userId);
   });
 
+  it("deletes a workout exercise through explicit entity and authenticated-owner filters", async () => {
+    const single = jest.fn().mockResolvedValue({ data: { id: "exercise-id" }, error: null });
+    const select = jest.fn(() => ({ single }));
+    const ownerEq = jest.fn(() => ({ select }));
+    const idEq = jest.fn(() => ({ eq: ownerEq }));
+    const remove = jest.fn(() => ({ eq: idEq }));
+    mockFrom.mockReturnValue({ delete: remove });
+
+    await expect(new SupabaseRemoteWorkoutAdapter().deleteOwnWorkoutExercise("exercise-id"))
+      .resolves.toBeUndefined();
+    expect(mockFrom).toHaveBeenCalledWith("workout_exercises");
+    expect(idEq).toHaveBeenCalledWith("id", "exercise-id");
+    expect(ownerEq).toHaveBeenCalledWith("user_id", userId);
+  });
+
   it("rejects unauthenticated, foreign-owned, and provider failures with sanitized errors", async () => {
     const adapter = new SupabaseRemoteWorkoutAdapter();
     mockGetUser.mockResolvedValueOnce({ data: { user: null }, error: null });

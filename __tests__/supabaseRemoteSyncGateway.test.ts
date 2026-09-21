@@ -28,6 +28,28 @@ const preference: UserExercisePreference = {
 };
 
 describe("SupabaseRemoteSyncGateway", () => {
+  it("routes workout-exercise deletes through the canonical workout adapter", async () => {
+    const workouts = unusedWorkouts();
+    const gateway = new SupabaseRemoteSyncGateway(
+      unusedExercises(),
+      unusedTemplates(),
+      workouts,
+      unusedRecommendations(),
+      {
+        fetchOwnPreferences: jest.fn(),
+        upsertOwnPreference: jest.fn(),
+        deleteOwnPreference: jest.fn(),
+      },
+    );
+
+    await expect(gateway.apply({
+      entityType: "workout_exercise",
+      operation: "delete",
+      entityId: "workout-exercise-a",
+    })).resolves.toEqual({});
+    expect(workouts.deleteOwnWorkoutExercise).toHaveBeenCalledWith("workout-exercise-a");
+  });
+
   it("routes preference upserts and deletes through the canonical remote adapter", async () => {
     const preferences: jest.Mocked<RemoteUserExercisePreferenceAdapter> = {
       fetchOwnPreferences: jest.fn(),
@@ -96,6 +118,7 @@ function unusedTemplates(): jest.Mocked<TemplateRepository> {
 function unusedWorkouts(): jest.Mocked<RemoteWorkoutAdapter> {
   return {
     deleteOwnSet: jest.fn(),
+    deleteOwnWorkoutExercise: jest.fn(),
     upsertOwnSet: jest.fn(),
     upsertOwnWorkout: jest.fn(),
     upsertOwnWorkoutExercise: jest.fn(),

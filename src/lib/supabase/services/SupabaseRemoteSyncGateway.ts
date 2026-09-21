@@ -36,6 +36,9 @@ export class SupabaseRemoteSyncGateway implements RemoteSyncGateway {
         case "set":
           await this.workouts.deleteOwnSet(mutation.entityId);
           return {};
+        case "workout_exercise":
+          await this.workouts.deleteOwnWorkoutExercise(mutation.entityId);
+          return {};
         case "user_exercise_preference":
           await this.preferences.deleteOwnPreference(mutation.entityId);
           return {};

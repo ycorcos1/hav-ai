@@ -8,6 +8,7 @@ import type {
 
 export interface RemoteWorkoutAdapter {
   deleteOwnSet(id: UUID): Promise<void>;
+  deleteOwnWorkoutExercise(id: UUID): Promise<void>;
   upsertOwnSet(set: WorkoutSet): Promise<RemoteMutationResult>;
   upsertOwnWorkout(workout: Workout): Promise<RemoteMutationResult>;
   upsertOwnWorkoutExercise(exercise: WorkoutExercise): Promise<RemoteMutationResult>;
@@ -15,6 +16,7 @@ export interface RemoteWorkoutAdapter {
 
 export type RemoteWorkoutAdapterOperation =
   | "deleteOwnSet"
+  | "deleteOwnWorkoutExercise"
   | "upsertOwnSet"
   | "upsertOwnWorkout"
   | "upsertOwnWorkoutExercise";

@@ -172,6 +172,147 @@ describe("ActiveWorkoutOverviewScreen", () => {
     expect(onOpenExercise).toHaveBeenCalledWith("workout-exercise-2");
   });
 
+  it("adds an exercise through the shared library picker without changing the source template", async () => {
+    const addedExercise = {
+      ...overview.exercises[1].exercise!,
+      id: "exercise-3",
+      name: "Lat Pulldown",
+      primaryMuscleGroup: "back" as const,
+    };
+    const addedOverview: ActiveWorkoutOverview = {
+      ...overview,
+      workout: {
+        ...overview.workout,
+        sourceTemplateId: "template-1",
+        exercises: [...overview.exercises.map(({ workoutExercise }) => workoutExercise), {
+          id: "workout-exercise-3",
+          userId: "user-a",
+          workoutId: "workout-1",
+          exerciseId: addedExercise.id,
+          position: 2,
+          sets: [],
+          createdAt: startedAt,
+          updatedAt: startedAt,
+        }],
+      },
+      exercises: [...overview.exercises, {
+        exercise: addedExercise,
+        workoutExercise: {
+          id: "workout-exercise-3",
+          userId: "user-a",
+          workoutId: "workout-1",
+          exerciseId: addedExercise.id,
+          position: 2,
+          sets: [],
+          createdAt: startedAt,
+          updatedAt: startedAt,
+        },
+      }],
+    };
+    const addExercise = jest.fn().mockResolvedValue(addedOverview);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        addExercise={addExercise}
+        finishWorkout={finishWorkout}
+        loadExercises={async () => [addedExercise]}
+        loadPreferences={async () => []}
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await fireEvent.press(await rendered.findByRole("button", { name: "Add Exercise" }));
+    const picker = await rendered.findByLabelText("Add exercise picker");
+    await fireEvent.press(within(picker).getByRole("button", { name: "Select Lat Pulldown" }));
+    expect(addExercise).toHaveBeenCalledWith("exercise-3");
+    expect(await rendered.findByText("Lat Pulldown")).toBeOnTheScreen();
+    expect(addedOverview.workout.sourceTemplateId).toBe("template-1");
+  });
+
+  it("reorders only the active session with contiguous positions", async () => {
+    const reordered: ActiveWorkoutOverview = {
+      ...overview,
+      exercises: [
+        { ...overview.exercises[1], workoutExercise: { ...overview.exercises[1].workoutExercise, position: 0 } },
+        { ...overview.exercises[0], workoutExercise: { ...overview.exercises[0].workoutExercise, position: 1 } },
+      ],
+      workout: {
+        ...overview.workout,
+        exercises: [
+          { ...overview.exercises[1].workoutExercise, position: 0 },
+          { ...overview.exercises[0].workoutExercise, position: 1 },
+        ],
+      },
+    };
+    const moveExercise = jest.fn().mockResolvedValue(reordered);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => overview}
+        moveExercise={moveExercise}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await fireEvent.press(await rendered.findByRole("button", { name: "Move Cable Fly up" }));
+    expect(moveExercise).toHaveBeenCalledWith("workout-exercise-2", "up");
+    const names = rendered.getAllByText(/Bench Press|Cable Fly/);
+    expect(names.map(({ props }) => props.children)).toEqual(["Cable Fly", "Bench Press"]);
+  });
+
+  it("requires confirmation before removing completed exercise data", async () => {
+    const removed: ActiveWorkoutOverview = {
+      ...overview,
+      exercises: [overview.exercises[1]],
+      workout: { ...overview.workout, exercises: [overview.exercises[1].workoutExercise] },
+    };
+    const removeExercise = jest.fn().mockResolvedValue(removed);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        removeExercise={removeExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await fireEvent.press(await rendered.findByRole("button", { name: "Remove Bench Press" }));
+    const confirmation = rendered.getByLabelText("Remove exercise confirmation");
+    expect(removeExercise).not.toHaveBeenCalled();
+    await fireEvent.press(within(confirmation).getByRole("button", { name: "Remove Exercise" }));
+    expect(removeExercise).toHaveBeenCalledWith("workout-exercise-1");
+    expect(rendered.queryByText("Bench Press")).toBeNull();
+  });
+
+  it("removes an exercise with no completed data without destructive confirmation", async () => {
+    const removed: ActiveWorkoutOverview = {
+      ...overview,
+      exercises: [overview.exercises[0]],
+      workout: { ...overview.workout, exercises: [overview.exercises[0].workoutExercise] },
+    };
+    const removeExercise = jest.fn().mockResolvedValue(removed);
+    const rendered = await render(
+      <ActiveWorkoutOverviewScreen
+        finishWorkout={finishWorkout}
+        loadWorkout={async () => overview}
+        onOpenExercise={onOpenExercise}
+        onWorkoutFinished={onWorkoutFinished}
+        removeExercise={removeExercise}
+        saveWorkoutNote={saveWorkoutNote}
+      />,
+    );
+
+    await fireEvent.press(await rendered.findByRole("button", { name: "Remove Cable Fly" }));
+    expect(removeExercise).toHaveBeenCalledWith("workout-exercise-2");
+    expect(rendered.queryByLabelText("Remove exercise confirmation")).toBeNull();
+  });
+
   it("requires confirmation for incomplete planned work and allows keeping training", async () => {
     const rendered = await render(
       <ActiveWorkoutOverviewScreen

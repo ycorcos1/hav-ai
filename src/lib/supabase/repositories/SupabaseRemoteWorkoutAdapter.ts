@@ -67,6 +67,17 @@ export class SupabaseRemoteWorkoutAdapter implements RemoteWorkoutAdapter {
     if (error || !data) throw adapterError("deleteOwnSet");
   }
 
+  async deleteOwnWorkoutExercise(id: UUID): Promise<void> {
+    const user = await this.requireUser("deleteOwnWorkoutExercise");
+    const { data, error } = await this.client.from("workout_exercises")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select("id")
+      .single();
+    if (error || !data) throw adapterError("deleteOwnWorkoutExercise");
+  }
+
   private async requireOwner(
     ownerUserId: UUID,
     operation: RemoteWorkoutAdapterOperation,

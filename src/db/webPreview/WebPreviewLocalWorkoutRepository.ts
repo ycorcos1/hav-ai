@@ -9,6 +9,7 @@ import { browserWebPreviewStorage, type WebPreviewStorage } from "./storage";
 import {
   readWorkoutWebPreviewState,
   enqueueWorkoutWebPreviewMutation,
+  removeWorkoutWebPreviewMutation,
   writeWorkoutWebPreviewState,
   type WorkoutWebPreviewState,
 } from "./workoutStorage";
@@ -96,6 +97,35 @@ export class WebPreviewLocalWorkoutRepository implements LocalWorkoutRepository,
     const state = readWorkoutWebPreviewState(this.storage);
     const index = state.workouts.findIndex(({ id }) => id === workout.id);
     if (index < 0 || state.workouts[index].userId !== workout.userId) return;
+    state.workouts[index] = workout;
+    enqueueWorkoutWebPreviewMutation(state, "workout", workout.id, workout.updatedAt);
+    workout.exercises.forEach((exercise) => enqueueWorkoutWebPreviewMutation(
+      state,
+      "workout_exercise",
+      exercise.id,
+      workout.updatedAt,
+    ));
+    writeWorkoutWebPreviewState(this.storage, state);
+  }
+
+  async updateActiveWorkoutStructure(
+    workout: Workout,
+    removedExerciseId?: string,
+  ): Promise<void> {
+    if (workout.status !== "active") throw new Error("Only an active workout can be changed.");
+    this.validateAggregate(workout);
+    const state = readWorkoutWebPreviewState(this.storage);
+    const index = state.workouts.findIndex(({ id }) => id === workout.id);
+    const existing = state.workouts[index];
+    if (!existing || existing.userId !== workout.userId || existing.status !== "active") {
+      throw new Error("The active workout is not accessible to its user.");
+    }
+    if (removedExerciseId) {
+      const removed = existing.exercises.find(({ id }) => id === removedExerciseId);
+      if (!removed) throw new Error("Workout exercise ancestry is not accessible to its user.");
+      removeWorkoutWebPreviewMutation(state, "workout_exercise", removedExerciseId);
+      removed.sets.forEach(({ id }) => removeWorkoutWebPreviewMutation(state, "set", id));
+    }
     state.workouts[index] = workout;
     enqueueWorkoutWebPreviewMutation(state, "workout", workout.id, workout.updatedAt);
     workout.exercises.forEach((exercise) => enqueueWorkoutWebPreviewMutation(
