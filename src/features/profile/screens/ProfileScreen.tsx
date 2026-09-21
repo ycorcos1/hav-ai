@@ -6,24 +6,34 @@ import { Card } from "@/components/Card";
 import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { TextInput } from "@/components/TextInput";
 import type { ProfileSettings } from "@/features/profile/services/profileApplication";
 import type { UpdateOwnProfileInput } from "@/lib/supabase/repositories";
 import { colors, spacing } from "@/theme";
 
 export type ProfileScreenProps = {
   loadProfile: () => Promise<ProfileSettings | null>;
-  onLogout?: () => void;
+  prepareLogout?: () => Promise<"pending_sync" | "signed_out">;
+  trySyncAndLogout?: () => Promise<boolean>;
   updateProfile?: (input: UpdateOwnProfileInput) => Promise<ProfileSettings["profile"]>;
 };
 
-export function ProfileScreen({ loadProfile, onLogout, updateProfile }: ProfileScreenProps) {
+export function ProfileScreen({
+  loadProfile,
+  prepareLogout,
+  trySyncAndLogout,
+  updateProfile,
+}: ProfileScreenProps) {
   const [settings, setSettings] = useState<ProfileSettings | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [savingUnit, setSavingUnit] = useState(false);
   const [savingRpe, setSavingRpe] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
+  const [savingProgressionStyle, setSavingProgressionStyle] = useState(false);
+  const [savingRestDuration, setSavingRestDuration] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [logoutState, setLogoutState] = useState<"idle" | "checking" | "pending" | "syncing" | "error">("idle");
 
   useEffect(() => {
     let active = true;
@@ -114,6 +124,65 @@ export function ProfileScreen({ loadProfile, onLogout, updateProfile }: ProfileS
     }
   }
 
+  async function saveProgressionStyle(
+    progressionStyle: ProfileSettings["profile"]["progressionStyle"],
+  ): Promise<void> {
+    if (
+      !updateProfile
+      || savingProgressionStyle
+      || progressionStyle === profile.progressionStyle
+    ) return;
+    setSavingProgressionStyle(true);
+    setSaveError(false);
+    try {
+      const updated = await updateProfile({ progressionStyle });
+      setSettings((current) => current ? { ...current, profile: updated } : current);
+    } catch {
+      setSaveError(true);
+    } finally {
+      setSavingProgressionStyle(false);
+    }
+  }
+
+  async function saveDefaultRestDuration(defaultRestDurationSeconds: number): Promise<void> {
+    if (
+      !updateProfile
+      || savingRestDuration
+      || defaultRestDurationSeconds === profile.defaultRestDurationSeconds
+    ) return;
+    setSavingRestDuration(true);
+    setSaveError(false);
+    try {
+      const updated = await updateProfile({ defaultRestDurationSeconds });
+      setSettings((current) => current ? { ...current, profile: updated } : current);
+    } catch {
+      setSaveError(true);
+    } finally {
+      setSavingRestDuration(false);
+    }
+  }
+
+  async function requestLogout(): Promise<void> {
+    if (!prepareLogout || logoutState === "checking" || logoutState === "syncing") return;
+    setLogoutState("checking");
+    try {
+      const result = await prepareLogout();
+      if (result === "pending_sync") setLogoutState("pending");
+    } catch {
+      setLogoutState("error");
+    }
+  }
+
+  async function retrySyncBeforeLogout(): Promise<void> {
+    if (!trySyncAndLogout || logoutState === "syncing") return;
+    setLogoutState("syncing");
+    try {
+      if (!await trySyncAndLogout()) setLogoutState("error");
+    } catch {
+      setLogoutState("error");
+    }
+  }
+
   return (
     <Screen contentContainerStyle={styles.container} scroll>
       <AppText variant="screenTitle">Profile</AppText>
@@ -167,17 +236,93 @@ export function ProfileScreen({ loadProfile, onLogout, updateProfile }: ProfileS
             </View>
           ) : null}
           <PreferenceRow label="Progression Style" value={styleLabel(profile.progressionStyle)} />
+          {updateProfile ? (
+            <View accessibilityLabel="Progression style options" style={styles.options}>
+              {(["conservative", "balanced", "aggressive"] as const).map((style) => (
+                <SecondaryButton
+                  disabled={savingProgressionStyle || profile.progressionStyle === style}
+                  key={style}
+                  label={`Progression ${styleLabel(style)}`}
+                  onPress={() => { void saveProgressionStyle(style); }}
+                />
+              ))}
+            </View>
+          ) : null}
           <PreferenceRow label="Default Rest" value={`${profile.defaultRestDurationSeconds} seconds`} />
+          {updateProfile ? (
+            <RestDurationPreference
+              key={profile.defaultRestDurationSeconds}
+              onSave={saveDefaultRestDuration}
+              saving={savingRestDuration}
+              value={profile.defaultRestDurationSeconds}
+            />
+          ) : null}
         </Card>
       </View>
       <View style={styles.section}>
         <AppText variant="sectionHeading">Account</AppText>
         <Card style={styles.card}>
           <PreferenceRow label="Email" value={settings.email ?? "Authenticated account"} />
-          <SecondaryButton disabled={!onLogout} label="Logout" onPress={onLogout ?? (() => {})} />
+          <SecondaryButton
+            disabled={!prepareLogout || logoutState === "checking" || logoutState === "syncing"}
+            label="Logout"
+            onPress={() => { void requestLogout(); }}
+          />
+          {logoutState === "pending" || logoutState === "syncing" || logoutState === "error" ? (
+            <View accessibilityLabel="Pending workout data" style={styles.options}>
+              <AppText variant="sectionHeading">Unsynced workout data</AppText>
+              <AppText color="secondary">
+                Sync your saved device data before logging out so it is not left behind.
+              </AppText>
+              {logoutState === "error" ? (
+                <AppText accessibilityRole="alert" style={styles.error}>
+                  Your data is still saved on this device. Sync could not finish, so you were not logged out.
+                </AppText>
+              ) : null}
+              <SecondaryButton
+                disabled={logoutState === "syncing"}
+                label="Try Sync"
+                onPress={() => { void retrySyncBeforeLogout(); }}
+              />
+              <SecondaryButton
+                disabled={logoutState === "syncing"}
+                label="Cancel"
+                onPress={() => setLogoutState("idle")}
+              />
+            </View>
+          ) : null}
         </Card>
       </View>
     </Screen>
+  );
+}
+
+function RestDurationPreference({
+  onSave,
+  saving,
+  value,
+}: {
+  onSave: (value: number) => Promise<void>;
+  saving: boolean;
+  value: number;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const valid = /^\d+$/.test(draft) && Number(draft) > 0;
+  return (
+    <View style={styles.options}>
+      <TextInput
+        error={valid ? undefined : "Enter a positive whole number of seconds."}
+        keyboardType="number-pad"
+        label="Default rest duration in seconds"
+        onChangeText={setDraft}
+        value={draft}
+      />
+      <SecondaryButton
+        disabled={saving || !valid || Number(draft) === value}
+        label="Save Default Rest"
+        onPress={() => { void onSave(Number(draft)); }}
+      />
+    </View>
   );
 }
 

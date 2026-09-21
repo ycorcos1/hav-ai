@@ -111,4 +111,87 @@ describe("ProfileScreen", () => {
     expect(await screen.findByLabelText("Primary Goal: Get Stronger")).toBeOnTheScreen();
     expect(updateProfile).toHaveBeenCalledWith({ primaryGoal: "strength" });
   });
+
+  it("changes progression style and exposes only the updated active state", async () => {
+    const updateProfile = jest.fn().mockResolvedValue({
+      ...settings.profile,
+      progressionStyle: "aggressive",
+    });
+    const screen = await render(
+      <ProfileScreen loadProfile={async () => settings} updateProfile={updateProfile} />,
+    );
+
+    expect(await screen.findByLabelText("Progression Style: Balanced")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Progression Aggressive" }));
+    expect(await screen.findByLabelText("Progression Style: Aggressive")).toBeOnTheScreen();
+    expect(updateProfile).toHaveBeenCalledWith({ progressionStyle: "aggressive" });
+  });
+
+  it("saves a positive default rest duration", async () => {
+    const updateProfile = jest.fn().mockResolvedValue({
+      ...settings.profile,
+      defaultRestDurationSeconds: 180,
+    });
+    const screen = await render(
+      <ProfileScreen loadProfile={async () => settings} updateProfile={updateProfile} />,
+    );
+
+    const input = await screen.findByLabelText("Default rest duration in seconds");
+    await fireEvent.changeText(input, "180");
+    await fireEvent.press(screen.getByRole("button", { name: "Save Default Rest" }));
+    expect(await screen.findByLabelText("Default Rest: 180 seconds")).toBeOnTheScreen();
+    expect(updateProfile).toHaveBeenCalledWith({ defaultRestDurationSeconds: 180 });
+  });
+
+  it("rejects non-positive default rest durations before persistence", async () => {
+    const updateProfile = jest.fn();
+    const screen = await render(
+      <ProfileScreen loadProfile={async () => settings} updateProfile={updateProfile} />,
+    );
+
+    const input = await screen.findByLabelText("Default rest duration in seconds");
+    await fireEvent.changeText(input, "0");
+    expect(screen.getByText("Enter a positive whole number of seconds.")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Save Default Rest" })).toBeDisabled();
+    expect(updateProfile).not.toHaveBeenCalled();
+  });
+
+  it("offers Cancel and Try Sync instead of abandoning pending data", async () => {
+    const prepareLogout = jest.fn().mockResolvedValue("pending_sync");
+    const trySyncAndLogout = jest.fn().mockResolvedValue(false);
+    const screen = await render(
+      <ProfileScreen
+        loadProfile={async () => settings}
+        prepareLogout={prepareLogout}
+        trySyncAndLogout={trySyncAndLogout}
+      />,
+    );
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Logout" }));
+    expect(await screen.findByText("Unsynced workout data")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Try Sync" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeOnTheScreen();
+    expect(trySyncAndLogout).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("Unsynced workout data")).toBeNull();
+  });
+
+  it("keeps the user signed in and reports a sanitized failed sync", async () => {
+    const trySyncAndLogout = jest.fn().mockResolvedValue(false);
+    const screen = await render(
+      <ProfileScreen
+        loadProfile={async () => settings}
+        prepareLogout={jest.fn().mockResolvedValue("pending_sync")}
+        trySyncAndLogout={trySyncAndLogout}
+      />,
+    );
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Logout" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Try Sync" }));
+    expect(await screen.findByText(
+      "Your data is still saved on this device. Sync could not finish, so you were not logged out.",
+    )).toBeOnTheScreen();
+    expect(trySyncAndLogout).toHaveBeenCalledTimes(1);
+  });
 });
