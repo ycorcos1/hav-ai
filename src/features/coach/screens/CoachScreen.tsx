@@ -9,6 +9,7 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
 import { TextInput } from "@/components/TextInput";
 import { coachApi, type CoachApi } from "@/features/ai/api";
+import { useNetworkStatus } from "@/features/network/components/NetworkStatusProvider";
 import type { CoachMessage, CoachRequestV1 } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
@@ -37,6 +38,8 @@ export function CoachScreen({
   now = () => new Date().toISOString(),
   onClose,
 }: CoachScreenProps) {
+  const networkStatus = useNetworkStatus();
+  const offline = networkStatus === "offline";
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [pendingMessage, setPendingMessage] = useState<string>();
@@ -73,7 +76,7 @@ export function CoachScreen({
 
   async function send(): Promise<void> {
     const normalized = message.trim();
-    if (!normalized || pendingMessage) return;
+    if (!normalized || pendingMessage || offline) return;
     const userMessage: CoachMessage = {
       id: createId(),
       role: "user",
@@ -110,6 +113,7 @@ export function CoachScreen({
           <View accessibilityLabel="Suggested Coach prompts" style={styles.prompts}>
             {coachSuggestedPrompts.map((prompt) => (
               <SecondaryButton
+                disabled={offline}
                 key={prompt}
                 label={prompt}
                 onPress={() => setMessage(prompt)}
@@ -139,6 +143,12 @@ export function CoachScreen({
           <AppText color="secondary">Reviewing your training context...</AppText>
         </View>
       ) : null}
+      {offline ? (
+        <View accessibilityRole="alert" style={styles.offline}>
+          <AppText variant="exerciseName">Coach requires an internet connection.</AppText>
+          <AppText color="secondary">Your workout and manual logging remain available.</AppText>
+        </View>
+      ) : null}
       {failedMessage ? (
         <View accessibilityRole="alert" style={styles.failure}>
           <AppText style={styles.failureTitle} variant="exerciseName">
@@ -152,13 +162,14 @@ export function CoachScreen({
       <View style={styles.composer}>
         <TextInput
           accessibilityLabel="Ask havAI"
+          disabled={offline}
           multiline
           onChangeText={setMessage}
           placeholder="Ask havAI..."
           value={message}
         />
         <PrimaryButton
-          disabled={!message.trim() || Boolean(pendingMessage)}
+          disabled={offline || !message.trim() || Boolean(pendingMessage)}
           label="Send"
           loading={Boolean(pendingMessage)}
           onPress={() => { void send(); }}
@@ -200,6 +211,9 @@ const styles = StyleSheet.create({
   },
   failureTitle: {
     color: colors.semantic.error,
+  },
+  offline: {
+    gap: spacing.xs,
   },
   composer: {
     gap: spacing.md,

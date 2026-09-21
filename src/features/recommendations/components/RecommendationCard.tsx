@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { AppText } from "@/components/AppText";
 import { Card } from "@/components/Card";
 import { TextButton } from "@/components/TextButton";
+import { useNetworkStatus } from "@/features/network/components/NetworkStatusProvider";
 import { explainRecommendation } from "@/features/recommendations/explanations";
 import { formatDisplayWeight } from "@/features/workouts/services/weightConversion";
 import type {
@@ -26,6 +27,8 @@ export function RecommendationCard({
   recommendation,
   weightUnit,
 }: RecommendationCardProps) {
+  const networkStatus = useNetworkStatus();
+  const offline = networkStatus === "offline";
   const [showReasons, setShowReasons] = useState(false);
   const [aiExplanation, setAIExplanation] = useState<RecommendationExplanationV1>();
   const [aiFailed, setAIFailed] = useState(false);
@@ -55,7 +58,7 @@ export function RecommendationCard({
   function toggleReasons(): void {
     const nextVisible = !showReasons;
     setShowReasons(nextVisible);
-    if (nextVisible && loadAIExplanation && !aiExplanation && !aiFailed) {
+    if (nextVisible && !offline && loadAIExplanation && !aiExplanation && !aiFailed) {
       void loadRicherExplanation();
     }
   }
@@ -76,6 +79,9 @@ export function RecommendationCard({
           {explanation.reasons.map((reason) => (
             <AppText color="secondary" key={reason}>• {reason}</AppText>
           ))}
+          {offline && loadAIExplanation ? (
+            <AppText color="muted">AI explanation requires an internet connection.</AppText>
+          ) : null}
           {aiLoading ? (
             <AppText accessibilityLabel="AI explanation loading" color="muted">
               Reviewing the recommendation context...

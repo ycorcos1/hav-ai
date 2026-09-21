@@ -1,6 +1,8 @@
 import { fireEvent, render } from "@testing-library/react-native";
 
 import { WorkoutSummaryScreen } from "@/features/workouts/screens/WorkoutSummaryScreen";
+import { NetworkStatusProvider } from "@/features/network/components/NetworkStatusProvider";
+import type { NetworkStatusService } from "@/features/network/networkStatus";
 import type { CompletedWorkoutSummary } from "@/features/workouts/services/workoutApplication";
 import type { ProgressionRecommendation } from "@/shared/contracts";
 
@@ -188,5 +190,28 @@ describe("WorkoutSummaryScreen", () => {
     expect(screen.getByText("82.5 kg")).toBeOnTheScreen();
     expect(screen.getByText("Add reps at the same load")).toBeOnTheScreen();
     expect(screen.queryByText("provider detail")).toBeNull();
+  });
+
+  it("keeps deterministic reasons available without invoking AI while offline", async () => {
+    const loadAIExplanation = jest.fn();
+    const offlineService: NetworkStatusService = {
+      getCurrentStatus: async () => "offline",
+      subscribe: () => () => {},
+    };
+    const screen = await render(
+      <NetworkStatusProvider service={offlineService}>
+        <WorkoutSummaryScreen
+          loadAIExplanation={loadAIExplanation}
+          loadSummary={async () => result}
+          onDone={jest.fn()}
+        />
+      </NetworkStatusProvider>,
+    );
+
+    expect(await screen.findByText("82.5 kg")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Why?" }));
+    expect(screen.getByText("Add reps at the same load")).toBeOnTheScreen();
+    expect(screen.getByText("AI explanation requires an internet connection.")).toBeOnTheScreen();
+    expect(loadAIExplanation).not.toHaveBeenCalled();
   });
 });

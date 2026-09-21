@@ -10,6 +10,11 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
 import { useRestTimer } from "@/features/workouts/components/RestTimerProvider";
 import { WorkoutOfflineBanner } from "@/features/network/components/WorkoutOfflineBanner";
+import { useNetworkStatus } from "@/features/network/components/NetworkStatusProvider";
+import {
+  QuickLogSheet,
+  type ConfirmedQuickLogSet,
+} from "@/features/workouts/components/QuickLogSheet";
 import {
   SetInputRow,
   type SetInputDraft,
@@ -25,6 +30,8 @@ import type {
   UndoSetCompletionResult,
   WorkoutSet,
   WorkoutSetType,
+  ParseWorkoutRequestV1,
+  ParseWorkoutResponseV1,
 } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
@@ -36,6 +43,7 @@ export type ActiveExerciseLoggingScreenProps = {
   onOpenExercise: (workoutExerciseId: string) => void;
   onAskCoach?: () => void;
   onOverview: () => void;
+  parseWorkout?: (request: ParseWorkoutRequestV1) => Promise<ParseWorkoutResponseV1>;
   undoSet?: (setId: string) => Promise<UndoSetCompletionResult>;
 };
 
@@ -58,8 +66,10 @@ export function ActiveExerciseLoggingScreen({
   onAskCoach,
   onOpenExercise,
   onOverview,
+  parseWorkout,
   undoSet,
 }: ActiveExerciseLoggingScreenProps) {
+  const networkStatus = useNetworkStatus();
   const restTimer = useRestTimer();
   const [timerError, setTimerError] = useState(false);
   const [activeExercise, setActiveExercise] = useState<ActiveWorkoutExercise | null>();
@@ -79,6 +89,7 @@ export function ActiveExerciseLoggingScreen({
   const [undoOpportunity, setUndoOpportunity] = useState<SetCompletionUndoOpportunity>();
   const [undoError, setUndoError] = useState(false);
   const [undoingSet, setUndoingSet] = useState(false);
+  const [quickLogVisible, setQuickLogVisible] = useState(false);
   const completionDraft = useRef<SetInputDraft | undefined>(undefined);
   const completionLocked = useRef(false);
   const deleteLocked = useRef(false);
@@ -176,8 +187,8 @@ export function ActiveExerciseLoggingScreen({
     .find(({ weightKg }) => weightKg !== undefined)?.weightKg;
   const entryWeightKg = previousWorkingSetWeight ?? workoutExercise.targetWeightKg;
 
-  const completeCurrentSet = async (values: SetInputValues): Promise<void> => {
-    if (completionLocked.current) return;
+  const completeCurrentSet = async (values: SetInputValues): Promise<boolean> => {
+    if (completionLocked.current) return false;
     completionLocked.current = true;
     setSavingSet(true);
     setCompletionError(false);
@@ -227,8 +238,10 @@ export function ActiveExerciseLoggingScreen({
         }
       }
       await triggerSetCompletionHaptic();
+      return true;
     } catch {
       setCompletionError(true);
+      return false;
     } finally {
       completionLocked.current = false;
       setSavingSet(false);
@@ -447,6 +460,20 @@ export function ActiveExerciseLoggingScreen({
           }}
         />
       ) : null}
+      {parseWorkout ? (
+        <>
+          <SecondaryButton
+            disabled={networkStatus === "offline"}
+            label="Quick Log"
+            onPress={() => setQuickLogVisible(true)}
+          />
+          {networkStatus === "offline" ? (
+            <AppText color="muted" variant="metadata">
+              Quick Log requires an internet connection. Manual logging remains available.
+            </AppText>
+          ) : null}
+        </>
+      ) : null}
       {completionError ? (
         <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
           This set could not be saved. Check your entries and try again.
@@ -516,6 +543,17 @@ export function ActiveExerciseLoggingScreen({
           </AppText>
         ) : null}
       </BottomSheet>
+      {parseWorkout ? (
+        <QuickLogSheet
+          displayUnit={profile.weightUnit}
+          exerciseId={workoutExercise.exerciseId}
+          onCompleteSet={(set: ConfirmedQuickLogSet) => completeCurrentSet(set)}
+          onDismiss={() => setQuickLogVisible(false)}
+          parseWorkout={parseWorkout}
+          requiresWeight={exercise?.measurementType === "weight_reps"}
+          visible={quickLogVisible}
+        />
+      ) : null}
       <View style={styles.switchingControls}>
         <SecondaryButton
           disabled={!previousExercise}

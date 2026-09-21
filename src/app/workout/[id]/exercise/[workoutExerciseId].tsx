@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 
 import { ActiveExerciseLoggingScreen } from "@/features/workouts/screens/ActiveExerciseLoggingScreen";
+import { workoutParserApi } from "@/features/ai/api";
 import {
   completeCurrentUserSet,
   deleteCurrentUserSet,
@@ -31,6 +32,7 @@ export default function ActiveExerciseLoggingRoute() {
         router.replace(`/workout/${id}/exercise/${nextWorkoutExerciseId}`);
       }}
       onOverview={() => router.replace(`/workout/${id}`)}
+      parseWorkout={(request) => workoutParserApi.parse(request)}
       undoSet={undoCurrentUserSetCompletion}
     />
   );

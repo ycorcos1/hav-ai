@@ -9,6 +9,8 @@ import {
   coachSuggestedPrompts,
 } from "@/features/coach/screens/CoachScreen";
 import type { CoachApi } from "@/features/ai/api";
+import { NetworkStatusProvider } from "@/features/network/components/NetworkStatusProvider";
+import type { NetworkStatusService } from "@/features/network/networkStatus";
 
 function coachResponse(answer: string) {
   return {
@@ -26,6 +28,11 @@ function coachResponse(answer: string) {
 function controlledApi(ask: CoachApi["ask"]): CoachApi {
   return { ask };
 }
+
+const offlineService: NetworkStatusService = {
+  getCurrentStatus: async () => "offline",
+  subscribe: () => () => {},
+};
 
 describe("CoachScreen initial state", () => {
   it("shows the havAI Coach identity, suggested prompts, and message input", async () => {
@@ -113,5 +120,19 @@ describe("CoachScreen initial state", () => {
     expect(await screen.findByText("Try the same load again.")).toBeOnTheScreen();
     expect(screen.getAllByText("What next?")).toHaveLength(1);
     expect(ask).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not invoke Coach while clearly offline", async () => {
+    const ask = jest.fn();
+    const screen = await render(
+      <NetworkStatusProvider service={offlineService}>
+        <CoachScreen api={controlledApi(ask)} />
+      </NetworkStatusProvider>,
+    );
+
+    expect(await screen.findByText("Coach requires an internet connection.")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Ask havAI")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(ask).not.toHaveBeenCalled();
   });
 });
