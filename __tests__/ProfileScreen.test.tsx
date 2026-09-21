@@ -31,6 +31,7 @@ describe("ProfileScreen", () => {
     expect(screen.getByLabelText("Progression Style: Balanced")).toBeOnTheScreen();
     expect(screen.getByLabelText("Default Rest: 120 seconds")).toBeOnTheScreen();
     expect(screen.getByLabelText("Email: athlete@example.com")).toBeOnTheScreen();
+    expect(screen.getByText(/V1 is designed for one active device at a time/)).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Logout" })).toBeDisabled();
   });
 

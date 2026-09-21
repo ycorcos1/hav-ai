@@ -413,7 +413,30 @@ describe("ActiveExerciseLoggingScreen", () => {
     });
 
     expect(await rendered.findByText("Set 1: 82.5 kg × 6")).toBeTruthy();
-    expect(rendered.queryByText("This set could not be saved. Check your entries and try again.")).toBeNull();
+    expect(rendered.queryByText("Couldn't safely save this set. It was not added to your workout. Try again.")).toBeNull();
+  });
+
+  it("does not claim success when local set storage fails", async () => {
+    completeSet.mockRejectedValueOnce(new Error("private sqlite failure"));
+    const rendered = await render(
+      <ActiveExerciseLoggingScreen
+        completeSet={completeSet}
+        loadExercise={async () => activeExercise}
+        onOpenExercise={onOpenExercise}
+        onOverview={onOverview}
+      />,
+    );
+
+    await rendered.findByText("Bench Press");
+    await fireEvent.changeText(rendered.getByLabelText("Reps"), "6");
+    await fireEvent.press(rendered.getByRole("button", { name: "Complete Set" }));
+
+    expect(await rendered.findByText(
+      "Couldn't safely save this set. It was not added to your workout. Try again.",
+    )).toBeOnTheScreen();
+    expect(rendered.getByLabelText("Reps")).toHaveProp("value", "6");
+    expect(rendered.queryByText("Set 1: 82.5 kg × 6")).toBeNull();
+    expect(rendered.queryByText("private sqlite failure")).toBeNull();
   });
 
   it("accepts a manual load override and mixed working loads without warning or blocking", async () => {

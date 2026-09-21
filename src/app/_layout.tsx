@@ -6,6 +6,8 @@ import '@/lib/environment';
 import '@/lib/supabase/client';
 import { RestTimerProvider } from '@/features/workouts/components/RestTimerProvider';
 import { NetworkStatusProvider } from '@/features/network/components/NetworkStatusProvider';
+import { SyncStatusProvider } from '@/features/sync/components/SyncStatusProvider';
+import { applicationSyncProcessor } from '@/features/sync/services/applicationSyncProcessor';
 
 export default function RootLayout() {
   const segments = useSegments();
@@ -13,7 +15,9 @@ export default function RootLayout() {
   return (
     <RootRouteGuard {...rootRoutingDependencies} segments={segments}>
       <NetworkStatusProvider>
-        <RestTimerProvider><Slot /></RestTimerProvider>
+        <SyncStatusProvider processor={applicationSyncProcessor}>
+          <RestTimerProvider><Slot /></RestTimerProvider>
+        </SyncStatusProvider>
       </NetworkStatusProvider>
     </RootRouteGuard>
   );

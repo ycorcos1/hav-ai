@@ -2016,6 +2016,13 @@ one actively used device per user
 
 The schema remains compatible with future multi-device use, but sophisticated distributed conflict resolution is intentionally out of scope.
 
+The V1 code and user-facing settings describe this boundary consistently: one
+device should be treated as actively authoritative at a time. Pull hydration
+must never replace an active workout or dirty unsynced raw data. Conflicting raw
+records are retained for recovery; derived recommendations and personal records
+may be regenerated after canonical raw history converges. V1 does not perform a
+field-level merge of simultaneous edits.
+
 ---
 
 # 95. V1 Conflict Definition

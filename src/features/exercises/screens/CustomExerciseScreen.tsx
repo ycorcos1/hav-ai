@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
@@ -10,7 +10,12 @@ import { TextInput } from '@/components/TextInput';
 import type { EquipmentType, Exercise, MeasurementType, MuscleGroup } from '@/shared/contracts';
 import { spacing } from '@/theme';
 
-import { createCustomExercise, updateCustomExercise, type CustomExerciseInput } from '../services/customExercises';
+import {
+  createCustomExercise,
+  updateCustomExercise,
+  validateCustomExerciseInput,
+  type CustomExerciseInput,
+} from '../services/customExercises';
 
 const muscles: MuscleGroup[] = ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'glutes', 'core', 'other'];
 const equipment: EquipmentType[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'];
@@ -31,18 +36,30 @@ export function CustomExerciseScreen({ existingExercise, onSaved, repository, us
   const [measurementType, setMeasurementType] = useState<MeasurementType>(existingExercise?.measurementType ?? 'weight_reps');
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
-  async function save() {
-    setSaving(true); setError(undefined);
+  async function save(): Promise<void> {
+    if (savingRef.current) return;
+    const input: CustomExerciseInput = { name, primaryMuscleGroup, secondaryMuscleGroups, equipmentType, measurementType };
+    const validationError = validateCustomExerciseInput(input);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setError(undefined);
     try {
-      const input: CustomExerciseInput = { name, primaryMuscleGroup, secondaryMuscleGroups, equipmentType, measurementType };
       const exercise = existingExercise
         ? await updateCustomExercise(repository, userId, existingExercise.id, input)
         : await createCustomExercise(repository, userId, input);
       onSaved(exercise.id);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to save exercise.');
-    } finally { setSaving(false); }
+    } catch {
+      setError("Your exercise wasn't safely saved. Your entries are still here. Try again.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   return (

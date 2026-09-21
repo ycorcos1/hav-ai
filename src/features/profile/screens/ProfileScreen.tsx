@@ -263,6 +263,13 @@ export function ProfileScreen({
         <AppText variant="sectionHeading">Account</AppText>
         <Card style={styles.card}>
           <PreferenceRow label="Email" value={settings.email ?? "Authenticated account"} />
+          <View accessibilityLabel="V1 device sync behavior" style={styles.options}>
+            <AppText color="secondary" variant="metadata">DEVICE SYNC</AppText>
+            <AppText color="secondary">
+              V1 is designed for one active device at a time. Unsynced local workout data is
+              protected rather than silently replaced; simultaneous edits are not merged field by field.
+            </AppText>
+          </View>
           <SecondaryButton
             disabled={!prepareLogout || logoutState === "checking" || logoutState === "syncing"}
             label="Logout"

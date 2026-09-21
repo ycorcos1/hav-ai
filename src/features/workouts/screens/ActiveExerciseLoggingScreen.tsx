@@ -476,7 +476,7 @@ export function ActiveExerciseLoggingScreen({
       ) : null}
       {completionError ? (
         <AppText accessibilityRole="alert" style={styles.error} variant="metadata">
-          This set could not be saved. Check your entries and try again.
+          Couldn&apos;t safely save this set. It was not added to your workout. Try again.
         </AppText>
       ) : null}
       {timerError ? (
