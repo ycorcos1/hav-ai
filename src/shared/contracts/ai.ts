@@ -1,5 +1,12 @@
 import type { WeightUnit } from "./auth.ts";
-import type { RPE, UUID, WeightKg } from "./common.ts";
+import type { ISODateTime, RPE, UUID, WeightKg } from "./common.ts";
+
+export type CoachMessage = {
+  id: UUID;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: ISODateTime;
+};
 
 export type ApiSuccess<T> = {
   ok: true;

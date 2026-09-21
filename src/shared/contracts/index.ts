@@ -77,6 +77,7 @@ export type {
   ApiErrorCode,
   ApiErrorResponse,
   ApiSuccess,
+  CoachMessage,
   CoachRequestV1,
   CoachResponseV1,
   ExplainRecommendationRequestV1,
