@@ -155,6 +155,23 @@ describe("ActiveExerciseLoggingScreen", () => {
     expect(rendered.getByRole("button", { name: "Complete Set" })).toBeDisabled();
   });
 
+  it("offers an explicit active-workout Coach entry when configured", async () => {
+    const onAskCoach = jest.fn();
+    const rendered = await render(
+      <ActiveExerciseLoggingScreen
+        completeSet={completeSet}
+        loadExercise={async () => activeExercise}
+        onAskCoach={onAskCoach}
+        onOpenExercise={onOpenExercise}
+        onOverview={onOverview}
+      />,
+    );
+
+    expect(await rendered.findByText("Bench Press")).toBeOnTheScreen();
+    await fireEvent.press(rendered.getByRole("button", { name: "Ask Coach" }));
+    expect(onAskCoach).toHaveBeenCalledTimes(1);
+  });
+
   it("renders only real comparable working sets beside today's target", async () => {
     const rendered = await render(
       <ActiveExerciseLoggingScreen

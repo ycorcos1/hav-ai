@@ -149,4 +149,44 @@ describe("WorkoutSummaryScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Done" }));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
+
+  it("shows deterministic reasons immediately and optional richer AI context", async () => {
+    const loadAIExplanation = jest.fn().mockResolvedValue({
+      headline: "Keep building at this load",
+      summary: "The canonical target reflects improved total reps.",
+      evidence: ["You completed two more reps than the comparable session."],
+      meta: { promptVersion: "explanation-v1" },
+    });
+    const screen = await render(
+      <WorkoutSummaryScreen
+        loadAIExplanation={loadAIExplanation}
+        loadSummary={async () => result}
+        onDone={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("82.5 kg")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Why?" }));
+    expect(screen.getByText("Add reps at the same load")).toBeOnTheScreen();
+    expect(screen.getByText(/Your total completed reps improved across comparable sessions/)).toBeOnTheScreen();
+    expect(await screen.findByText("Keep building at this load")).toBeOnTheScreen();
+    expect(loadAIExplanation).toHaveBeenCalledWith(recommendation.id);
+  });
+
+  it("keeps the target and deterministic fallback visible when AI explanation fails", async () => {
+    const screen = await render(
+      <WorkoutSummaryScreen
+        loadAIExplanation={jest.fn().mockRejectedValue(new Error("provider detail"))}
+        loadSummary={async () => result}
+        onDone={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("82.5 kg")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Why?" }));
+    expect(await screen.findByText(/Couldn't generate the richer explanation/)).toBeOnTheScreen();
+    expect(screen.getByText("82.5 kg")).toBeOnTheScreen();
+    expect(screen.getByText("Add reps at the same load")).toBeOnTheScreen();
+    expect(screen.queryByText("provider detail")).toBeNull();
+  });
 });

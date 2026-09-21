@@ -26,6 +26,7 @@ export default function ActiveExerciseLoggingRoute() {
       deleteSet={deleteCurrentUserSet}
       editSet={editCurrentUserSet}
       loadExercise={loadExercise}
+      onAskCoach={() => router.push(`/workout/${id}/coach?workoutExerciseId=${workoutExerciseId}`)}
       onOpenExercise={(nextWorkoutExerciseId) => {
         router.replace(`/workout/${id}/exercise/${nextWorkoutExerciseId}`);
       }}

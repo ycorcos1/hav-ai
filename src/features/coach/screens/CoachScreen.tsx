@@ -9,7 +9,7 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
 import { TextInput } from "@/components/TextInput";
 import { coachApi, type CoachApi } from "@/features/ai/api";
-import type { CoachMessage } from "@/shared/contracts";
+import type { CoachMessage, CoachRequestV1 } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export const coachSuggestedPrompts = [
@@ -21,15 +21,21 @@ export const coachSuggestedPrompts = [
 const MAX_CONVERSATION_MESSAGES = 12;
 
 export type CoachScreenProps = {
+  activeContext?: CoachRequestV1["context"];
+  activeContextLabel?: string;
   api?: CoachApi;
   createId?: () => string;
   now?: () => string;
+  onClose?: () => void;
 };
 
 export function CoachScreen({
+  activeContext,
+  activeContextLabel,
   api = coachApi,
   createId = createMessageId,
   now = () => new Date().toISOString(),
+  onClose,
 }: CoachScreenProps) {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<CoachMessage[]>([]);
@@ -42,6 +48,7 @@ export function CoachScreen({
     try {
       const response = await api.ask({
         message: userMessage,
+        ...(activeContext ? { context: activeContext } : {}),
         ...(conversation.length > 0 ? {
           conversation: {
             messages: conversation.slice(-MAX_CONVERSATION_MESSAGES).map(({ role, content }) => ({
@@ -89,7 +96,9 @@ export function CoachScreen({
 
   return (
     <Screen contentContainerStyle={styles.container} scroll>
+      {onClose ? <SecondaryButton label="Back to Workout" onPress={onClose} /> : null}
       <AppText color="secondary" variant="metadata">HAVAI COACH</AppText>
+      {activeContextLabel ? <AppText color="secondary">{activeContextLabel}</AppText> : null}
       {messages.length === 0 ? (
         <>
           <View style={styles.header}>

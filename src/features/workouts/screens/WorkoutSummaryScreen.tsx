@@ -9,15 +9,24 @@ import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { RecommendationCard } from "@/features/recommendations/components/RecommendationCard";
 import type { CompletedWorkoutSummary } from "@/features/workouts/services/workoutApplication";
-import type { DetectedPersonalRecordType, ExerciseWorkoutSummary } from "@/shared/contracts";
+import type {
+  DetectedPersonalRecordType,
+  ExerciseWorkoutSummary,
+  RecommendationExplanationV1,
+} from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type WorkoutSummaryScreenProps = {
   loadSummary: () => Promise<CompletedWorkoutSummary | null>;
+  loadAIExplanation?: (recommendationId: string) => Promise<RecommendationExplanationV1>;
   onDone: () => void;
 };
 
-export function WorkoutSummaryScreen({ loadSummary, onDone }: WorkoutSummaryScreenProps) {
+export function WorkoutSummaryScreen({
+  loadAIExplanation,
+  loadSummary,
+  onDone,
+}: WorkoutSummaryScreenProps) {
   const [result, setResult] = useState<CompletedWorkoutSummary | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -109,6 +118,7 @@ export function WorkoutSummaryScreen({ loadSummary, onDone }: WorkoutSummaryScre
             <RecommendationCard
               exerciseName={exercise?.name ?? "Exercise unavailable"}
               key={summary.nextRecommendation.id}
+              loadAIExplanation={loadAIExplanation}
               recommendation={summary.nextRecommendation}
               weightUnit={result.weightUnit}
             />

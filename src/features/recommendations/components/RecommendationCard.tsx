@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
@@ -6,22 +6,60 @@ import { Card } from "@/components/Card";
 import { TextButton } from "@/components/TextButton";
 import { explainRecommendation } from "@/features/recommendations/explanations";
 import { formatDisplayWeight } from "@/features/workouts/services/weightConversion";
-import type { ProgressionRecommendation, WeightUnit } from "@/shared/contracts";
-import { spacing } from "@/theme";
+import type {
+  ProgressionRecommendation,
+  RecommendationExplanationV1,
+  WeightUnit,
+} from "@/shared/contracts";
+import { colors, spacing } from "@/theme";
 
 export type RecommendationCardProps = {
   exerciseName: string;
+  loadAIExplanation?: (recommendationId: string) => Promise<RecommendationExplanationV1>;
   recommendation: ProgressionRecommendation;
   weightUnit: WeightUnit;
 };
 
 export function RecommendationCard({
   exerciseName,
+  loadAIExplanation,
   recommendation,
   weightUnit,
 }: RecommendationCardProps) {
   const [showReasons, setShowReasons] = useState(false);
+  const [aiExplanation, setAIExplanation] = useState<RecommendationExplanationV1>();
+  const [aiFailed, setAIFailed] = useState(false);
+  const [aiLoading, setAILoading] = useState(false);
+  const mounted = useRef(true);
+  const requestPending = useRef(false);
   const explanation = explainRecommendation(recommendation);
+
+  useEffect(() => () => { mounted.current = false; }, []);
+
+  async function loadRicherExplanation(): Promise<void> {
+    if (!loadAIExplanation || requestPending.current) return;
+    requestPending.current = true;
+    setAILoading(true);
+    setAIFailed(false);
+    try {
+      const result = await loadAIExplanation(recommendation.id);
+      if (mounted.current) setAIExplanation(result);
+    } catch {
+      if (mounted.current) setAIFailed(true);
+    } finally {
+      requestPending.current = false;
+      if (mounted.current) setAILoading(false);
+    }
+  }
+
+  function toggleReasons(): void {
+    const nextVisible = !showReasons;
+    setShowReasons(nextVisible);
+    if (nextVisible && loadAIExplanation && !aiExplanation && !aiFailed) {
+      void loadRicherExplanation();
+    }
+  }
+
   return (
     <Card accessibilityLabel={`Next target for ${exerciseName}`} style={styles.card}>
       <AppText variant="exerciseName">{exerciseName}</AppText>
@@ -30,7 +68,7 @@ export function RecommendationCard({
       <AppText color="secondary">{repTargetLabel(recommendation)}</AppText>
       <TextButton
         label={showReasons ? "Hide Why" : "Why?"}
-        onPress={() => setShowReasons((visible) => !visible)}
+        onPress={toggleReasons}
       />
       {showReasons ? (
         <View accessibilityLabel="Recommendation reasons" style={styles.reasons}>
@@ -38,6 +76,32 @@ export function RecommendationCard({
           {explanation.reasons.map((reason) => (
             <AppText color="secondary" key={reason}>• {reason}</AppText>
           ))}
+          {aiLoading ? (
+            <AppText accessibilityLabel="AI explanation loading" color="muted">
+              Reviewing the recommendation context...
+            </AppText>
+          ) : null}
+          {aiExplanation ? (
+            <View accessibilityLabel="AI recommendation explanation" style={styles.aiExplanation}>
+              <AppText color="muted" variant="metadata">HAVAI COACH CONTEXT</AppText>
+              <AppText variant="exerciseName">{aiExplanation.headline}</AppText>
+              <AppText color="secondary">{aiExplanation.summary}</AppText>
+              {aiExplanation.evidence.map((evidence) => (
+                <AppText color="secondary" key={evidence}>• {evidence}</AppText>
+              ))}
+              {aiExplanation.caution ? (
+                <AppText color="muted">{aiExplanation.caution}</AppText>
+              ) : null}
+            </View>
+          ) : null}
+          {aiFailed ? (
+            <View accessibilityRole="alert" style={styles.aiFailure}>
+              <AppText style={styles.error}>
+                Couldn&apos;t generate the richer explanation right now. Your target is unchanged.
+              </AppText>
+              <TextButton label="Retry AI Explanation" onPress={() => { void loadRicherExplanation(); }} />
+            </View>
+          ) : null}
         </View>
       ) : null}
     </Card>
@@ -75,4 +139,7 @@ function repTargetLabel(recommendation: ProgressionRecommendation): string {
 const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   reasons: { gap: spacing.xs },
+  aiExplanation: { gap: spacing.xs, marginTop: spacing.sm },
+  aiFailure: { gap: spacing.xs, marginTop: spacing.sm },
+  error: { color: colors.semantic.error },
 });

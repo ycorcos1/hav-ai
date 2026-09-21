@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback } from "react";
 
+import { recommendationExplanationApi } from "@/features/ai/api";
 import { WorkoutSummaryScreen } from "@/features/workouts/screens/WorkoutSummaryScreen";
 import { loadCurrentUserCompletedWorkoutSummary } from "@/features/workouts/services/workoutApplication";
 
@@ -13,6 +14,9 @@ export default function WorkoutSummaryRoute() {
   );
   return (
     <WorkoutSummaryScreen
+      loadAIExplanation={(recommendationId) => recommendationExplanationApi.explain({
+        recommendationId,
+      })}
       loadSummary={loadSummary}
       onDone={() => router.replace("/home")}
     />

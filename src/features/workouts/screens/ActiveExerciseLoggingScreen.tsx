@@ -34,6 +34,7 @@ export type ActiveExerciseLoggingScreenProps = {
   editSet?: (input: EditSetInput) => Promise<WorkoutSet>;
   loadExercise: () => Promise<ActiveWorkoutExercise | null>;
   onOpenExercise: (workoutExerciseId: string) => void;
+  onAskCoach?: () => void;
   onOverview: () => void;
   undoSet?: (setId: string) => Promise<UndoSetCompletionResult>;
 };
@@ -54,6 +55,7 @@ export function ActiveExerciseLoggingScreen({
   deleteSet,
   editSet,
   loadExercise,
+  onAskCoach,
   onOpenExercise,
   onOverview,
   undoSet,
@@ -326,6 +328,7 @@ export function ActiveExerciseLoggingScreen({
     <Screen contentContainerStyle={styles.content} scroll>
       <WorkoutOfflineBanner />
       <SecondaryButton label="Workout Overview" onPress={onOverview} />
+      {onAskCoach ? <SecondaryButton label="Ask Coach" onPress={onAskCoach} /> : null}
       <AppText color="secondary" variant="metadata">{workout.name}</AppText>
       <AppText variant="screenTitle">{exercise?.name ?? "Exercise unavailable"}</AppText>
       {exercisePreference?.notes ? (
