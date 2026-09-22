@@ -161,6 +161,57 @@ describe("offline workout progression completion", () => {
       }),
     ]));
   });
+
+  it("produces the same deterministic recommendation when user-authored note text changes", async () => {
+    async function finishWithNotes(noteSuffix: string) {
+      const database = new NodeSQLiteConnection(new DatabaseSync(":memory:"));
+      await configureLocalDatabase(database);
+      const exercises = new SQLiteLocalExerciseRepository(database);
+      const profiles = new SQLiteLocalProfileCacheRepository(database);
+      const workouts = new SQLiteLocalWorkoutRepository(database);
+      await exercises.upsert(exercise());
+      await profiles.upsert(profile());
+      await workouts.create(activeWorkout({
+        workoutNotes: `Workout ${noteSuffix}`,
+        exerciseNotes: `Exercise ${noteSuffix}`,
+        setNotes: `Set ${noteSuffix}`,
+      }));
+
+      const result = await new FinishWorkoutService({
+        exerciseHistoryRepository: new SQLiteExerciseHistoryRepository(database),
+        exerciseRepository: exercises,
+        profileCacheRepository: profiles,
+        workoutRepository: workouts,
+      }).finish(userId, { workoutId: "workout-current", completedAt });
+      database.close();
+      return result.recommendations[0];
+    }
+
+    const first = await finishWithNotes("notes one");
+    const second = await finishWithNotes("completely different notes");
+
+    expect({
+      recommendationType: second.recommendationType,
+      recommendedWeightKg: second.recommendedWeightKg,
+      targetSets: second.targetSets,
+      targetMinReps: second.targetMinReps,
+      targetMaxReps: second.targetMaxReps,
+      targetSetReps: second.targetSetReps,
+      confidence: second.confidence,
+      reasonCodes: second.reasonCodes,
+      engineVersion: second.engineVersion,
+    }).toEqual({
+      recommendationType: first.recommendationType,
+      recommendedWeightKg: first.recommendedWeightKg,
+      targetSets: first.targetSets,
+      targetMinReps: first.targetMinReps,
+      targetMaxReps: first.targetMaxReps,
+      targetSetReps: first.targetSetReps,
+      confidence: first.confidence,
+      reasonCodes: first.reasonCodes,
+      engineVersion: first.engineVersion,
+    });
+  });
 });
 
 function exercise(): Exercise {
@@ -193,13 +244,18 @@ function profile(): UserProfile {
   };
 }
 
-function activeWorkout(): Workout {
+function activeWorkout(notes?: {
+  workoutNotes: string;
+  exerciseNotes: string;
+  setNotes: string;
+}): Workout {
   return {
     id: "workout-current",
     userId,
     name: "Push",
     status: "active",
     startedAt,
+    ...(notes ? { notes: notes.workoutNotes } : {}),
     exercises: [{
       id: "workout-exercise-current",
       userId,
@@ -210,7 +266,8 @@ function activeWorkout(): Workout {
       targetMinReps: 6,
       targetMaxReps: 10,
       targetWeightKg: 80,
-      sets: [set("set-1", 9, 0), set("set-2", 8, 1)],
+      ...(notes ? { notes: notes.exerciseNotes } : {}),
+      sets: [set("set-1", 9, 0, notes?.setNotes), set("set-2", 8, 1, notes?.setNotes)],
       createdAt: startedAt,
       updatedAt: startedAt,
     }],
@@ -219,7 +276,7 @@ function activeWorkout(): Workout {
   };
 }
 
-function set(id: string, reps: number, position: number): WorkoutSet {
+function set(id: string, reps: number, position: number, notes?: string): WorkoutSet {
   return {
     id,
     userId,
@@ -230,6 +287,7 @@ function set(id: string, reps: number, position: number): WorkoutSet {
     setType: "working",
     weightKg: 80,
     reps,
+    ...(notes ? { notes } : {}),
     completedAt,
     createdAt: completedAt,
     updatedAt: completedAt,

@@ -70,6 +70,10 @@ describe("ExerciseProgressScreen", () => {
       .toBeOnTheScreen();
     expect(screen.getByLabelText("105.0 kg estimated 1RM on 2026-09-03T10:00:00.000Z"))
       .toBeOnTheScreen();
+    expect(screen.getAllByLabelText(/kg estimated 1RM on/)).toHaveLength(2);
+
+    await user.press(screen.getByRole("button", { name: "Hide Graph" }));
+    expect(screen.queryByText("Estimated 1RM Over Time")).not.toBeOnTheScreen();
   });
 
   it("handles insufficient history without fake graph or percentages", async () => {

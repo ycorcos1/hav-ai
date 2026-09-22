@@ -45,6 +45,10 @@ describe('OnboardingScreen', () => {
     expect(screen.getByLabelText('Both')).toHaveProp('accessibilityState',
       expect.objectContaining({ selected: false }),
     );
+    expect(screen.queryByText('RPE preference')).toBeNull();
+    expect(screen.queryByText('Progression style')).toBeNull();
+    expect(screen.queryByText('Default rest duration')).toBeNull();
+    expect(screen.queryByRole('button', { name: /skip/i })).toBeNull();
     expect(profileRepository.updateOwnProfile).not.toHaveBeenCalled();
   });
 

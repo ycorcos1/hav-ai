@@ -45,6 +45,19 @@ describe("local user exercise preferences", () => {
       expect((await repository.listFavorites("user-b"))[0].notes).toBe("User B");
       await repository.setNotes("user-a", "preference-a", "Updated note", later);
       expect(await repository.get("user-a", "exercise-1")).toMatchObject({ isFavorite: true, notes: "Updated note", restDurationSeconds: 120 });
+      expect(await new SQLiteLocalExerciseRepository(database).getById("user-a", "exercise-1"))
+        .toEqual({
+          id: "exercise-1",
+          name: "Bench Press",
+          primaryMuscleGroup: "chest",
+          secondaryMuscleGroups: [],
+          equipmentType: "barbell",
+          measurementType: "weight_reps",
+          isSystem: true,
+          isArchived: false,
+          createdAt: time,
+          updatedAt: time,
+        });
       await repository.setFavorite("user-a", "preference-a", false, later);
       expect(await repository.get("user-a", "exercise-1")).toMatchObject({ isFavorite: false, notes: "Updated note", restDurationSeconds: 120 });
       await repository.setRestDuration("user-a", "preference-a", undefined, later);

@@ -69,7 +69,11 @@ import { recoverLocalStartup, requireCurrentLocalOwner } from "@/features/routin
 import {
   completeCurrentUserSet,
   editCurrentUserSet,
+  finishCurrentUserWorkout,
+  loadCurrentUserCompletedWorkoutSummary,
   loadCurrentUserWorkoutHome,
+  loadCurrentUserWorkoutHistory,
+  loadCurrentUserWorkoutHistoryDetail,
   loadCurrentUserWorkoutOverview,
   requestCurrentUserWorkoutStart,
   updateCurrentUserActiveWorkoutNote,
@@ -112,15 +116,19 @@ type QueueRow = {
 };
 
 function repositories(database: NodeSQLiteConnection) {
+  const exerciseHistoryRepository = new SQLiteExerciseHistoryRepository(database);
+  const workoutRepository = new SQLiteLocalWorkoutRepository(database);
   return {
-    exerciseHistoryRepository: new SQLiteExerciseHistoryRepository(database),
+    exerciseHistoryRepository,
     exerciseRepository: new SQLiteLocalExerciseRepository(database),
     preferenceRepository: new SQLiteLocalUserExercisePreferenceRepository(database),
     profileCacheRepository: new SQLiteLocalProfileCacheRepository(database),
+    progressHistoryRepository: exerciseHistoryRepository,
     recommendationRepository: new SQLiteLocalRecommendationRepository(database),
     setPersistence: new SQLiteSetPersistence(database),
     templateRepository: new SQLiteLocalTemplateRepository(database),
-    workoutRepository: new SQLiteLocalWorkoutRepository(database),
+    workoutHistoryRepository: workoutRepository,
+    workoutRepository,
   };
 }
 
@@ -139,7 +147,7 @@ function connectApplication(database: NodeSQLiteConnection): ReturnType<typeof r
 }
 
 describe("full local workout flow", () => {
-  it("survives an offline process boundary through the truthful finish placeholder", async () => {
+  it("survives an offline process boundary through finish, summary, and history", async () => {
     const directory = mkdtempSync(join(tmpdir(), "havai-full-local-flow-"));
     const filename = join(directory, "havai.db");
     let database = new NodeSQLiteConnection(new DatabaseSync(filename));
@@ -334,6 +342,45 @@ describe("full local workout flow", () => {
       expect(remoteProfile.updateOwnProfile).not.toHaveBeenCalled();
       expect(mockPopulateExerciseFixture).toHaveBeenCalled();
       expect(await local.workoutRepository.getActiveForUser("another-user")).toBeNull();
+
+      const finishedAt = new Date(new Date(workout.startedAt).getTime() + 60 * 60 * 1_000)
+        .toISOString();
+      const finished = await finishCurrentUserWorkout({
+        workoutId: workout.id,
+        completedAt: finishedAt,
+      });
+      expect(finished.workout).toMatchObject({
+        id: workout.id,
+        status: "completed",
+        completedAt: finishedAt,
+      });
+      expect(finished.summary).toMatchObject({
+        workoutId: workout.id,
+        workingSetCount: 3,
+        exerciseSummaries: [{ exerciseId: exercise.id, totalReps: 23 }],
+      });
+      expect(finished.recommendations).toHaveLength(1);
+
+      const summary = await loadCurrentUserCompletedWorkoutSummary(workout.id);
+      expect(summary).toMatchObject({
+        workout: { id: workout.id, status: "completed" },
+        summary: {
+          workoutId: workout.id,
+          exerciseSummaries: [{
+            exerciseId: exercise.id,
+            nextRecommendation: { sourceWorkoutId: workout.id },
+          }],
+        },
+      });
+      const history = await loadCurrentUserWorkoutHistory();
+      expect(history.items).toEqual([
+        expect.objectContaining({ id: workout.id, status: "completed" }),
+      ]);
+      await expect(loadCurrentUserWorkoutHistoryDetail(workout.id)).resolves.toMatchObject({
+        workout: { id: workout.id, status: "completed" },
+        exercises: [{ exercise: { id: exercise.id } }],
+      });
+      await expect(local.workoutRepository.getActiveForUser(userId)).resolves.toBeNull();
     } finally {
       database.close();
       rmSync(directory, { recursive: true, force: true });

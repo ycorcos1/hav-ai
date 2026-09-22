@@ -1,6 +1,7 @@
 import { fireEvent, render } from "@testing-library/react-native";
 
 import { ExercisePicker } from "@/features/exercises/components/ExercisePicker";
+import { discoverExercises } from "@/features/exercises/services/discoverExercises";
 import type { Exercise } from "@/shared/contracts";
 
 const base: Exercise = {
@@ -51,5 +52,64 @@ describe("ExercisePicker", () => {
     await fireEvent.press(rendered.getByRole("button", { name: "All" }));
     await fireEvent.changeText(rendered.getByLabelText("Search"), "bench");
     expect(rendered.getByText("Bench Press")).toBeTruthy();
+  });
+
+  it("uses deterministic source order for the curated Popular section", () => {
+    const popularExercises = Array.from({ length: 7 }, (_, index) => ({
+      ...base,
+      id: `system-${index + 1}`,
+      name: `System Exercise ${index + 1}`,
+    }));
+
+    expect(
+      discoverExercises(popularExercises, new Set(), "popular", "", "all").map(
+        (exercise) => exercise.id,
+      ),
+    ).toEqual(popularExercises.slice(0, 6).map((exercise) => exercise.id));
+  });
+
+  it("isolates Favorites to the supplied user's local favorite IDs", () => {
+    expect(
+      discoverExercises(
+        [base, custom, backExercise],
+        new Set([custom.id]),
+        "favorites",
+        "",
+        "all",
+      ).map((exercise) => exercise.id),
+    ).toEqual([custom.id]);
+
+    expect(
+      discoverExercises(
+        [base, custom, backExercise],
+        new Set([backExercise.id]),
+        "favorites",
+        "",
+        "all",
+      ).map((exercise) => exercise.id),
+    ).toEqual([backExercise.id]);
+  });
+
+  it("exposes the canonical muscle taxonomy without Swap or Skip actions", async () => {
+    const rendered = await render(
+      <ExercisePicker exercises={[base, custom, backExercise]} onSelect={jest.fn()} />,
+    );
+
+    for (const label of [
+      "Chest",
+      "Back",
+      "Shoulders",
+      "Biceps",
+      "Triceps",
+      "Quads",
+      "Hamstrings",
+      "Glutes",
+      "Calves",
+      "Core",
+    ]) {
+      expect(rendered.getByRole("button", { name: label })).toBeTruthy();
+    }
+    expect(rendered.queryByRole("button", { name: /swap/i })).toBeNull();
+    expect(rendered.queryByRole("button", { name: /skip/i })).toBeNull();
   });
 });
