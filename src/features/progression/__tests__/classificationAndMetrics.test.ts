@@ -11,8 +11,12 @@ describe("progression session classification", () => {
 
   it.each([
     [[8, 8, 8], "perfect"],
+    [[9, 9, 8], "perfect"],
+    [[8, 8, 7], "successful"],
     [[8, 7, 6], "successful"],
+    [[6, 6, 6], "successful"],
     [[6, 6, 5], "partial_underperformance"],
+    [[6, 5, 5], "partial_underperformance"],
     [[4, 4, 4], "severe_underperformance"],
   ] as const)("classifies %j as %s", (reps, expected) => {
     expect(classifySession({ ...target, sets: reps.map((value) => ({ reps: value })) })).toBe(

@@ -81,6 +81,77 @@ describe("calculateProgression", () => {
     });
   });
 
+  it("progresses reps-only exercises without inventing a load", () => {
+    const result = calculateProgression(
+      input({
+        exercise: {
+          exerciseId: "plank-reach",
+          measurementType: "reps_only",
+          equipmentType: "bodyweight",
+        },
+        currentTarget: { targetSets: 3, minReps: 8, maxReps: 12 },
+        currentSession: {
+          ...performance(3, [10, 9, 8]),
+          sets: [{ reps: 10 }, { reps: 9 }, { reps: 8 }],
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({
+      recommendationType: "increase_reps",
+      targetSetReps: [10, 9, 9],
+    });
+    expect(result.recommendedWeightKg).toBeUndefined();
+  });
+
+  it("keeps partial RPE evidence optional and reports meaningful RPE change", () => {
+    const partialRpe = calculateProgression(
+      input({
+        currentSession: {
+          ...performance(4, [8, 7, 6]),
+          sets: [
+            { reps: 8, weightKg: 80, rpe: 8 },
+            { reps: 7, weightKg: 80 },
+            { reps: 6, weightKg: 80, rpe: 9 },
+          ],
+        },
+      }),
+    );
+    expect(partialRpe.reasonCodes).toContain("RPE_ACCEPTABLE");
+    expect(partialRpe.recommendationType).not.toBe("insufficient_data");
+
+    const improved = calculateProgression(
+      input({
+        currentSession: performance(4, [8, 8, 8], 80, 8),
+        recentSessions: [
+          performance(2, [8, 8, 8], 80, 9.5),
+          performance(3, [8, 8, 8], 80, 9.5),
+        ],
+      }),
+    );
+    expect(improved.reasonCodes).toContain("RPE_IMPROVED");
+
+    const worsened = calculateProgression(
+      input({
+        currentSession: performance(4, [8, 8, 8], 80, 9.5),
+        recentSessions: [performance(2, [8, 8, 8], 80, 8), performance(3, [8, 8, 8], 80, 8)],
+      }),
+    );
+    expect(worsened.reasonCodes).toContain("RPE_WORSENED");
+  });
+
+  it("distinguishes a first-session baseline from a second-session recommendation", () => {
+    const first = calculateProgression(input());
+    expect(first.confidence).toBe("low");
+    expect(first.reasonCodes).toContain("INITIAL_BASELINE_ESTABLISHED");
+
+    const second = calculateProgression(
+      input({ recentSessions: [performance(2, [7, 7, 6])] }),
+    );
+    expect(second.confidence).toBe("medium");
+    expect(second.reasonCodes).not.toContain("INITIAL_BASELINE_ESTABLISHED");
+  });
+
   it("tolerates one poor session and decreases only after repeated underperformance", () => {
     expect(calculateProgression(input({ currentSession: performance(3, [5, 5, 4], 85) }))).toMatchObject({
       recommendationType: "repeat_target",
@@ -141,13 +212,45 @@ describe("calculateProgression", () => {
   });
 
   it("fails safely for malformed or unusable input", () => {
-    expect(
-      calculateProgression(input({ currentTarget: { targetSets: 0, minReps: 8, maxReps: 6 } })),
-    ).toEqual({
+    const insufficient = {
       recommendationType: "insufficient_data",
       confidence: "low",
       reasonCodes: ["INSUFFICIENT_HISTORY"],
       engineVersion: progressionEngineVersion,
-    });
+    } as const;
+
+    expect(
+      calculateProgression(input({ currentTarget: { targetSets: 0, minReps: 8, maxReps: 6 } })),
+    ).toEqual(insufficient);
+    expect(
+      calculateProgression(
+        input({
+          currentSession: {
+            ...performance(3, [8, 7, 6]),
+            sets: [{ reps: 8, weightKg: 80, rpe: 10.5 as 10 }],
+          },
+        }),
+      ),
+    ).toEqual(insufficient);
+    expect(
+      calculateProgression(
+        input({
+          currentSession: {
+            ...performance(3, [8, 7, 6]),
+            sets: [{ reps: 8, weightKg: 80, rpe: 5.5 as 6 }],
+          },
+        }),
+      ),
+    ).toEqual(insufficient);
+    expect(
+      calculateProgression(
+        input({
+          recentSessions: [{
+            ...performance(2, [8, 7, 6]),
+            sets: [{ reps: 8, weightKg: 80, rpe: 8.25 as 8 }],
+          }],
+        }),
+      ),
+    ).toEqual(insufficient);
   });
 });

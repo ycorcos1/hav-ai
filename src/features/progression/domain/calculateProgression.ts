@@ -18,8 +18,11 @@ import { hasRepeatedUnderperformance } from "./underperformance";
 
 export const progressionEngineVersion = "progression-v1";
 
+const validRpeValues = new Set([6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]);
+
 function invalidInput(input: ProgressionInput): boolean {
   const target = input.currentTarget;
+  const sessions = [input.currentSession, ...input.recentSessions];
   return (
     !Number.isInteger(target.targetSets) ||
     target.targetSets <= 0 ||
@@ -29,8 +32,14 @@ function invalidInput(input: ProgressionInput): boolean {
     target.maxReps < target.minReps ||
     (target.targetWeightKg !== undefined && target.targetWeightKg <= 0) ||
     (input.availableWeightIncrementKg !== undefined && input.availableWeightIncrementKg <= 0) ||
-    input.currentSession.sets.some(
-      (set) => !Number.isInteger(set.reps) || set.reps < 0 || (set.weightKg !== undefined && set.weightKg <= 0),
+    sessions.some((session) =>
+      session.sets.some(
+        (set) =>
+          !Number.isInteger(set.reps) ||
+          set.reps < 0 ||
+          (set.weightKg !== undefined && set.weightKg <= 0) ||
+          (set.rpe !== undefined && !validRpeValues.has(set.rpe)),
+      ),
     ) ||
     (target.targetSetReps !== undefined &&
       (target.targetSetReps.length !== target.targetSets ||
