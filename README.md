@@ -1,145 +1,85 @@
 # havAI
 
-havAI is a local-first mobile workout progression tracker for iOS and Android. It combines fast workout logging, deterministic progression logic, offline-first reliability, progress tracking, and optional AI coaching.
-
-## Project Status
-
-The Expo application foundation is scaffolded. Product functionality has not been implemented yet.
-
-## Documentation Location
-
-All approved specifications live in `/docs`:
-
-```text
-docs/
-├── adr/
-├── PRD.md
-├── USER_FLOWS.md
-├── DESIGN_SPEC.md
-├── ARCHITECTURE.md
-├── DATABASE.md
-├── PROGRESSION_ENGINE.md
-├── AI_SYSTEM.md
-├── OFFLINE_SYNC.md
-├── API_CONTRACTS.md
-├── TESTING.md
-├── DEPLOYMENT.md
-├── CURSOR_RULES.md
-└── MASTER_TASK_LIST.md
-```
-
-Implementation tasks are defined in `docs/MASTER_TASK_LIST.md`. Cursor behavior rules are in `docs/CURSOR_RULES.md`.
+havAI is a local-first workout progression app built with Expo, React Native, TypeScript, SQLite, Supabase, and optional AI coaching. Native SQLite is the canonical local store; cloud synchronization is additive and workout logging remains available offline.
 
 ## Prerequisites
 
+- Node.js 22 LTS and npm
 - Git
-- A React Native-supported Node.js release (Node.js 22 LTS recommended) and npm
-- Expo Go or a supported simulator for device testing
+- Docker for the local Supabase stack
+- A supported Expo development build or simulator for native testing
 
-Install dependencies and start the Expo development server:
+## Install and configure
 
 ```sh
-npm install
-cp .env.example .env.local
+npm ci
+cp .env.example .env
+```
+
+Set only the public development values in `.env`:
+
+```text
+EXPO_PUBLIC_APP_ENV=development
+EXPO_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+```
+
+Every `EXPO_PUBLIC_*` value is bundled into the client. Never place an OpenAI key, Supabase service-role key, database password, or other privileged secret in the mobile environment.
+
+## Run Expo
+
+```sh
 npm run dev
 ```
 
-Replace the values in `.env.local` with the public configuration for your development Supabase project. Expo exposes every `EXPO_PUBLIC_` value to the client, so never place private keys or server secrets there.
+Platform-specific commands are `npm run ios`, `npm run android`, and `npm run web`. Native SQLite is the production persistence path. The browser uses an isolated development-preview adapter for UI and flow testing; browser storage does not validate SQLite behavior.
 
-Use `npm run ios`, `npm run android`, or `npm run web` for a specific platform. See `docs/DEPLOYMENT.md` for the complete environment specification.
-
-## Supabase Development Workflow
-
-The Supabase CLI is installed as a project development dependency. Run it through `npx` so the
-version recorded in `package-lock.json` is used consistently.
-
-havAI initially links to one development Supabase project. On a new development machine:
+## Quality checks
 
 ```sh
-npx supabase login
-npx supabase link --project-ref <development-project-ref>
+npm run typecheck
+npm run lint
+npm test
+npm run security:secrets
+npx expo install --check
 ```
 
-Find the non-secret project reference in the development project’s dashboard URL. Enter access
-tokens and database passwords only in the local CLI prompt; never add them to this repository or
-paste them into application environment files. Supabase stores link and authentication state
-locally, and `supabase/.gitignore` excludes that machine-specific state.
-
-Cloud schema changes must be represented by timestamped migration files:
+Jest covers unit, component, repository, offline durability, sync, progression, and AI contract behavior. PostgreSQL/RLS tests run through the local Supabase stack:
 
 ```sh
-npx supabase migration new <descriptive_name>
-# Edit and review supabase/migrations/<timestamp>_<descriptive_name>.sql
-npx supabase db push --dry-run
-npx supabase db push
+npx supabase test db
+npx supabase db lint --local --schema public
 ```
 
-When a local container runtime is available, validate migrations from a clean database with
-`npx supabase start` and `npx supabase db reset` before applying them to the linked development
-project. Dashboard-only schema changes are not an approved workflow: committed files under
-`supabase/migrations/` are the source of truth. Production and preview Supabase projects are not
-part of the current development stage.
+See [docs/TESTING.md](docs/TESTING.md) for the complete verification policy.
 
-After applying a cloud migration, regenerate the linked development project's public-schema types:
+## Supabase development
+
+Start and rebuild the local stack from source-controlled migrations and seed data:
 
 ```sh
-npm run supabase:types
+npx supabase start
+npx supabase db reset --local
 ```
 
-This replaces `src/lib/supabase/database.types.ts` with official Supabase CLI output. Treat that
-file as generated code and never edit it manually.
+The detailed workflow for linking the development project, reviewing and applying migrations, seeding, generating types, and deploying functions is in [docs/DEVELOPMENT_SUPABASE.md](docs/DEVELOPMENT_SUPABASE.md).
 
-## Current Development Stage
+Edge Functions:
 
-```text
-Phase 0: Repository preparation — complete
-Task 1.1: Expo application scaffold — complete
-Task 1.2: Minimal havAI shell — complete
-Task 1.3: Strict TypeScript and source alias — complete
-Task 1.4: Expo-compatible linting — complete
-Task 1.5: Jest test infrastructure — complete
-Task 1.6: Core project scripts — complete
-Task 1.7: Environment handling — complete
-Task 2.1: Root routing strategy — complete
-Task 2.2: Main tab navigation — complete
-Task 2.3: Feature-level placeholder screens — complete
-Task 2.4: Route guard skeleton — complete
-Task 3.1: Theme tokens — complete
-Task 3.2: Typography system — complete
-Task 3.3: Button components — complete
-Task 3.4: Form/UI primitives — complete
-Task 3.5: Status components — complete
-Task 3.6: Bottom sheet foundation — complete; physical-device verification deferred
-Task 4.1: Common contracts — complete
-Task 4.2: Profile contracts — complete
-Task 4.3: Exercise contracts — complete
-Task 4.4: Workout contracts — complete
-Task 4.5: Progression contracts — complete
-Task 4.6: Personal record contracts — complete
-Task 4.7: Sync contracts — complete
-Task 4.8: AI contracts — complete
-Task 4.9: Runtime validation — complete
-Task 5.1: Expo SQLite connection and bootstrap — complete
-Task 5.2: Local migration runner — complete
-Task 5.3: Local workout tables — complete
-Task 5.4: Authoritative local template tables — complete
-Task 5.5: Local progression recommendation table — complete
-Task 5.6: Sync queue table — complete
-Task 5.7: Local exercise storage and recent-history cache — complete
-Task 5.8: Local database mappers — complete
-Task 5.9: Local repository interfaces and implementations — complete
-Task 5.10: Local exercise preferences and note persistence — complete
-Task 6.1: Supabase CLI and project structure — complete
-Task 6.2: Mobile Supabase client — complete
-Task 6.3: Profiles migration and row-level security — complete
-Task 6.4: Generated Supabase database types — complete
-Task 6.5: Profile repository and cloud mapping boundary — complete
-Task 6.6: Authentication service and provider mapping boundary — complete
-Task 6.7: Authentication route structure — complete
-Task 6.8: Welcome screen and authentication entry navigation — complete
-Task 6.11: Ensure Profile use case — complete
-Task 6.12: Real authentication/profile root routing — complete
-Next: Task 6.9 — Implement Signup Screen (approved dependency order)
-```
+- `ai-diagnostics`
+- `coach`
+- `explain-recommendation`
+- `parse-workout`
 
-Execute one task at a time from `docs/MASTER_TASK_LIST.md`. Do not skip ahead.
+Privileged OpenAI and Supabase credentials belong only in server-side secret storage.
+
+## Architecture and specifications
+
+- Product behavior: [docs/PRD.md](docs/PRD.md) and [docs/USER_FLOWS.md](docs/USER_FLOWS.md)
+- Architecture and persistence: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATABASE.md](docs/DATABASE.md), and [docs/OFFLINE_SYNC.md](docs/OFFLINE_SYNC.md)
+- Development and deployment: [docs/TESTING.md](docs/TESTING.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- Canonical implementation sequence: [docs/MASTER_TASK_LIST.md](docs/MASTER_TASK_LIST.md)
+
+The implementation is complete through Phase 25. Deployment preparation and final V1 validation remain intentionally staged; production infrastructure is not created until external or beta use requires it.
+
+Do not use broad dependency repair commands such as `npm audit fix --force`. Dependency changes must remain explicit and Expo-compatible.

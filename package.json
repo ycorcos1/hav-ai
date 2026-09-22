@@ -43,6 +43,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
+    "security:secrets": "node scripts/check-secret-boundaries.mjs",
     "supabase:types": "supabase gen types --linked --schema public > src/lib/supabase/database.types.ts",
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll --runInBand --watchman"
