@@ -8,6 +8,20 @@ export type CoachMessage = {
   createdAt: ISODateTime;
 };
 
+export type AIDiagnosticsV1 = {
+  provider: "mock" | "openai";
+  models: {
+    coach: string;
+    explanation: string;
+    parser: string;
+  };
+  promptVersions: {
+    coach: string;
+    explanation: string;
+    parser: string;
+  };
+};
+
 export type ApiSuccess<T> = {
   ok: true;
   data: T;

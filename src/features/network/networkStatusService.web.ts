@@ -1,3 +1,4 @@
+import { createDevelopmentNetworkStatusService } from "./developmentNetworkStatus";
 import { createNetworkStatusService, type PlatformNetworkState } from "./networkStatus";
 
 function currentBrowserState(): PlatformNetworkState {
@@ -5,7 +6,7 @@ function currentBrowserState(): PlatformNetworkState {
   return { isConnected: navigator.onLine, isInternetReachable: navigator.onLine };
 }
 
-export const networkStatusService = createNetworkStatusService({
+const platformNetworkStatusService = createNetworkStatusService({
   getCurrentState: async () => currentBrowserState(),
   subscribe: (listener) => {
     if (typeof window === "undefined") return () => {};
@@ -18,3 +19,8 @@ export const networkStatusService = createNetworkStatusService({
     };
   },
 });
+
+export const networkStatusService = createDevelopmentNetworkStatusService(
+  platformNetworkStatusService,
+  process.env.EXPO_PUBLIC_APP_ENV === "development",
+);

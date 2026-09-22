@@ -13,6 +13,7 @@ export {
   weightUnitSchema,
 } from "./profile.ts";
 export {
+  aiDiagnosticsV1Schema,
   apiErrorResponseSchema,
   apiSuccessSchema,
   coachRequestV1Schema,

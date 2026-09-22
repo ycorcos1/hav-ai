@@ -14,6 +14,7 @@ import { SyncTriggerBridge } from "./SyncTriggerBridge";
 
 type SyncStatusContextValue = {
   failed: boolean;
+  lastSuccessfulSyncAt?: string;
   retry: () => Promise<void>;
   retrying: boolean;
 };
@@ -27,6 +28,7 @@ const SyncStatusContext = createContext<SyncStatusContextValue>({
 export type SyncStatusProviderProps = PropsWithChildren<{
   appStateSource?: AppStateSource;
   networkService?: NetworkStatusService;
+  now?: () => string;
   processor: SyncProcessor;
 }>;
 
@@ -34,9 +36,11 @@ export function SyncStatusProvider({
   appStateSource,
   children,
   networkService,
+  now = () => new Date().toISOString(),
   processor,
 }: SyncStatusProviderProps) {
   const [failed, setFailed] = useState(false);
+  const [lastSuccessfulSyncAt, setLastSuccessfulSyncAt] = useState<string>();
   const [retrying, setRetrying] = useState(false);
 
   const synchronize = useCallback(async (): ReturnType<SyncProcessor["synchronize"]> => {
@@ -44,6 +48,7 @@ export function SyncStatusProvider({
     try {
       const result = await processor.synchronize();
       setFailed(!result.success && result.remainingQueueSize > 0);
+      if (result.success) setLastSuccessfulSyncAt(now());
       return result;
     } catch (error) {
       // Preconditions can disappear during auth or network transitions. Existing
@@ -52,10 +57,15 @@ export function SyncStatusProvider({
     } finally {
       setRetrying(false);
     }
-  }, [processor]);
+  }, [now, processor]);
 
   const observedProcessor = useMemo<SyncProcessor>(() => ({ synchronize }), [synchronize]);
-  const value = useMemo(() => ({ failed, retry: async () => { await synchronize().catch(() => {}); }, retrying }), [failed, retrying, synchronize]);
+  const value = useMemo(() => ({
+    failed,
+    lastSuccessfulSyncAt,
+    retry: async () => { await synchronize().catch(() => {}); },
+    retrying,
+  }), [failed, lastSuccessfulSyncAt, retrying, synchronize]);
 
   return (
     <SyncStatusContext.Provider value={value}>

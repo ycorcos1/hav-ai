@@ -1,4 +1,9 @@
 export {
+  aiDiagnosticsApi,
+  createAIDiagnosticsApi,
+  type AIDiagnosticsApi,
+} from "./aiDiagnosticsApi";
+export {
   AIServiceError,
   invokeAIFunction,
   type AIFunctionInvoker,

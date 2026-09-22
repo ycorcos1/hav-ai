@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type {
+  AIDiagnosticsV1,
   ApiErrorResponse,
   CoachRequestV1,
   CoachResponseV1,
@@ -15,6 +16,22 @@ import { weightUnitSchema } from "./profile.ts";
 
 const nonNegativeIntegerSchema = z.number().int().nonnegative();
 const positiveIntegerSchema = z.number().int().positive();
+
+export const aiDiagnosticsV1Schema = z
+  .object({
+    provider: z.enum(["mock", "openai"]),
+    models: z.object({
+      coach: z.string(),
+      explanation: z.string(),
+      parser: z.string(),
+    }).strict(),
+    promptVersions: z.object({
+      coach: z.string(),
+      explanation: z.string(),
+      parser: z.string(),
+    }).strict(),
+  })
+  .strict() satisfies z.ZodType<AIDiagnosticsV1>;
 
 const currentTargetSchema = z
   .object({

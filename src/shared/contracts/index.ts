@@ -74,6 +74,7 @@ export type {
   UserFacingSyncStatus,
 } from "./sync.ts";
 export type {
+  AIDiagnosticsV1,
   ApiErrorCode,
   ApiErrorResponse,
   ApiSuccess,

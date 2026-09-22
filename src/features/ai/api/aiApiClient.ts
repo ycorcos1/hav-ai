@@ -3,7 +3,11 @@ import type { ApiErrorCode } from "@/shared/contracts";
 import { apiErrorResponseSchema } from "@/shared/schemas";
 import type { z } from "zod";
 
-export type AIFunctionName = "coach" | "explain-recommendation" | "parse-workout";
+export type AIFunctionName =
+  | "ai-diagnostics"
+  | "coach"
+  | "explain-recommendation"
+  | "parse-workout";
 
 export type AIFunctionInvoker = {
   invoke(name: AIFunctionName, options: { body: unknown }): Promise<{
