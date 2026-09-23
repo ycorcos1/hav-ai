@@ -18,6 +18,7 @@ export type WorkoutHistoryDetailScreenProps = {
   deleteWorkout?: () => Promise<void>;
   editSet?: (input: SetInputValues & { setId: string }) => Promise<HistoricalSetEditResult>;
   loadWorkout: () => Promise<WorkoutHistoryDetail | null>;
+  onBack?: () => void;
   onDeleted?: () => void;
 };
 
@@ -25,6 +26,7 @@ export function WorkoutHistoryDetailScreen({
   deleteWorkout,
   editSet,
   loadWorkout,
+  onBack,
   onDeleted,
 }: WorkoutHistoryDetailScreenProps) {
   const [detail, setDetail] = useState<WorkoutHistoryDetail | null>();
@@ -86,7 +88,7 @@ export function WorkoutHistoryDetailScreen({
 
   if (failed || detail === null) {
     return (
-      <Screen contentContainerStyle={styles.centered}>
+      <Screen contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}>
         <ErrorState
           message={failed ? "Your locally saved workout could not be loaded." : "This completed workout is not available."}
           title="Unable to load workout"
@@ -96,14 +98,14 @@ export function WorkoutHistoryDetailScreen({
   }
   if (!detail) {
     return (
-      <Screen accessibilityLabel="Loading workout detail" contentContainerStyle={styles.centered}>
+      <Screen accessibilityLabel="Loading workout detail" contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}>
         <ActivityIndicator color={colors.accent.primary} />
       </Screen>
     );
   }
 
   return (
-    <Screen contentContainerStyle={styles.container} scroll>
+    <Screen contentContainerStyle={styles.container} navigationAction={onBack ? { onBack } : undefined} scroll>
       <View style={styles.header}>
         <AppText variant="screenTitle">{detail.workout.name}</AppText>
         <AppText color="secondary" variant="metadata">

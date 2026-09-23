@@ -8,6 +8,7 @@ import { Screen } from '@/components/Screen';
 import { TextButton } from '@/components/TextButton';
 import { TextInput } from '@/components/TextInput';
 import { authErrorMessage } from '@/features/auth/authMessages';
+import { useSafeBack } from '@/features/routing/hooks/useSafeBack';
 import {
   validateSignupFields,
   type SignupFieldErrors,
@@ -17,6 +18,7 @@ import { spacing } from '@/theme';
 
 export function SignupScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(auth)/welcome');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -59,6 +61,7 @@ export function SignupScreen() {
       <Screen
         accessibilityLabel="Confirm your email"
         contentContainerStyle={styles.confirmation}
+        navigationAction={{ onBack: goBack }}
       >
         <View style={styles.header}>
           <AppText variant="screenTitle">Check your email</AppText>
@@ -75,6 +78,7 @@ export function SignupScreen() {
     <Screen
       accessibilityLabel="Create your havAI account"
       contentContainerStyle={styles.content}
+      navigationAction={{ onBack: goBack }}
       scroll
     >
       <View style={styles.header}>

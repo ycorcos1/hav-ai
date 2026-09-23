@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { ErrorState } from '@/components/ErrorState';
@@ -23,12 +23,13 @@ const measurements: MeasurementType[] = ['weight_reps', 'bodyweight_reps', 'reps
 
 export type CustomExerciseScreenProps = {
   existingExercise?: Exercise;
+  onBack?: () => void;
   onSaved: (id: string) => void;
   repository: Parameters<typeof createCustomExercise>[0];
   userId: string;
 };
 
-export function CustomExerciseScreen({ existingExercise, onSaved, repository, userId }: CustomExerciseScreenProps) {
+export function CustomExerciseScreen({ existingExercise, onBack, onSaved, repository, userId }: CustomExerciseScreenProps) {
   const [name, setName] = useState(existingExercise?.name ?? '');
   const [primaryMuscleGroup, setPrimaryMuscleGroup] = useState<MuscleGroup>(existingExercise?.primaryMuscleGroup ?? 'chest');
   const [secondaryMuscleGroups, setSecondaryMuscleGroups] = useState<MuscleGroup[]>(existingExercise?.secondaryMuscleGroups ?? []);
@@ -37,6 +38,24 @@ export function CustomExerciseScreen({ existingExercise, onSaved, repository, us
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+
+  const hasUnsavedChanges = name !== (existingExercise?.name ?? '')
+    || primaryMuscleGroup !== (existingExercise?.primaryMuscleGroup ?? 'chest')
+    || secondaryMuscleGroups.join(',') !== (existingExercise?.secondaryMuscleGroups ?? []).join(',')
+    || equipmentType !== (existingExercise?.equipmentType ?? 'barbell')
+    || measurementType !== (existingExercise?.measurementType ?? 'weight_reps');
+
+  function requestBack(): void {
+    if (!onBack) return;
+    if (!hasUnsavedChanges) {
+      onBack();
+      return;
+    }
+    Alert.alert('Discard Changes?', 'Your unsaved exercise changes will be lost.', [
+      { text: 'Keep Editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: onBack },
+    ]);
+  }
 
   async function save(): Promise<void> {
     if (savingRef.current) return;
@@ -63,7 +82,11 @@ export function CustomExerciseScreen({ existingExercise, onSaved, repository, us
   }
 
   return (
-    <Screen contentContainerStyle={styles.content} scroll>
+    <Screen
+      contentContainerStyle={styles.content}
+      navigationAction={onBack ? { onBack: requestBack } : undefined}
+      scroll
+    >
       <AppText variant="screenTitle">{existingExercise ? 'Edit Custom Exercise' : 'Create Custom Exercise'}</AppText>
       <TextInput label="Name" onChangeText={setName} value={name} />
       <Choice label="Primary muscle" options={muscles} value={primaryMuscleGroup} onSelect={setPrimaryMuscleGroup} />

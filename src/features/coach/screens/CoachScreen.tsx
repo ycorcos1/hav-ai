@@ -98,8 +98,7 @@ export function CoachScreen({
   }
 
   return (
-    <Screen contentContainerStyle={styles.container} scroll>
-      {onClose ? <SecondaryButton label="Back to Workout" onPress={onClose} /> : null}
+    <Screen contentContainerStyle={styles.container} navigationAction={onClose ? { onBack: onClose } : undefined} scroll>
       <AppText color="secondary" variant="metadata">HAVAI COACH</AppText>
       {activeContextLabel ? <AppText color="secondary">{activeContextLabel}</AppText> : null}
       {messages.length === 0 ? (

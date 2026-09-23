@@ -17,6 +17,7 @@ export type ExerciseDetailScreenProps = {
   loadPreference?: (id: string) => Promise<{ isFavorite: boolean; notes?: string; restDurationSeconds?: number } | null>;
   updatePreference?: (patch: { isFavorite?: boolean; notes?: string | null; restDurationSeconds?: number | null }) => Promise<void>;
   onArchive?: (id: string) => Promise<void>;
+  onBack?: () => void;
   onEdit?: (id: string) => void;
 };
 
@@ -25,6 +26,7 @@ export function ExerciseDetailScreen({
   loadExercise,
   loadPreference,
   onArchive,
+  onBack,
   onEdit,
   updatePreference,
 }: ExerciseDetailScreenProps) {
@@ -59,15 +61,21 @@ export function ExerciseDetailScreen({
   }, [exerciseId, loadPreference]);
 
   if (error || exercise === null) {
-    return error ? (
-      <ErrorState message="This exercise could not be loaded." title="Unable to load exercise" />
-    ) : (
-      <Screen><AppText>Loading exercise...</AppText></Screen>
+    return (
+      <Screen navigationAction={onBack ? { onBack } : undefined}>
+        {error ? (
+          <ErrorState message="This exercise could not be loaded." title="Unable to load exercise" />
+        ) : <AppText>Loading exercise...</AppText>}
+      </Screen>
     );
   }
 
   return (
-    <Screen contentContainerStyle={styles.content} scroll>
+    <Screen
+      contentContainerStyle={styles.content}
+      navigationAction={onBack ? { onBack } : undefined}
+      scroll
+    >
       <AppText variant="screenTitle">{exercise.name}</AppText>
       <View style={styles.details}>
         <Detail label="Primary muscle" value={format(exercise.primaryMuscleGroup)} />

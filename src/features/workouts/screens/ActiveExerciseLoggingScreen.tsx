@@ -132,7 +132,7 @@ export function ActiveExerciseLoggingScreen({
 
   if (failed || activeExercise === null) {
     return (
-      <Screen contentContainerStyle={styles.centered}>
+      <Screen contentContainerStyle={styles.centered} navigationAction={{ onBack: onOverview }}>
         <ErrorState
           action={failed ? (
             <SecondaryButton
@@ -154,7 +154,7 @@ export function ActiveExerciseLoggingScreen({
 
   if (!activeExercise) {
     return (
-      <Screen accessibilityLabel="Loading active exercise" contentContainerStyle={styles.centered}>
+      <Screen accessibilityLabel="Loading active exercise" contentContainerStyle={styles.centered} navigationAction={{ onBack: onOverview }}>
         <ActivityIndicator color={colors.accent.primary} />
       </Screen>
     );
@@ -338,9 +338,8 @@ export function ActiveExerciseLoggingScreen({
   };
 
   return (
-    <Screen contentContainerStyle={styles.content} scroll>
+    <Screen contentContainerStyle={styles.content} navigationAction={{ onBack: onOverview }} scroll>
       <WorkoutOfflineBanner />
-      <SecondaryButton label="Workout Overview" onPress={onOverview} />
       {onAskCoach ? <SecondaryButton label="Ask Coach" onPress={onAskCoach} /> : null}
       <AppText color="secondary" variant="metadata">{workout.name}</AppText>
       <AppText variant="screenTitle">{exercise?.name ?? "Exercise unavailable"}</AppText>

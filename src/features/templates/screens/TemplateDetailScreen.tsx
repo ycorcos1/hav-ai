@@ -16,6 +16,7 @@ export type TemplateDetailScreenProps = {
   loadTemplate: () => Promise<TemplateDetail | null>;
   onArchive?: (id: string) => Promise<void>;
   onArchived?: () => void;
+  onBack?: () => void;
   onDuplicate?: (id: string) => Promise<WorkoutTemplate>;
   onDuplicated?: (id: string) => void;
   onEdit?: (id: string) => void;
@@ -25,6 +26,7 @@ export function TemplateDetailScreen({
   loadTemplate,
   onArchive,
   onArchived,
+  onBack,
   onDuplicate,
   onDuplicated,
   onEdit,
@@ -86,14 +88,14 @@ export function TemplateDetailScreen({
   }
 
   if (failed || detail === null) {
-    return <Screen><ErrorState message="This local workout could not be loaded." title="Unable to load workout" /></Screen>;
+    return <Screen navigationAction={onBack ? { onBack } : undefined}><ErrorState message="This local workout could not be loaded." title="Unable to load workout" /></Screen>;
   }
   if (!detail) {
-    return <Screen contentContainerStyle={styles.loading}><ActivityIndicator color={colors.accent.primary} /></Screen>;
+    return <Screen contentContainerStyle={styles.loading} navigationAction={onBack ? { onBack } : undefined}><ActivityIndicator color={colors.accent.primary} /></Screen>;
   }
 
   return (
-    <Screen contentContainerStyle={styles.content} scroll>
+    <Screen contentContainerStyle={styles.content} navigationAction={onBack ? { onBack } : undefined} scroll>
       <AppText variant="screenTitle">{detail.template.name}</AppText>
       {detail.template.notes ? <AppText color="secondary">{detail.template.notes}</AppText> : null}
       <View style={styles.list}>

@@ -8,12 +8,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { NavigationHeader } from '@/components/NavigationHeader';
 import { colors, spacing } from '@/theme';
 
 export type ScreenProps = {
   accessibilityLabel?: string;
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  navigationAction?: {
+    accessibilityLabel?: string;
+    onBack: () => void;
+  };
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -23,12 +28,19 @@ export function Screen({
   accessibilityLabel,
   children,
   contentContainerStyle,
+  navigationAction,
   scroll = false,
   style,
   testID,
 }: ScreenProps) {
   return (
     <SafeAreaView style={[styles.safeArea, style]}>
+      {navigationAction ? (
+        <NavigationHeader
+          accessibilityLabel={navigationAction.accessibilityLabel}
+          onBack={navigationAction.onBack}
+        />
+      ) : null}
       {scroll ? (
         <ScrollView
           accessibilityLabel={accessibilityLabel}

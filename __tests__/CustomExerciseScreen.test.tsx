@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
+import { Alert } from "react-native";
 
 import type { LocalExerciseRepository } from "@/db/repositories";
 import { CustomExerciseScreen } from "@/features/exercises/screens/CustomExerciseScreen";
@@ -55,6 +56,32 @@ describe("CustomExerciseScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Save Exercise" }));
     expect(await screen.findByText("Enter an exercise name.")).toBeOnTheScreen();
     expect(repository.upsert).not.toHaveBeenCalled();
+  });
+
+  it("does not silently discard a changed exercise draft", async () => {
+    const onBack = jest.fn();
+    const alert = jest.spyOn(Alert, "alert").mockImplementation(jest.fn());
+    const screen = await render(
+      <CustomExerciseScreen
+        onBack={onBack}
+        onSaved={jest.fn()}
+        repository={exerciseRepository()}
+        userId={userId}
+      />,
+    );
+
+    await fireEvent.changeText(screen.getByLabelText("Name"), "Cable Press");
+    await fireEvent.press(screen.getByRole("button", { name: "Go back" }));
+
+    expect(onBack).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith(
+      "Discard Changes?",
+      "Your unsaved exercise changes will be lost.",
+      expect.any(Array),
+    );
+    const discard = alert.mock.calls[0][2]?.find(({ text }) => text === "Discard");
+    discard?.onPress?.();
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });
 

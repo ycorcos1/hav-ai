@@ -8,6 +8,7 @@ import { Screen } from '@/components/Screen';
 import { TextButton } from '@/components/TextButton';
 import { TextInput } from '@/components/TextInput';
 import { authErrorMessage } from '@/features/auth/authMessages';
+import { useSafeBack } from '@/features/routing/hooks/useSafeBack';
 import {
   validateLoginFields,
   type LoginFieldErrors,
@@ -17,6 +18,7 @@ import { spacing } from '@/theme';
 
 export function LoginScreen() {
   const router = useRouter();
+  const goBack = useSafeBack('/(auth)/welcome');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
@@ -52,6 +54,7 @@ export function LoginScreen() {
     <Screen
       accessibilityLabel="Log in to havAI"
       contentContainerStyle={styles.content}
+      navigationAction={{ onBack: goBack }}
       scroll
     >
       <View style={styles.header}>

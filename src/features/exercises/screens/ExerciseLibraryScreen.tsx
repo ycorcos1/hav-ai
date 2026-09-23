@@ -6,6 +6,7 @@ import { AppText } from '@/components/AppText';
 import { ErrorState } from '@/components/ErrorState';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import { Screen } from '@/components/Screen';
+import { useSafeBack } from '@/features/routing/hooks/useSafeBack';
 import type { Exercise, UserExercisePreference } from '@/shared/contracts';
 import { colors, spacing } from '@/theme';
 
@@ -19,6 +20,7 @@ export type ExerciseLibraryScreenProps = {
 
 export function ExerciseLibraryScreen({ loadExercises, loadPreferences, updateFavorite }: ExerciseLibraryScreenProps) {
   const router = useRouter();
+  const goBack = useSafeBack('/workouts');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [preferenceError, setPreferenceError] = useState(false);
@@ -49,6 +51,7 @@ export function ExerciseLibraryScreen({ loadExercises, loadPreferences, updateFa
     <Screen
       accessibilityLabel="Exercise library"
       contentContainerStyle={styles.content}
+      navigationAction={{ onBack: goBack }}
       scroll
     >
       <View style={styles.header}>

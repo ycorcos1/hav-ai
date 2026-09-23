@@ -15,9 +15,10 @@ import { colors, spacing } from "@/theme";
 
 export type ExerciseProgressScreenProps = {
   loadProgress: () => Promise<ExerciseProgress | null>;
+  onBack?: () => void;
 };
 
-export function ExerciseProgressScreen({ loadProgress }: ExerciseProgressScreenProps) {
+export function ExerciseProgressScreen({ loadProgress, onBack }: ExerciseProgressScreenProps) {
   const networkStatus = useNetworkStatus();
   const [progress, setProgress] = useState<ExerciseProgress | null>();
   const [failed, setFailed] = useState(false);
@@ -33,15 +34,15 @@ export function ExerciseProgressScreen({ loadProgress }: ExerciseProgressScreenP
   }, [loadProgress]);
 
   if (failed || progress === null) {
-    return <Screen><ErrorState message="This exercise progress is not available." title="Unable to load progress" /></Screen>;
+    return <Screen navigationAction={onBack ? { onBack } : undefined}><ErrorState message="This exercise progress is not available." title="Unable to load progress" /></Screen>;
   }
   if (!progress) {
-    return <Screen accessibilityLabel="Loading exercise progress" contentContainerStyle={styles.centered}><ActivityIndicator color={colors.accent.primary} /></Screen>;
+    return <Screen accessibilityLabel="Loading exercise progress" contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}><ActivityIndicator color={colors.accent.primary} /></Screen>;
   }
   const { metrics } = progress;
   const insufficient = metrics.trend.length < 2;
   return (
-    <Screen contentContainerStyle={styles.container} scroll>
+    <Screen contentContainerStyle={styles.container} navigationAction={onBack ? { onBack } : undefined} scroll>
       <AppText variant="screenTitle">{progress.exercise.name}</AppText>
       <OfflineBanner
         message="Offline · Some historical data may be unavailable"

@@ -12,10 +12,12 @@ import {
 import { loadExerciseLibrary } from "@/features/exercises/services/loadExerciseLibrary";
 import { loadExercisePreferences } from "@/features/exercises/services/loadExercisePreferences";
 import { loadRecoveryWorkoutOverview } from "@/features/workouts/services/workoutRecoveryContext";
+import { useSafeBack } from "@/features/routing/hooks/useSafeBack";
 
 export default function ActiveWorkoutOverviewRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const goBack = useSafeBack('/home');
   const loadWorkout = useCallback(() => loadRecoveryWorkoutOverview(id), [id]);
   return (
     <ActiveWorkoutOverviewScreen
@@ -30,6 +32,7 @@ export default function ActiveWorkoutOverviewRoute() {
       onOpenExercise={(workoutExerciseId) => {
         router.push(`/workout/${id}/exercise/${workoutExerciseId}`);
       }}
+      onBack={goBack}
       onWorkoutFinished={() => router.replace(`/workout/${id}/summary`)}
       moveExercise={(workoutExerciseId, direction) => (
         moveCurrentUserActiveWorkoutExercise(id, workoutExerciseId, direction)

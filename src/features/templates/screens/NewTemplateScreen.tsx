@@ -26,6 +26,7 @@ export type NewTemplateScreenProps = {
   name: string;
   notes: string;
   onAddExercise: () => void;
+  onBack?: () => void;
   onEditExercise?: (index: number) => void;
   onNameChange: (name: string) => void;
   onNotesChange: (notes: string) => void;
@@ -42,6 +43,7 @@ export function NewTemplateScreen({
   name,
   notes,
   onAddExercise,
+  onBack,
   onEditExercise,
   onNameChange,
   onNotesChange,
@@ -79,7 +81,11 @@ export function NewTemplateScreen({
   }
 
   return (
-    <Screen contentContainerStyle={styles.content} scroll>
+    <Screen
+      contentContainerStyle={styles.content}
+      navigationAction={onBack ? { onBack } : undefined}
+      scroll
+    >
       <AppText variant="screenTitle">{title}</AppText>
       <TextInput label="Workout Name" onChangeText={onNameChange} value={name} />
       <TextInput label="Notes (optional)" multiline onChangeText={onNotesChange} value={notes} />

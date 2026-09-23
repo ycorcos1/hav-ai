@@ -128,7 +128,7 @@ describe("ActiveExerciseLoggingScreen", () => {
     expect(rendered.queryByText("Offline · Saved on device")).toBeNull();
     await act(async () => listener?.("offline"));
     expect(rendered.getByText("Offline · Saved on device")).toBeTruthy();
-    const overviewButton = rendered.getByRole("button", { name: "Workout Overview" });
+    const overviewButton = rendered.getByRole("button", { name: "Go back" });
     expect(overviewButton).toBeEnabled();
     await fireEvent.press(overviewButton);
     expect(onOverview).toHaveBeenCalledTimes(1);
@@ -293,7 +293,7 @@ describe("ActiveExerciseLoggingScreen", () => {
     expect(onOpenExercise).toHaveBeenLastCalledWith("workout-exercise-1");
     await fireEvent.press(rendered.getByRole("button", { name: "Next Exercise" }));
     expect(onOpenExercise).toHaveBeenLastCalledWith("workout-exercise-3");
-    await fireEvent.press(rendered.getByRole("button", { name: "Workout Overview" }));
+    await fireEvent.press(rendered.getByRole("button", { name: "Go back" }));
     expect(onOverview).toHaveBeenCalledTimes(1);
 
     const first = await render(

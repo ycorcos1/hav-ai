@@ -33,6 +33,7 @@ export type ActiveWorkoutOverviewScreenProps = {
     direction: "down" | "up",
   ) => Promise<ActiveWorkoutOverview>;
   onOpenExercise: (workoutExerciseId: string) => void;
+  onBack?: () => void;
   onWorkoutFinished: (result: FinishWorkoutResult) => void;
   removeExercise?: (workoutExerciseId: string) => Promise<ActiveWorkoutOverview>;
   saveWorkoutNote: (notes?: string) => Promise<Workout>;
@@ -45,6 +46,7 @@ export function ActiveWorkoutOverviewScreen({
   loadExercises,
   loadPreferences,
   moveExercise,
+  onBack,
   onOpenExercise,
   onWorkoutFinished,
   removeExercise,
@@ -83,7 +85,7 @@ export function ActiveWorkoutOverviewScreen({
 
   if (failed || overview === null) {
     return (
-      <Screen contentContainerStyle={styles.centered}>
+      <Screen contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}>
         <ErrorState
           action={failed ? <SecondaryButton label="Try Again" onPress={() => { setFailed(false); setAttempt((value) => value + 1); }} /> : undefined}
           message={failed ? "Your active workout could not be loaded. Your local data was not changed." : "This active workout is no longer available."}
@@ -93,7 +95,7 @@ export function ActiveWorkoutOverviewScreen({
     );
   }
   if (!overview) {
-    return <Screen accessibilityLabel="Loading active workout" contentContainerStyle={styles.centered}><ActivityIndicator color={colors.accent.primary} /></Screen>;
+    return <Screen accessibilityLabel="Loading active workout" contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}><ActivityIndicator color={colors.accent.primary} /></Screen>;
   }
 
   const completedExercises = overview.exercises.filter(({ workoutExercise }) => isExerciseComplete(workoutExercise)).length;
@@ -245,7 +247,7 @@ export function ActiveWorkoutOverviewScreen({
   }
 
   return (
-    <Screen contentContainerStyle={styles.content} scroll>
+    <Screen contentContainerStyle={styles.content} navigationAction={onBack ? { onBack } : undefined} scroll>
       <WorkoutOfflineBanner />
       <View style={styles.header}>
         <View style={styles.heading}>

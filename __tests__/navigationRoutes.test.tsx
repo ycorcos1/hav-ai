@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 
-type HomeRouteProps = { onOpenWorkout: (id: string) => void };
+type HomeRouteProps = { onBack?: () => void; onOpenWorkout: (id: string) => void };
 type WorkoutsRouteProps = {
   onCreate: () => void;
   onOpen: (id: string) => void;
@@ -8,6 +8,7 @@ type WorkoutsRouteProps = {
 };
 type ProgressRouteProps = { onOpenExercise: (id: string) => void };
 type WorkoutOverviewRouteProps = {
+  onBack?: () => void;
   onOpenExercise: (id: string) => void;
   onWorkoutFinished: () => void;
 };
@@ -18,13 +19,16 @@ type ExerciseLoggingRouteProps = {
 };
 type WorkoutSummaryRouteProps = { onDone: () => void };
 type WorkoutHistoryRouteProps = { onOpenWorkout: (id: string) => void };
-type WorkoutHistoryDetailRouteProps = { onDeleted: () => void };
-type ExerciseProgressRouteProps = { loadProgress: () => Promise<unknown> };
+type WorkoutHistoryDetailRouteProps = { onBack?: () => void; onDeleted: () => void };
+type ExerciseProgressRouteProps = { loadProgress: () => Promise<unknown>; onBack?: () => void };
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+const mockBack = jest.fn();
+let mockCanGoBack = true;
 const mockTabScreens: { name: string; title?: string }[] = [];
 let mockInitialTabRoute: string | undefined;
+let mockTabHeaderShown: boolean | undefined;
 let mockParams: Record<string, string> = {};
 let mockHomeProps: HomeRouteProps | undefined;
 let mockWorkoutsProps: WorkoutsRouteProps | undefined;
@@ -39,8 +43,13 @@ let mockExerciseProgressProps: ExerciseProgressRouteProps | undefined;
 jest.mock("expo-router", () => {
   const React = require("react");
   const { View } = require("react-native");
-  function Tabs({ children, initialRouteName }: { children?: unknown; initialRouteName?: string }) {
+  function Tabs({ children, initialRouteName, screenOptions }: {
+    children?: unknown;
+    initialRouteName?: string;
+    screenOptions?: { headerShown?: boolean };
+  }) {
     mockInitialTabRoute = initialRouteName;
+    mockTabHeaderShown = screenOptions?.headerShown;
     return React.createElement(View, null, children);
   }
   Tabs.Screen = ({ name, options }: { name: string; options?: { title?: string } }) => {
@@ -50,7 +59,12 @@ jest.mock("expo-router", () => {
   return {
     Tabs,
     useLocalSearchParams: () => mockParams,
-    useRouter: () => ({ push: mockPush, replace: mockReplace }),
+    useRouter: () => ({
+      back: mockBack,
+      canGoBack: () => mockCanGoBack,
+      push: mockPush,
+      replace: mockReplace,
+    }),
   };
 });
 
@@ -162,13 +176,16 @@ describe("Expo Router navigation adapters", () => {
     jest.clearAllMocks();
     mockTabScreens.length = 0;
     mockInitialTabRoute = undefined;
+    mockTabHeaderShown = undefined;
     mockParams = {};
+    mockCanGoBack = true;
   });
 
   it("registers all five authenticated tabs with Home as the initial route", async () => {
     await render(<TabsLayout />);
 
     expect(mockInitialTabRoute).toBe("home");
+    expect(mockTabHeaderShown).toBe(false);
     expect(mockTabScreens).toEqual([
       { name: "home", title: "Home" },
       { name: "workouts", title: "Workouts" },
@@ -180,6 +197,7 @@ describe("Expo Router navigation adapters", () => {
 
   it("connects Home, templates, history, Progress, and Coach tab routes", async () => {
     await render(<HomeRoute />);
+    expect(mockHomeProps?.onBack).toBeUndefined();
     mockHomeProps?.onOpenWorkout("workout-a");
     expect(mockPush).toHaveBeenLastCalledWith("/workout/workout-a");
 
@@ -219,7 +237,7 @@ describe("Expo Router navigation adapters", () => {
     expect(mockReplace).toHaveBeenCalledWith(
       "/workout/workout-a/exercise/workout-exercise-b",
     );
-    expect(mockReplace).toHaveBeenCalledWith("/workout/workout-a");
+    expect(mockBack).toHaveBeenCalledTimes(1);
 
     await render(<WorkoutSummaryRoute />);
     mockWorkoutSummaryProps?.onDone();
@@ -240,5 +258,30 @@ describe("Expo Router navigation adapters", () => {
     await render(<ExerciseProgressRoute />);
     await mockExerciseProgressProps?.loadProgress();
     expect(mockLoadExerciseProgress).toHaveBeenCalledWith("exercise-a");
+  });
+
+  it("uses navigation history for secondary screens without mutating an active workout", async () => {
+    mockParams = { id: "workout-a" };
+    await render(<ActiveWorkoutOverviewRoute />);
+
+    mockWorkoutOverviewProps?.onBack?.();
+
+    expect(mockBack).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(require("@/features/workouts/services/workoutApplication").finishCurrentUserWorkout)
+      .not.toHaveBeenCalled();
+    expect(require("@/features/workouts/services/workoutApplication").discardCurrentUserActiveWorkout)
+      .not.toHaveBeenCalled();
+  });
+
+  it("uses a safe route fallback when a direct detail link has no back history", async () => {
+    mockCanGoBack = false;
+    mockParams = { id: "exercise-a" };
+    await render(<ExerciseProgressRoute />);
+
+    mockExerciseProgressProps?.onBack?.();
+
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith("/progress");
   });
 });

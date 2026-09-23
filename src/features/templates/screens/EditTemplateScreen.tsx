@@ -13,11 +13,12 @@ export type EditTemplateScreenProps = {
   loadExercises: () => Promise<Exercise[]>;
   loadPreferences: () => Promise<UserExercisePreference[]>;
   loadTemplate: () => Promise<TemplateDetail | null>;
+  onBack?: () => void;
   onSave: (input: SaveTemplateInput) => Promise<WorkoutTemplate>;
   onSaved: (id: string) => void;
 };
 
-export function EditTemplateScreen({ loadTemplate, ...flowProps }: EditTemplateScreenProps) {
+export function EditTemplateScreen({ loadTemplate, onBack, ...flowProps }: EditTemplateScreenProps) {
   const [detail, setDetail] = useState<TemplateDetail | null>();
   useEffect(() => {
     let active = true;
@@ -29,16 +30,16 @@ export function EditTemplateScreen({ loadTemplate, ...flowProps }: EditTemplateS
   }, [loadTemplate]);
 
   if (detail === null) {
-    return <Screen><ErrorState message="This workout could not be loaded for editing." title="Unable to edit workout" /></Screen>;
+    return <Screen navigationAction={onBack ? { onBack } : undefined}><ErrorState message="This workout could not be loaded for editing." title="Unable to edit workout" /></Screen>;
   }
   if (!detail) {
     return (
-      <Screen accessibilityLabel="Loading workout editor" contentContainerStyle={styles.loading}>
+      <Screen accessibilityLabel="Loading workout editor" contentContainerStyle={styles.loading} navigationAction={onBack ? { onBack } : undefined}>
         <ActivityIndicator color={colors.accent.primary} />
       </Screen>
     );
   }
-  return <NewTemplateFlowScreen key={detail.template.id} initialDetail={detail} {...flowProps} />;
+  return <NewTemplateFlowScreen key={detail.template.id} initialDetail={detail} onBack={onBack} {...flowProps} />;
 }
 
 const styles = StyleSheet.create({

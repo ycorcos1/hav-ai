@@ -94,7 +94,7 @@ describe("active workout Coach entry", () => {
       message: "What should I do next?",
       context: buildActiveWorkoutCoachContext(activeExercise),
     }));
-    await fireEvent.press(screen.getByRole("button", { name: "Back to Workout" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Go back" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

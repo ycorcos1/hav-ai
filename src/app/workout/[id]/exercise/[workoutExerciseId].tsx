@@ -10,6 +10,7 @@ import {
   undoCurrentUserSetCompletion,
 } from "@/features/workouts/services/workoutApplication";
 import { loadAndRememberActiveExercise } from "@/features/workouts/services/workoutRecoveryContext";
+import { useSafeBack } from "@/features/routing/hooks/useSafeBack";
 
 export default function ActiveExerciseLoggingRoute() {
   const { id, workoutExerciseId } = useLocalSearchParams<{
@@ -17,6 +18,7 @@ export default function ActiveExerciseLoggingRoute() {
     workoutExerciseId: string;
   }>();
   const router = useRouter();
+  const goBack = useSafeBack(`/workout/${id}`);
   const loadExercise = useCallback(
     () => loadAndRememberActiveExercise(id, workoutExerciseId),
     [id, workoutExerciseId],
@@ -31,7 +33,7 @@ export default function ActiveExerciseLoggingRoute() {
       onOpenExercise={(nextWorkoutExerciseId) => {
         router.replace(`/workout/${id}/exercise/${nextWorkoutExerciseId}`);
       }}
-      onOverview={() => router.replace(`/workout/${id}`)}
+      onOverview={goBack}
       parseWorkout={(request) => workoutParserApi.parse(request)}
       undoSet={undoCurrentUserSetCompletion}
     />

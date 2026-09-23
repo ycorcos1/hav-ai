@@ -20,6 +20,7 @@ export type DebugScreenProps = {
   loadAIDiagnostics: () => Promise<AIDiagnosticsV1>;
   loadDiagnostics: () => Promise<LocalDiagnostics>;
   networkControls: DevelopmentNetworkStatusService;
+  onBack?: () => void;
 };
 
 export function DebugScreen({
@@ -28,6 +29,7 @@ export function DebugScreen({
   loadAIDiagnostics,
   loadDiagnostics,
   networkControls,
+  onBack,
 }: DebugScreenProps) {
   const networkState = useNetworkStatus();
   const sync = useSyncStatus();
@@ -73,7 +75,7 @@ export function DebugScreen({
 
   if (failed) {
     return (
-      <Screen contentContainerStyle={styles.centered}>
+      <Screen contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}>
         <ErrorState
           action={<SecondaryButton label="Try Again" onPress={() => { void refresh(); }} />}
           message="Local diagnostics could not be read. No data was changed."
@@ -84,14 +86,14 @@ export function DebugScreen({
   }
   if (!diagnostics) {
     return (
-      <Screen accessibilityLabel="Loading diagnostics" contentContainerStyle={styles.centered}>
+      <Screen accessibilityLabel="Loading diagnostics" contentContainerStyle={styles.centered} navigationAction={onBack ? { onBack } : undefined}>
         <ActivityIndicator color={colors.accent.primary} />
       </Screen>
     );
   }
 
   return (
-    <Screen accessibilityLabel="Developer diagnostics" contentContainerStyle={styles.container} scroll>
+    <Screen accessibilityLabel="Developer diagnostics" contentContainerStyle={styles.container} navigationAction={onBack ? { onBack } : undefined} scroll>
       <AppText variant="screenTitle">Developer Diagnostics</AppText>
       <AppText color="muted">Development-only, read-only unless an action is explicitly selected.</AppText>
 

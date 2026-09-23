@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
 import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
-import { SecondaryButton } from "@/components/SecondaryButton";
 import { ExercisePicker } from "@/features/exercises/components/ExercisePicker";
 import { TemplateExerciseConfigurationSheet } from "@/features/templates/components/TemplateExerciseConfigurationSheet";
 import type { SaveTemplateInput, TemplateExerciseInput } from "@/features/templates/services/templateService";
@@ -18,6 +17,7 @@ export type NewTemplateFlowScreenProps = {
   initialDetail?: import("@/features/templates/services/templateApplication").TemplateDetail;
   loadExercises: () => Promise<Exercise[]>;
   loadPreferences: () => Promise<UserExercisePreference[]>;
+  onBack?: () => void;
   onSave: (input: SaveTemplateInput) => Promise<WorkoutTemplate>;
   onSaved: (id: string) => void;
 };
@@ -26,6 +26,7 @@ export function NewTemplateFlowScreen({
   initialDetail,
   loadExercises,
   loadPreferences,
+  onBack,
   onSave,
   onSaved,
 }: NewTemplateFlowScreenProps) {
@@ -48,6 +49,32 @@ export function NewTemplateFlowScreen({
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [configurationExercise, setConfigurationExercise] = useState<Exercise | null>(null);
   const [configurationIndex, setConfigurationIndex] = useState<number>();
+
+  const hasUnsavedChanges = name !== (initialDetail?.template.name ?? "")
+    || notes !== (initialDetail?.template.notes ?? "")
+    || selectionFingerprint(selections) !== selectionFingerprint(
+      initialDetail?.exercises.map(({ exercise, templateExercise }) => ({
+        exercise,
+        exerciseId: templateExercise.exerciseId,
+        id: templateExercise.id,
+        targetSets: templateExercise.targetSets,
+        targetMinReps: templateExercise.targetMinReps,
+        targetMaxReps: templateExercise.targetMaxReps,
+        ...(templateExercise.notes ? { notes: templateExercise.notes } : {}),
+      })) ?? [],
+    );
+
+  function requestBack(): void {
+    if (!onBack) return;
+    if (!hasUnsavedChanges) {
+      onBack();
+      return;
+    }
+    Alert.alert('Discard Changes?', 'Your unsaved workout changes will be lost.', [
+      { text: 'Keep Editing', style: 'cancel' },
+      { text: 'Discard', style: 'destructive', onPress: onBack },
+    ]);
+  }
 
   useEffect(() => {
     if (!pickerVisible || pickerStatus !== "loading") return;
@@ -80,10 +107,16 @@ export function NewTemplateFlowScreen({
 
   if (pickerVisible) {
     return (
-      <Screen contentContainerStyle={styles.content} scroll>
+      <Screen
+        contentContainerStyle={styles.content}
+        navigationAction={{
+          accessibilityLabel: "Back to workout editor",
+          onBack: () => setPickerVisible(false),
+        }}
+        scroll
+      >
         <View style={styles.header}>
           <AppText variant="screenTitle">Add Exercise</AppText>
-          <SecondaryButton label="Back to Workout" onPress={() => setPickerVisible(false)} />
         </View>
         {pickerStatus === "loading" ? <ActivityIndicator color={colors.accent.primary} /> : null}
         {pickerStatus === "error" ? <ErrorState message="Your exercise library could not be loaded." title="Unable to add exercise" /> : null}
@@ -110,6 +143,7 @@ export function NewTemplateFlowScreen({
       name={name}
       notes={notes}
       onAddExercise={() => { setPickerStatus("loading"); setPickerVisible(true); }}
+      onBack={onBack ? requestBack : undefined}
       onEditExercise={(index) => {
         setConfigurationIndex(index);
         setConfigurationExercise(selections[index].exercise);
@@ -128,6 +162,17 @@ export function NewTemplateFlowScreen({
       title={initialDetail ? "Edit Workout" : "New Workout"}
     />
   );
+}
+
+function selectionFingerprint(selections: TemplateExerciseSelection[]): string {
+  return JSON.stringify(selections.map((selection) => ({
+    exerciseId: selection.exerciseId,
+    id: selection.id,
+    notes: selection.notes ?? null,
+    targetMaxReps: selection.targetMaxReps,
+    targetMinReps: selection.targetMinReps,
+    targetSets: selection.targetSets,
+  })));
 }
 
 const styles = StyleSheet.create({

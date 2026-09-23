@@ -3,7 +3,6 @@ import { ActivityIndicator, StyleSheet } from "react-native";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
-import { SecondaryButton } from "@/components/SecondaryButton";
 import { type CoachApi } from "@/features/ai/api";
 import { buildActiveWorkoutCoachContext } from "@/features/coach/services/activeWorkoutCoachContext";
 import type { ActiveWorkoutExercise } from "@/features/workouts/services/workoutApplication";
@@ -35,16 +34,15 @@ export function ActiveWorkoutCoachScreen({
 
   if (activeExercise === undefined) {
     return (
-      <Screen accessibilityLabel="Loading workout Coach" contentContainerStyle={styles.centered}>
+      <Screen accessibilityLabel="Loading workout Coach" contentContainerStyle={styles.centered} navigationAction={{ onBack: onClose }}>
         <ActivityIndicator color={colors.accent.primary} />
       </Screen>
     );
   }
   if (activeExercise === null) {
     return (
-      <Screen contentContainerStyle={styles.centered}>
+      <Screen contentContainerStyle={styles.centered} navigationAction={{ onBack: onClose }}>
         <ErrorState
-          action={<SecondaryButton label="Back to Workout" onPress={onClose} />}
           message="Your active exercise context could not be loaded. Your workout was not changed."
           title="Unable to open Coach"
         />

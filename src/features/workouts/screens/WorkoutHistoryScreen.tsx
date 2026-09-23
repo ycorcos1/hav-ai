@@ -15,10 +15,11 @@ import { colors, spacing } from "@/theme";
 
 export type WorkoutHistoryScreenProps = {
   loadPage: (cursor?: WorkoutHistoryCursor) => Promise<WorkoutHistoryPage>;
+  onBack?: () => void;
   onOpenWorkout: (id: string) => void;
 };
 
-export function WorkoutHistoryScreen({ loadPage, onOpenWorkout }: WorkoutHistoryScreenProps) {
+export function WorkoutHistoryScreen({ loadPage, onBack, onOpenWorkout }: WorkoutHistoryScreenProps) {
   const networkStatus = useNetworkStatus();
   const [items, setItems] = useState<Workout[]>([]);
   const [nextCursor, setNextCursor] = useState<WorkoutHistoryCursor>();
@@ -54,7 +55,7 @@ export function WorkoutHistoryScreen({ loadPage, onOpenWorkout }: WorkoutHistory
   };
 
   return (
-    <Screen contentContainerStyle={styles.container} scroll>
+    <Screen contentContainerStyle={styles.container} navigationAction={onBack ? { onBack } : undefined} scroll>
       <AppText variant="screenTitle">Workout History</AppText>
       <OfflineBanner
         message="Offline · Some historical data may be unavailable"
