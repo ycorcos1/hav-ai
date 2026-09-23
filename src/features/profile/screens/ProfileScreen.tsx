@@ -1,15 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
-import { Card } from "@/components/Card";
+import { BottomSheet } from "@/components/BottomSheet";
 import { ErrorState } from "@/components/ErrorState";
+import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { SegmentedControl } from "@/components/SegmentedControl";
 import { TextInput } from "@/components/TextInput";
+import {
+  SettingsRow,
+  SettingsSeparator,
+} from "@/features/profile/components/SettingsRow";
 import type { ProfileSettings } from "@/features/profile/services/profileApplication";
 import type { UpdateOwnProfileInput } from "@/lib/supabase/repositories";
-import { colors, spacing } from "@/theme";
+import { colors, radius, spacing } from "@/theme";
 
 export type ProfileScreenProps = {
   loadProfile: () => Promise<ProfileSettings | null>;
@@ -17,6 +23,8 @@ export type ProfileScreenProps = {
   trySyncAndLogout?: () => Promise<boolean>;
   updateProfile?: (input: UpdateOwnProfileInput) => Promise<ProfileSettings["profile"]>;
 };
+
+type ProfileSheet = "deviceSync" | "goal" | "logout" | "progression" | "rest" | "rpe";
 
 export function ProfileScreen({
   loadProfile,
@@ -27,6 +35,7 @@ export function ProfileScreen({
   const [settings, setSettings] = useState<ProfileSettings | null>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [activeSheet, setActiveSheet] = useState<ProfileSheet>();
   const [savingUnit, setSavingUnit] = useState(false);
   const [savingRpe, setSavingRpe] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
@@ -78,6 +87,12 @@ export function ProfileScreen({
   }
 
   const { profile } = settings;
+
+  function openSheet(sheet: ProfileSheet): void {
+    setSaveError(false);
+    setActiveSheet(sheet);
+  }
+
   async function saveWeightUnit(weightUnit: ProfileSettings["profile"]["weightUnit"]): Promise<void> {
     if (!updateProfile || savingUnit || weightUnit === profile.weightUnit) return;
     setSavingUnit(true);
@@ -101,6 +116,7 @@ export function ProfileScreen({
     try {
       const updated = await updateProfile({ rpePreference });
       setSettings((current) => current ? { ...current, profile: updated } : current);
+      setActiveSheet(undefined);
     } catch {
       setSaveError(true);
     } finally {
@@ -117,6 +133,7 @@ export function ProfileScreen({
     try {
       const updated = await updateProfile({ primaryGoal });
       setSettings((current) => current ? { ...current, profile: updated } : current);
+      setActiveSheet(undefined);
     } catch {
       setSaveError(true);
     } finally {
@@ -137,6 +154,7 @@ export function ProfileScreen({
     try {
       const updated = await updateProfile({ progressionStyle });
       setSettings((current) => current ? { ...current, profile: updated } : current);
+      setActiveSheet(undefined);
     } catch {
       setSaveError(true);
     } finally {
@@ -155,6 +173,7 @@ export function ProfileScreen({
     try {
       const updated = await updateProfile({ defaultRestDurationSeconds });
       setSettings((current) => current ? { ...current, profile: updated } : current);
+      setActiveSheet(undefined);
     } catch {
       setSaveError(true);
     } finally {
@@ -167,9 +186,13 @@ export function ProfileScreen({
     setLogoutState("checking");
     try {
       const result = await prepareLogout();
-      if (result === "pending_sync") setLogoutState("pending");
+      if (result === "pending_sync") {
+        setLogoutState("pending");
+        setActiveSheet("logout");
+      }
     } catch {
       setLogoutState("error");
+      setActiveSheet("logout");
     }
   }
 
@@ -183,124 +206,264 @@ export function ProfileScreen({
     }
   }
 
+  function cancelLogout(): void {
+    setLogoutState("idle");
+    setActiveSheet(undefined);
+  }
+
   return (
     <Screen contentContainerStyle={styles.container} scroll>
       <AppText variant="screenTitle">Profile</AppText>
-      <View style={styles.section}>
-        <AppText variant="sectionHeading">Training Preferences</AppText>
-        <Card style={styles.card}>
-          <PreferenceRow label="Units" value={profile.weightUnit === "lb" ? "Pounds (lb)" : "Kilograms (kg)"} />
-          {updateProfile ? (
-            <View accessibilityLabel="Weight unit options" style={styles.options}>
-              <SecondaryButton
-                disabled={savingUnit || profile.weightUnit === "lb"}
-                label="Use Pounds (lb)"
-                onPress={() => { void saveWeightUnit("lb"); }}
-              />
-              <SecondaryButton
-                disabled={savingUnit || profile.weightUnit === "kg"}
-                label="Use Kilograms (kg)"
-                onPress={() => { void saveWeightUnit("kg"); }}
-              />
-            </View>
-          ) : null}
-          {saveError ? (
-            <AppText accessibilityRole="alert" style={styles.error}>
-              Your training preference could not be saved. Nothing else was changed.
-            </AppText>
-          ) : null}
-          <PreferenceRow label="Primary Goal" value={goalLabel(profile.primaryGoal)} />
-          {updateProfile ? (
-            <View accessibilityLabel="Primary goal options" style={styles.options}>
-              {(["hypertrophy", "strength", "hybrid"] as const).map((goal) => (
-                <SecondaryButton
-                  disabled={savingGoal || profile.primaryGoal === goal}
-                  key={goal}
-                  label={`Goal ${goalLabel(goal)}`}
-                  onPress={() => { void savePrimaryGoal(goal); }}
-                />
-              ))}
-            </View>
-          ) : null}
-          <PreferenceRow label="RPE Preference" value={preferenceLabel(profile.rpePreference)} />
-          {updateProfile ? (
-            <View accessibilityLabel="RPE preference options" style={styles.options}>
-              {(["hidden", "optional", "preferred"] as const).map((preference) => (
-                <SecondaryButton
-                  disabled={savingRpe || profile.rpePreference === preference}
-                  key={preference}
-                  label={`RPE ${preferenceLabel(preference)}`}
-                  onPress={() => { void saveRpePreference(preference); }}
-                />
-              ))}
-            </View>
-          ) : null}
-          <PreferenceRow label="Progression Style" value={styleLabel(profile.progressionStyle)} />
-          {updateProfile ? (
-            <View accessibilityLabel="Progression style options" style={styles.options}>
-              {(["conservative", "balanced", "aggressive"] as const).map((style) => (
-                <SecondaryButton
-                  disabled={savingProgressionStyle || profile.progressionStyle === style}
-                  key={style}
-                  label={`Progression ${styleLabel(style)}`}
-                  onPress={() => { void saveProgressionStyle(style); }}
-                />
-              ))}
-            </View>
-          ) : null}
-          <PreferenceRow label="Default Rest" value={`${profile.defaultRestDurationSeconds} seconds`} />
-          {updateProfile ? (
-            <RestDurationPreference
-              key={profile.defaultRestDurationSeconds}
-              onSave={saveDefaultRestDuration}
-              saving={savingRestDuration}
-              value={profile.defaultRestDurationSeconds}
-            />
-          ) : null}
-        </Card>
+
+      <View accessibilityLabel="Account identity" style={styles.identity}>
+        <View accessibilityElementsHidden style={styles.avatar}>
+          <AppText style={styles.avatarText} variant="exerciseName">
+            {accountInitial(settings.email)}
+          </AppText>
+        </View>
+        <View style={styles.identityCopy}>
+          <AppText variant="exerciseName">Your havAI account</AppText>
+          <AppText color="secondary" numberOfLines={1}>
+            {settings.email ?? "Authenticated account"}
+          </AppText>
+        </View>
       </View>
-      <View style={styles.section}>
-        <AppText variant="sectionHeading">Account</AppText>
-        <Card style={styles.card}>
-          <PreferenceRow label="Email" value={settings.email ?? "Authenticated account"} />
-          <View accessibilityLabel="V1 device sync behavior" style={styles.options}>
-            <AppText color="secondary" variant="metadata">DEVICE SYNC</AppText>
-            <AppText color="secondary">
-              V1 is designed for one active device at a time. Unsynced local workout data is
-              protected rather than silently replaced; simultaneous edits are not merged field by field.
-            </AppText>
-          </View>
-          <SecondaryButton
-            disabled={!prepareLogout || logoutState === "checking" || logoutState === "syncing"}
-            label="Logout"
-            onPress={() => { void requestLogout(); }}
-          />
-          {logoutState === "pending" || logoutState === "syncing" || logoutState === "error" ? (
-            <View accessibilityLabel="Pending workout data" style={styles.options}>
-              <AppText variant="sectionHeading">Unsynced workout data</AppText>
-              <AppText color="secondary">
-                Sync your saved device data before logging out so it is not left behind.
-              </AppText>
-              {logoutState === "error" ? (
-                <AppText accessibilityRole="alert" style={styles.error}>
-                  Your data is still saved on this device. Sync could not finish, so you were not logged out.
-                </AppText>
-              ) : null}
-              <SecondaryButton
-                disabled={logoutState === "syncing"}
-                label="Try Sync"
-                onPress={() => { void retrySyncBeforeLogout(); }}
-              />
-              <SecondaryButton
-                disabled={logoutState === "syncing"}
-                label="Cancel"
-                onPress={() => setLogoutState("idle")}
-              />
-            </View>
-          ) : null}
-        </Card>
-      </View>
+
+      <SettingsSection title="TRAINING PREFERENCES">
+        <UnitsRow
+          disabled={!updateProfile || savingUnit}
+          onChange={(weightUnit) => { void saveWeightUnit(weightUnit); }}
+          value={profile.weightUnit}
+        />
+        <SettingsSeparator />
+        <SettingsRow
+          disabled={!updateProfile}
+          label="Primary Goal"
+          onPress={() => openSheet("goal")}
+          value={goalLabel(profile.primaryGoal)}
+        />
+        <SettingsSeparator />
+        <SettingsRow
+          disabled={!updateProfile}
+          label="RPE Preference"
+          onPress={() => openSheet("rpe")}
+          value={preferenceLabel(profile.rpePreference)}
+        />
+        <SettingsSeparator />
+        <SettingsRow
+          disabled={!updateProfile}
+          label="Progression Style"
+          onPress={() => openSheet("progression")}
+          value={styleLabel(profile.progressionStyle)}
+        />
+      </SettingsSection>
+
+      {saveError && activeSheet === undefined ? <PreferenceSaveError /> : null}
+
+      <SettingsSection title="WORKOUT SETTINGS">
+        <SettingsRow
+          disabled={!updateProfile}
+          label="Default Rest"
+          onPress={() => openSheet("rest")}
+          value={formatRestDuration(profile.defaultRestDurationSeconds)}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="ACCOUNT">
+        <SettingsRow label="Email" value={settings.email ?? "Authenticated account"} />
+        <SettingsSeparator />
+        <SettingsRow
+          label="Device Sync"
+          onPress={() => openSheet("deviceSync")}
+          subtitle="One active device in V1"
+        />
+        <SettingsSeparator />
+        <SettingsRow
+          destructive
+          disabled={!prepareLogout || logoutState === "checking" || logoutState === "syncing"}
+          label="Logout"
+          onPress={() => { void requestLogout(); }}
+          showChevron={false}
+        />
+      </SettingsSection>
+
+      <SelectionSheet
+        error={saveError && activeSheet === "goal"}
+        onDismiss={() => setActiveSheet(undefined)}
+        onSelect={(goal) => { void savePrimaryGoal(goal); }}
+        options={[
+          { accessibilityLabel: "Goal Build Muscle", label: "Build Muscle", value: "hypertrophy" },
+          { accessibilityLabel: "Goal Get Stronger", label: "Get Stronger", value: "strength" },
+          { accessibilityLabel: "Goal Both", label: "Both", value: "hybrid" },
+        ]}
+        saving={savingGoal}
+        selectedValue={profile.primaryGoal}
+        title="Primary Goal"
+        visible={activeSheet === "goal"}
+      />
+      <SelectionSheet
+        error={saveError && activeSheet === "rpe"}
+        onDismiss={() => setActiveSheet(undefined)}
+        onSelect={(preference) => { void saveRpePreference(preference); }}
+        options={[
+          { accessibilityLabel: "RPE Hidden", label: "Hidden", value: "hidden" },
+          { accessibilityLabel: "RPE Optional", label: "Optional", value: "optional" },
+          { accessibilityLabel: "RPE Preferred", label: "Preferred", value: "preferred" },
+        ]}
+        saving={savingRpe}
+        selectedValue={profile.rpePreference}
+        title="RPE Preference"
+        visible={activeSheet === "rpe"}
+      />
+      <SelectionSheet
+        error={saveError && activeSheet === "progression"}
+        onDismiss={() => setActiveSheet(undefined)}
+        onSelect={(progressionStyle) => { void saveProgressionStyle(progressionStyle); }}
+        options={[
+          { accessibilityLabel: "Progression Conservative", label: "Conservative", value: "conservative" },
+          { accessibilityLabel: "Progression Balanced", label: "Balanced", value: "balanced" },
+          { accessibilityLabel: "Progression Aggressive", label: "Aggressive", value: "aggressive" },
+        ]}
+        saving={savingProgressionStyle}
+        selectedValue={profile.progressionStyle}
+        title="Progression Style"
+        visible={activeSheet === "progression"}
+      />
+      <BottomSheet
+        accessibilityLabel="Edit default rest duration"
+        onDismiss={() => setActiveSheet(undefined)}
+        title="Default Rest"
+        visible={activeSheet === "rest"}
+      >
+        <AppText color="secondary">
+          Used after working sets unless an exercise has its own rest override.
+        </AppText>
+        <RestDurationPreference
+          key={profile.defaultRestDurationSeconds}
+          onSave={saveDefaultRestDuration}
+          saving={savingRestDuration}
+          value={profile.defaultRestDurationSeconds}
+        />
+        {saveError ? <PreferenceSaveError /> : null}
+      </BottomSheet>
+      <BottomSheet
+        accessibilityLabel="Device sync information"
+        onDismiss={() => setActiveSheet(undefined)}
+        title="Device Sync"
+        visible={activeSheet === "deviceSync"}
+      >
+        <AppText color="secondary">
+          V1 is designed for one active device at a time. Unsynced local workout data is
+          protected rather than silently replaced; simultaneous edits are not merged field by field.
+        </AppText>
+      </BottomSheet>
+      <BottomSheet
+        accessibilityLabel="Pending workout data"
+        dismissOnBackdropPress={false}
+        onDismiss={cancelLogout}
+        title="Unsynced workout data"
+        visible={activeSheet === "logout"}
+      >
+        <AppText color="secondary">
+          Sync your saved device data before logging out so it is not left behind.
+        </AppText>
+        {logoutState === "error" ? (
+          <AppText accessibilityRole="alert" style={styles.error}>
+            Your data is still saved on this device. Sync could not finish, so you were not logged out.
+          </AppText>
+        ) : null}
+        <PrimaryButton
+          disabled={logoutState === "syncing"}
+          label="Try Sync"
+          loading={logoutState === "syncing"}
+          onPress={() => { void retrySyncBeforeLogout(); }}
+        />
+        <SecondaryButton
+          disabled={logoutState === "syncing"}
+          label="Cancel"
+          onPress={cancelLogout}
+        />
+      </BottomSheet>
     </Screen>
+  );
+}
+
+function SettingsSection({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <View style={styles.section}>
+      <AppText color="secondary" variant="sectionHeading">{title}</AppText>
+      <View style={styles.settingsGroup}>{children}</View>
+    </View>
+  );
+}
+
+function UnitsRow({
+  disabled,
+  onChange,
+  value,
+}: {
+  disabled: boolean;
+  onChange: (value: "kg" | "lb") => void;
+  value: "kg" | "lb";
+}) {
+  return (
+    <View
+      accessibilityLabel={`Units: ${value === "lb" ? "Pounds (lb)" : "Kilograms (kg)"}`}
+      style={styles.unitsRow}
+    >
+      <AppText>Units</AppText>
+      <SegmentedControl
+        accessibilityLabel="Weight unit options"
+        disabled={disabled}
+        onChange={onChange}
+        options={[
+          { accessibilityLabel: "Use Pounds (lb)", label: "lb", value: "lb" },
+          { accessibilityLabel: "Use Kilograms (kg)", label: "kg", value: "kg" },
+        ]}
+        value={value}
+      />
+    </View>
+  );
+}
+
+function SelectionSheet<T extends string>({
+  error,
+  onDismiss,
+  onSelect,
+  options,
+  saving,
+  selectedValue,
+  title,
+  visible,
+}: {
+  error: boolean;
+  onDismiss: () => void;
+  onSelect: (value: T) => void;
+  options: readonly { accessibilityLabel: string; label: string; value: T }[];
+  saving: boolean;
+  selectedValue: T;
+  title: string;
+  visible: boolean;
+}) {
+  return (
+    <BottomSheet onDismiss={onDismiss} title={title} visible={visible}>
+      <View style={styles.selectionList}>
+        {options.map((option, index) => (
+          <View key={option.value}>
+            {index > 0 ? <SettingsSeparator /> : null}
+            <SettingsRow
+              accessibilityLabel={option.accessibilityLabel}
+              disabled={saving}
+              label={option.label}
+              onPress={() => onSelect(option.value)}
+              selected={option.value === selectedValue}
+              showChevron={false}
+            />
+          </View>
+        ))}
+      </View>
+      {error ? <PreferenceSaveError /> : null}
+    </BottomSheet>
   );
 }
 
@@ -316,7 +479,7 @@ function RestDurationPreference({
   const [draft, setDraft] = useState(String(value));
   const valid = /^\d+$/.test(draft) && Number(draft) > 0;
   return (
-    <View style={styles.options}>
+    <View style={styles.sheetForm}>
       <TextInput
         error={valid ? undefined : "Enter a positive whole number of seconds."}
         keyboardType="number-pad"
@@ -324,22 +487,31 @@ function RestDurationPreference({
         onChangeText={setDraft}
         value={draft}
       />
-      <SecondaryButton
+      <PrimaryButton
         disabled={saving || !valid || Number(draft) === value}
         label="Save Default Rest"
+        loading={saving}
         onPress={() => { void onSave(Number(draft)); }}
       />
     </View>
   );
 }
 
-function PreferenceRow({ label, value }: { label: string; value: string }) {
+function PreferenceSaveError() {
   return (
-    <View accessibilityLabel={`${label}: ${value}`} style={styles.row}>
-      <AppText color="secondary">{label}</AppText>
-      <AppText>{value}</AppText>
-    </View>
+    <AppText accessibilityRole="alert" style={styles.error}>
+      Your training preference could not be saved. Nothing else was changed.
+    </AppText>
   );
+}
+
+function accountInitial(email: string | undefined): string {
+  return email?.trim().charAt(0).toUpperCase() || "H";
+}
+
+function formatRestDuration(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
 function goalLabel(goal: ProfileSettings["profile"]["primaryGoal"]): string {
@@ -359,16 +531,48 @@ function styleLabel(style: ProfileSettings["profile"]["progressionStyle"]): stri
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.lg },
+  avatar: {
+    alignItems: "center",
+    backgroundColor: colors.accent.soft,
+    borderRadius: radius.panel,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
+  },
+  avatarText: { color: colors.accent.primary },
   centered: { alignItems: "center", justifyContent: "center" },
   container: {
     backgroundColor: colors.background.primary,
     gap: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    paddingBottom: spacing.xxxl + spacing.xl,
     paddingTop: spacing.xl,
   },
   error: { color: colors.semantic.error },
-  options: { gap: spacing.sm },
-  row: { gap: spacing.xs },
-  section: { gap: spacing.md },
+  identity: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  identityCopy: { flex: 1, gap: spacing.xs },
+  section: { gap: spacing.sm },
+  selectionList: {
+    backgroundColor: colors.surface.primary,
+    borderRadius: radius.card,
+    overflow: "hidden",
+  },
+  settingsGroup: {
+    backgroundColor: colors.surface.primary,
+    borderRadius: radius.card,
+    overflow: "hidden",
+  },
+  sheetForm: { gap: spacing.md },
+  unitsRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    minHeight: 56,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
 });

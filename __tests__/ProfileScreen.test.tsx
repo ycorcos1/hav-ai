@@ -24,13 +24,16 @@ describe("ProfileScreen", () => {
       <ProfileScreen loadProfile={async () => settings} />,
     );
 
-    expect(await screen.findByText("Training Preferences")).toBeOnTheScreen();
+    expect(await screen.findByText("TRAINING PREFERENCES")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Account identity")).toBeOnTheScreen();
     expect(screen.getByLabelText("Units: Pounds (lb)")).toBeOnTheScreen();
     expect(screen.getByLabelText("Primary Goal: Both")).toBeOnTheScreen();
     expect(screen.getByLabelText("RPE Preference: Optional")).toBeOnTheScreen();
     expect(screen.getByLabelText("Progression Style: Balanced")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Default Rest: 120 seconds")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Default Rest: 2:00")).toBeOnTheScreen();
     expect(screen.getByLabelText("Email: athlete@example.com")).toBeOnTheScreen();
+    expect(screen.queryByText(/V1 is designed for one active device at a time/)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Device Sync" }));
     expect(screen.getByText(/V1 is designed for one active device at a time/)).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Logout" })).toBeDisabled();
   });
@@ -46,7 +49,7 @@ describe("ProfileScreen", () => {
     expect(await screen.findByText("Your profile settings could not be loaded.")).toBeOnTheScreen();
     expect(screen.queryByText("raw provider detail")).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "Try Again" }));
-    expect(await screen.findByText("Training Preferences")).toBeOnTheScreen();
+    expect(await screen.findByText("TRAINING PREFERENCES")).toBeOnTheScreen();
     expect(loadProfile).toHaveBeenCalledTimes(2);
   });
 
@@ -61,8 +64,16 @@ describe("ProfileScreen", () => {
     );
 
     expect(await screen.findByLabelText("Units: Pounds (lb)")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Use Pounds (lb)" })).toHaveProp(
+      "accessibilityState",
+      { disabled: false, selected: true },
+    );
     await fireEvent.press(screen.getByRole("button", { name: "Use Kilograms (kg)" }));
     expect(await screen.findByLabelText("Units: Kilograms (kg)")).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Use Kilograms (kg)" })).toHaveProp(
+      "accessibilityState",
+      { disabled: false, selected: true },
+    );
     expect(updateProfile).toHaveBeenCalledWith({ weightUnit: "kg" });
     expect(screen.getByLabelText("Primary Goal: Both")).toBeOnTheScreen();
   });
@@ -92,6 +103,11 @@ describe("ProfileScreen", () => {
     );
 
     expect(await screen.findByLabelText("RPE Preference: Optional")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "RPE Preference: Optional" }));
+    expect(screen.getByRole("button", { name: "RPE Optional" })).toHaveProp(
+      "accessibilityState",
+      { disabled: false, selected: true },
+    );
     await fireEvent.press(screen.getByRole("button", { name: "RPE Preferred" }));
     expect(await screen.findByLabelText("RPE Preference: Preferred")).toBeOnTheScreen();
     expect(updateProfile).toHaveBeenCalledWith({ rpePreference: "preferred" });
@@ -108,6 +124,11 @@ describe("ProfileScreen", () => {
     );
 
     expect(await screen.findByLabelText("Primary Goal: Both")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Primary Goal: Both" }));
+    expect(screen.getByRole("button", { name: "Goal Both" })).toHaveProp(
+      "accessibilityState",
+      { disabled: false, selected: true },
+    );
     await fireEvent.press(screen.getByRole("button", { name: "Goal Get Stronger" }));
     expect(await screen.findByLabelText("Primary Goal: Get Stronger")).toBeOnTheScreen();
     expect(updateProfile).toHaveBeenCalledWith({ primaryGoal: "strength" });
@@ -123,6 +144,11 @@ describe("ProfileScreen", () => {
     );
 
     expect(await screen.findByLabelText("Progression Style: Balanced")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Progression Style: Balanced" }));
+    expect(screen.getByRole("button", { name: "Progression Balanced" })).toHaveProp(
+      "accessibilityState",
+      { disabled: false, selected: true },
+    );
     await fireEvent.press(screen.getByRole("button", { name: "Progression Aggressive" }));
     expect(await screen.findByLabelText("Progression Style: Aggressive")).toBeOnTheScreen();
     expect(updateProfile).toHaveBeenCalledWith({ progressionStyle: "aggressive" });
@@ -137,10 +163,11 @@ describe("ProfileScreen", () => {
       <ProfileScreen loadProfile={async () => settings} updateProfile={updateProfile} />,
     );
 
-    const input = await screen.findByLabelText("Default rest duration in seconds");
+    await fireEvent.press(await screen.findByRole("button", { name: "Default Rest: 2:00" }));
+    const input = screen.getByLabelText("Default rest duration in seconds");
     await fireEvent.changeText(input, "180");
     await fireEvent.press(screen.getByRole("button", { name: "Save Default Rest" }));
-    expect(await screen.findByLabelText("Default Rest: 180 seconds")).toBeOnTheScreen();
+    expect(await screen.findByLabelText("Default Rest: 3:00")).toBeOnTheScreen();
     expect(updateProfile).toHaveBeenCalledWith({ defaultRestDurationSeconds: 180 });
   });
 
@@ -150,7 +177,8 @@ describe("ProfileScreen", () => {
       <ProfileScreen loadProfile={async () => settings} updateProfile={updateProfile} />,
     );
 
-    const input = await screen.findByLabelText("Default rest duration in seconds");
+    await fireEvent.press(await screen.findByRole("button", { name: "Default Rest: 2:00" }));
+    const input = screen.getByLabelText("Default rest duration in seconds");
     await fireEvent.changeText(input, "0");
     expect(screen.getByText("Enter a positive whole number of seconds.")).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Save Default Rest" })).toBeDisabled();
