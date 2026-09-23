@@ -80,6 +80,6 @@ Privileged OpenAI and Supabase credentials belong only in server-side secret sto
 - Development and deployment: [docs/TESTING.md](docs/TESTING.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - Canonical implementation sequence: [docs/MASTER_TASK_LIST.md](docs/MASTER_TASK_LIST.md)
 
-The implementation is complete through Phase 25. Deployment preparation and final V1 validation remain intentionally staged; production infrastructure is not created until external or beta use requires it.
+Implementation and automated verification are complete through Phase 26 and the available Phase 27 gates. Native installation, physical-device lifecycle testing, and real-gym usability remain explicitly deferred; see [docs/V1_VALIDATION.md](docs/V1_VALIDATION.md). Production infrastructure is not created until external or beta use requires it.
 
 Do not use broad dependency repair commands such as `npm audit fix --force`. Dependency changes must remain explicit and Expo-compatible.

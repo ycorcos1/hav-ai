@@ -1360,9 +1360,9 @@ Once that workflow exists, verify on a physical iPhone:
 - background and foreground the app, then lock and unlock the phone
 - force close and relaunch havAI
 - use `Resume Workout` and confirm exercise order, set values, types, positions, and notes
-- confirm the current disabled `Finish Workout` placeholder is reachable
+- finish the workout offline and confirm summary and recommendation persistence
 
-The file-backed SQLite integration tests cover process-boundary durability, but do not prove actual iOS lifecycle behavior. Real workout finishing remains owned by Task 15.5.
+The file-backed SQLite integration tests cover process-boundary durability through workout completion, summary, recommendation, and history, but do not prove actual iOS lifecycle behavior.
 
 ---
 
