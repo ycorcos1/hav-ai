@@ -1348,7 +1348,9 @@ This is a release gate for gym testing.
 
 ## 62A. Deferred Phase 12 Local-Workout Device Check
 
-Status: **DEFERRED — native development/preview-build workflow not established.**
+Status: **DEFERRED — Apple/EAS/physical-device environment unavailable.**
+
+The EAS project metadata, build profiles, iOS bundle identifier, and preview environment are configured. Cloud signing, provisioning, device registration, installation, and physical-iPhone verification remain intentionally deferred. Automated file-backed SQLite durability and iOS JavaScript/Hermes bundling are substitutes only; they do not prove native lifecycle behavior.
 
 Once that workflow exists, verify on a physical iPhone:
 
