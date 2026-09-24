@@ -23,6 +23,7 @@
     "zod": "^4.5.2"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
     "@types/node": "~22.13.0",
@@ -41,6 +42,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "e2e": "playwright test",
+    "e2e:smoke": "playwright test --grep @smoke",
+    "e2e:report": "playwright show-report",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "security:secrets": "node scripts/check-secret-boundaries.mjs",
@@ -50,6 +54,10 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/e2e/"
+    ],
     "watchman": false
   },
   "private": true

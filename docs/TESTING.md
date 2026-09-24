@@ -2505,7 +2505,7 @@ Do not lock tooling that conflicts with the final Expo scaffold.
 
 # 130. E2E Tool Selection
 
-Choose after project scaffold based on:
+The scaffold audit selected a two-layer approach based on:
 
 ```text id="kfp75t"
 Expo compatibility
@@ -2514,14 +2514,69 @@ CI complexity
 physical-device needs
 ```
 
-Potential options may include:
+Current browser functional testing uses:
 
 ```text id="sjr0od"
-Maestro
-Detox
+Playwright
 ```
 
-but no decision is required in this document.
+Playwright drives the Expo development web preview against disposable local
+Supabase infrastructure. It verifies user-observable navigation, validation,
+authentication, local web-preview persistence, offline behavior, sync outcomes,
+and deterministic mock-AI flows. It must never target linked development,
+preview, or production Supabase projects.
+
+Native-only coverage will use Maestro after a development/preview build and
+simulator or device environment is available. Native SQLite, process death,
+AppState, notifications, haptics, and physical-device behavior remain outside
+browser E2E claims. Detox is not part of the approved V1 test stack.
+
+The Playwright runner is intentionally single-worker until fixture isolation is
+proven across concurrent local Supabase scenarios. Chromium is the initial CI
+target; additional browsers should be added only when they provide concrete
+product value.
+
+Run the browser smoke suite with:
+
+```text
+npm run e2e:smoke
+```
+
+The initial PR smoke scenario is intentionally small: it launches the real Expo
+web application, verifies unauthenticated account entry navigation, and proves
+client-side signup validation through Chromium. It does not mutate Supabase.
+Authenticated scenarios must start disposable local Supabase, replay migrations
+and canonical seed data, and use unique test users. A Node-only fixture boundary
+may use the local service role for setup, but that credential must never enter
+the Expo environment or browser context.
+
+Suite tiers are:
+
+```text
+Tier 1 — PR smoke
+Tier 2 — broader functional regression on main or a schedule
+Tier 3 — offline, recovery, synchronization, retries, and isolation
+Tier 4 — native-only SQLite, lifecycle, notifications, haptics, and device checks
+```
+
+Every browser context starts with isolated cookies and storage. Scenario setup
+must clear only havAI development-preview keys (`havai:dev:`), never personal
+browser data. Tests must not depend on execution order. Default AI coverage uses
+the authenticated Edge Function boundary with `AI_PROVIDER=mock`; live OpenAI is
+never required by CI.
+
+The runner supplies development-only loopback defaults and rejects non-loopback
+E2E application or Supabase URLs. Override them only with local values:
+
+```text
+E2E_BASE_URL
+E2E_SUPABASE_URL
+E2E_SUPABASE_PUBLISHABLE_KEY
+```
+
+Prefer accessible role and name selectors, then visible text. Add a test ID only
+when no stable semantic selector exists. Keep screenshots and traces for failed
+runs rather than producing artifacts for passing tests.
 
 ---
 
