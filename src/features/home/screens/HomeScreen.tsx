@@ -3,10 +3,14 @@ import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
 import { Card } from "@/components/Card";
+import { CompactButton } from "@/components/CompactButton";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { GroupedSeparator, GroupedSurface } from "@/components/GroupedSurface";
+import { ListRow } from "@/components/ListRow";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
+import { SectionHeader } from "@/components/SectionHeader";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { WorkoutElapsedTime } from "@/features/workouts/components/WorkoutElapsedTime";
 import type { StartWorkoutResult } from "@/features/workouts/services/startWorkout";
@@ -16,11 +20,18 @@ import { colors, spacing } from "@/theme";
 export type HomeScreenProps = {
   discardActiveWorkout: (workoutId: string) => Promise<void>;
   loadHome: () => Promise<WorkoutHomeState>;
+  onCreateTemplate?: () => void;
   onOpenWorkout: (workoutId: string) => void;
   startWorkout: (templateId: string) => Promise<StartWorkoutResult>;
 };
 
-export function HomeScreen({ discardActiveWorkout, loadHome, onOpenWorkout, startWorkout }: HomeScreenProps) {
+export function HomeScreen({
+  discardActiveWorkout,
+  loadHome,
+  onCreateTemplate,
+  onOpenWorkout,
+  startWorkout,
+}: HomeScreenProps) {
   const [state, setState] = useState<WorkoutHomeState>();
   const [loadError, setLoadError] = useState(false);
   const [startError, setStartError] = useState(false);
@@ -100,15 +111,18 @@ export function HomeScreen({ discardActiveWorkout, loadHome, onOpenWorkout, star
 
     return (
       <Screen contentContainerStyle={styles.content} scroll>
-        <AppText color="secondary" variant="metadata">Workout in Progress</AppText>
-        <AppText variant="screenTitle">{state.activeWorkout.name}</AppText>
-        <Card>
+        <View style={styles.pageHeader}>
+          <AppText color="secondary" variant="metadata">WORKOUT IN PROGRESS</AppText>
+          <AppText variant="screenTitle">{state.activeWorkout.name}</AppText>
+          <AppText color="secondary">Pick up exactly where you left off.</AppText>
+        </View>
+        <Card style={styles.activeWorkoutCard}>
           <View style={styles.activeWorkoutDetails}>
-            <View>
+            <View style={styles.metric}>
               <AppText color="muted" variant="metadata">Elapsed Time</AppText>
               <WorkoutElapsedTime startedAt={state.activeWorkout.startedAt} />
             </View>
-            <View>
+            <View style={styles.metric}>
               <AppText color="muted" variant="metadata">Progress</AppText>
               <AppText variant="sectionHeading">
                 {completedExercises} / {state.activeWorkout.exercises.length} exercises
@@ -123,33 +137,56 @@ export function HomeScreen({ discardActiveWorkout, loadHome, onOpenWorkout, star
 
   return (
     <Screen contentContainerStyle={styles.content} scroll>
-      <AppText variant="screenTitle">Ready to Train</AppText>
-      <AppText color="secondary">Choose a workout and start when you’re ready.</AppText>
-      <AppText variant="sectionHeading">Workout Templates</AppText>
-      {state.templates.length === 0 ? (
-        <EmptyState message="Create a workout in the Workouts tab to train from it here." title="No workouts yet" />
-      ) : (
-        <View style={styles.list}>
-          {state.templates.map((template) => (
-            <Card key={template.id}>
-              <AppText variant="exerciseName">{template.name}</AppText>
-              <AppText color="secondary" variant="metadata">
-                {template.exercises.length} {template.exercises.length === 1 ? "exercise" : "exercises"}
-              </AppText>
-              <PrimaryButton
-                label="Start Workout"
-                loading={startingTemplateId === template.id}
-                onPress={() => { void start(template.id); }}
-              />
-            </Card>
-          ))}
-        </View>
-      )}
+      <View style={styles.pageHeader}>
+        <AppText variant="screenTitle">Ready to Train</AppText>
+        <AppText color="secondary">Choose a workout and start when you’re ready.</AppText>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader color="secondary" title="WORKOUT TEMPLATES" />
+        {state.templates.length === 0 ? (
+          <GroupedSurface>
+            <EmptyState
+              action={onCreateTemplate ? (
+                <CompactButton label="Create Workout" onPress={onCreateTemplate} tone="accent" />
+              ) : undefined}
+              message="Create your first reusable workout to begin training."
+              title="No workouts yet"
+            />
+          </GroupedSurface>
+        ) : (
+          <GroupedSurface>
+            {state.templates.map((template, index) => (
+              <View key={template.id}>
+                {index > 0 ? <GroupedSeparator /> : null}
+                <ListRow
+                  subtitle={`${template.exercises.length} ${template.exercises.length === 1 ? "exercise" : "exercises"}`}
+                  title={template.name}
+                  trailing={(
+                    <CompactButton
+                      accessibilityLabel="Start Workout"
+                      disabled={Boolean(startingTemplateId)}
+                      label={startingTemplateId === template.id ? "Starting…" : "Start"}
+                      onPress={() => { void start(template.id); }}
+                      tone="accent"
+                    />
+                  )}
+                />
+              </View>
+            ))}
+          </GroupedSurface>
+        )}
+      </View>
       {startError ? <ErrorState message="Your workout could not be started. Nothing was replaced. Try again." title="Unable to start workout" /> : null}
-      <Card>
-        <AppText variant="sectionHeading">Recent Training</AppText>
-        <AppText color="muted">Your recent training will appear here.</AppText>
-      </Card>
+      <View style={styles.section}>
+        <SectionHeader color="secondary" title="RECENT TRAINING" />
+        <GroupedSurface>
+          <EmptyState
+            message="Completed workouts will appear here as your training history grows."
+            title="No completed sessions yet"
+          />
+        </GroupedSurface>
+      </View>
     </Screen>
   );
 }
@@ -176,7 +213,10 @@ function showActiveWorkoutChoices(
 
 const styles = StyleSheet.create({
   centered: { alignItems: "center", justifyContent: "center" },
-  content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
-  activeWorkoutDetails: { gap: spacing.lg, marginBottom: spacing.lg },
-  list: { gap: spacing.md },
+  content: { gap: spacing.xl, paddingBottom: spacing.xxxl + spacing.xl, paddingTop: spacing.xl },
+  pageHeader: { gap: spacing.sm },
+  section: { gap: spacing.sm },
+  activeWorkoutCard: { gap: spacing.lg },
+  activeWorkoutDetails: { flexDirection: "row", gap: spacing.xl },
+  metric: { flex: 1, gap: spacing.xs },
 });

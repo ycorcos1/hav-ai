@@ -35,12 +35,34 @@ describe("HomeScreen no-active state", () => {
       />,
     );
     expect(await rendered.findByText("Ready to Train")).toBeTruthy();
-    expect(rendered.getByText("Workout Templates")).toBeTruthy();
+    expect(rendered.getByRole("header", { name: "WORKOUT TEMPLATES" })).toBeTruthy();
     expect(rendered.getByText("Push")).toBeTruthy();
-    expect(rendered.getByText("Your recent training will appear here.")).toBeTruthy();
+    expect(rendered.getByText("No completed sessions yet")).toBeTruthy();
+    expect(
+      rendered.getByText(
+        "Completed workouts will appear here as your training history grows.",
+      ),
+    ).toBeTruthy();
     await fireEvent.press(rendered.getByRole("button", { name: "Start Workout" }));
     expect(startWorkout).toHaveBeenCalledWith(template.id);
     expect(onOpenWorkout).toHaveBeenCalledWith(workout.id);
+  });
+
+  it("offers a clear path to create the first workout when no templates exist", async () => {
+    const onCreateTemplate = jest.fn();
+    const rendered = await render(
+      <HomeScreen
+        discardActiveWorkout={jest.fn()}
+        loadHome={async () => ({ activeWorkout: null, templates: [] })}
+        onCreateTemplate={onCreateTemplate}
+        onOpenWorkout={jest.fn()}
+        startWorkout={jest.fn()}
+      />,
+    );
+
+    expect(await rendered.findByText("No workouts yet")).toBeTruthy();
+    await fireEvent.press(rendered.getByRole("button", { name: "Create Workout" }));
+    expect(onCreateTemplate).toHaveBeenCalledTimes(1);
   });
 
   it("shows recoverable sanitized feedback and does not navigate after start fails", async () => {
@@ -155,12 +177,12 @@ describe("HomeScreen active-workout state", () => {
       />,
     );
 
-    expect(await rendered.findByText("Workout in Progress")).toBeTruthy();
+    expect(await rendered.findByText("WORKOUT IN PROGRESS")).toBeTruthy();
     expect(rendered.getByText("Push")).toBeTruthy();
     expect(rendered.getByText("12:34")).toBeTruthy();
     expect(rendered.getByText("1 / 2 exercises")).toBeTruthy();
     expect(rendered.queryByText("Ready to Train")).toBeNull();
-    expect(rendered.queryByText("Workout Templates")).toBeNull();
+    expect(rendered.queryByText("WORKOUT TEMPLATES")).toBeNull();
 
     await fireEvent.press(rendered.getByRole("button", { name: "Resume Workout" }));
     expect(onOpenWorkout).toHaveBeenCalledWith(activeWorkout.id);
@@ -175,11 +197,11 @@ describe("HomeScreen active-workout state", () => {
       startWorkout: jest.fn(),
     };
     const first = await render(<HomeScreen {...props} />);
-    expect(await first.findByText("Workout in Progress")).toBeTruthy();
+    expect(await first.findByText("WORKOUT IN PROGRESS")).toBeTruthy();
     await first.unmount();
 
     const restored = await render(<HomeScreen {...props} />);
-    expect(await restored.findByText("Workout in Progress")).toBeTruthy();
+    expect(await restored.findByText("WORKOUT IN PROGRESS")).toBeTruthy();
     expect(loadHome).toHaveBeenCalledTimes(2);
   });
 });

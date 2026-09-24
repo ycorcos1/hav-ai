@@ -1,6 +1,12 @@
 import { render } from "@testing-library/react-native";
 
-type HomeRouteProps = { onBack?: () => void; onOpenWorkout: (id: string) => void };
+import { colors } from "@/theme";
+
+type HomeRouteProps = {
+  onBack?: () => void;
+  onCreateTemplate?: () => void;
+  onOpenWorkout: (id: string) => void;
+};
 type WorkoutsRouteProps = {
   onCreate: () => void;
   onOpen: (id: string) => void;
@@ -26,9 +32,11 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
 let mockCanGoBack = true;
-const mockTabScreens: { name: string; title?: string }[] = [];
+const mockTabScreens: { hasIcon: boolean; name: string; title?: string }[] = [];
 let mockInitialTabRoute: string | undefined;
 let mockTabHeaderShown: boolean | undefined;
+let mockTabActiveTintColor: unknown;
+let mockTabInactiveTintColor: unknown;
 let mockParams: Record<string, string> = {};
 let mockHomeProps: HomeRouteProps | undefined;
 let mockWorkoutsProps: WorkoutsRouteProps | undefined;
@@ -46,14 +54,23 @@ jest.mock("expo-router", () => {
   function Tabs({ children, initialRouteName, screenOptions }: {
     children?: unknown;
     initialRouteName?: string;
-    screenOptions?: { headerShown?: boolean };
+    screenOptions?: {
+      headerShown?: boolean;
+      tabBarActiveTintColor?: unknown;
+      tabBarInactiveTintColor?: unknown;
+    };
   }) {
     mockInitialTabRoute = initialRouteName;
     mockTabHeaderShown = screenOptions?.headerShown;
+    mockTabActiveTintColor = screenOptions?.tabBarActiveTintColor;
+    mockTabInactiveTintColor = screenOptions?.tabBarInactiveTintColor;
     return React.createElement(View, null, children);
   }
-  Tabs.Screen = ({ name, options }: { name: string; options?: { title?: string } }) => {
-    mockTabScreens.push({ name, title: options?.title });
+  Tabs.Screen = ({ name, options }: {
+    name: string;
+    options?: { tabBarIcon?: unknown; title?: string };
+  }) => {
+    mockTabScreens.push({ hasIcon: typeof options?.tabBarIcon === "function", name, title: options?.title });
     return null;
   };
   return {
@@ -177,6 +194,8 @@ describe("Expo Router navigation adapters", () => {
     mockTabScreens.length = 0;
     mockInitialTabRoute = undefined;
     mockTabHeaderShown = undefined;
+    mockTabActiveTintColor = undefined;
+    mockTabInactiveTintColor = undefined;
     mockParams = {};
     mockCanGoBack = true;
   });
@@ -186,18 +205,21 @@ describe("Expo Router navigation adapters", () => {
 
     expect(mockInitialTabRoute).toBe("home");
     expect(mockTabHeaderShown).toBe(false);
+    expect(mockTabActiveTintColor).toBe(colors.accent.primary);
+    expect(mockTabInactiveTintColor).toBe(colors.text.muted);
     expect(mockTabScreens).toEqual([
-      { name: "home", title: "Home" },
-      { name: "workouts", title: "Workouts" },
-      { name: "progress", title: "Progress" },
-      { name: "coach", title: "Coach" },
-      { name: "profile", title: "Profile" },
+      { hasIcon: true, name: "home", title: "Home" },
+      { hasIcon: true, name: "workouts", title: "Workouts" },
+      { hasIcon: true, name: "progress", title: "Progress" },
+      { hasIcon: true, name: "coach", title: "Coach" },
+      { hasIcon: true, name: "profile", title: "Profile" },
     ]);
   });
 
   it("connects Home, templates, history, Progress, and Coach tab routes", async () => {
     await render(<HomeRoute />);
     expect(mockHomeProps?.onBack).toBeUndefined();
+    mockHomeProps?.onCreateTemplate?.();
     mockHomeProps?.onOpenWorkout("workout-a");
     expect(mockPush).toHaveBeenLastCalledWith("/workout/workout-a");
 
@@ -206,6 +228,7 @@ describe("Expo Router navigation adapters", () => {
     mockWorkoutsProps?.onOpen("template-a");
     mockWorkoutsProps?.onOpenHistory();
     expect(mockPush.mock.calls.map(([path]) => path)).toEqual([
+      "/template/new",
       "/workout/workout-a",
       "/template/new",
       "/template/template-a",

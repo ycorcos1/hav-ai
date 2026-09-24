@@ -44,6 +44,7 @@ describe("CoachScreen initial state", () => {
       expect(screen.getByRole("button", { name: prompt })).toBeOnTheScreen();
     }
     expect(screen.getByLabelText("Ask havAI")).toHaveProp("placeholder", "Ask havAI...");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 
   it("places a suggested prompt into the editable message field without making a request", async () => {
@@ -115,6 +116,8 @@ describe("CoachScreen initial state", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("Coach is unavailable right now.")).toBeOnTheScreen();
     expect(screen.getAllByText("What next?")).toHaveLength(1);
+    expect(screen.getByLabelText("Ask havAI")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
 
     await fireEvent.press(screen.getByRole("button", { name: "Retry" }));
     expect(await screen.findByText("Try the same load again.")).toBeOnTheScreen();

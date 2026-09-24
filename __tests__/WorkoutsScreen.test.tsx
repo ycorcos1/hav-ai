@@ -26,6 +26,22 @@ const template: WorkoutTemplate = {
 };
 
 describe("WorkoutsScreen", () => {
+  it("presents workout history as compact navigation", async () => {
+    const onOpenHistory = jest.fn();
+    const rendered = await render(
+      <WorkoutsScreen
+        loadTemplates={async () => []}
+        onCreate={jest.fn()}
+        onOpen={jest.fn()}
+        onOpenHistory={onOpenHistory}
+      />,
+    );
+
+    await rendered.findByText("No workouts yet");
+    fireEvent.press(rendered.getByRole("button", { name: "Workout History" }));
+    expect(onOpenHistory).toHaveBeenCalledTimes(1);
+  });
+
   it("shows an actionable empty state", async () => {
     const onCreate = jest.fn();
     const rendered = await render(<WorkoutsScreen loadTemplates={async () => []} onCreate={onCreate} onOpen={jest.fn()} />);

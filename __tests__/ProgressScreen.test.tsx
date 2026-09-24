@@ -40,7 +40,7 @@ describe("ProgressScreen", () => {
         onOpenExercise={onOpenExercise}
       />,
     );
-    expect(await screen.findByText("Recent PRs")).toBeOnTheScreen();
+    expect(await screen.findByRole("header", { name: "RECENT PRS" })).toBeOnTheScreen();
     expect(screen.getByText("Best weight · 100 kg × 5")).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Bench Press" })).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Back Squat" })).toBeOnTheScreen();
@@ -49,5 +49,42 @@ describe("ProgressScreen", () => {
     expect(screen.queryByRole("button", { name: "Back Squat" })).not.toBeOnTheScreen();
     await user.press(screen.getByRole("button", { name: "Bench Press" }));
     expect(onOpenExercise).toHaveBeenCalledWith("bench");
+  });
+
+  it("shows intentional empty states without fabricating progress", async () => {
+    await render(
+      <ProgressScreen
+        loadProgress={async () => ({
+          exercises: [],
+          recentRecords: [],
+          weightUnit: "lb",
+        })}
+        onOpenExercise={jest.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("No personal records yet")).toBeOnTheScreen();
+    expect(screen.getByText("No exercises yet")).toBeOnTheScreen();
+  });
+
+  it("keeps a long exercise list navigable and searchable", async () => {
+    const exercises = Array.from({ length: 20 }, (_, index): Exercise => ({
+      ...bench,
+      id: `exercise-${index}`,
+      name: `Exercise ${String(index + 1).padStart(2, "0")}`,
+    }));
+    const onOpenExercise = jest.fn();
+    await render(
+      <ProgressScreen
+        loadProgress={async () => ({ exercises, recentRecords: [], weightUnit: "kg" })}
+        onOpenExercise={onOpenExercise}
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: "Exercise 20" })).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByLabelText("Search exercises"), "20");
+    expect(screen.queryByRole("button", { name: "Exercise 01" })).not.toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Exercise 20" }));
+    expect(onOpenExercise).toHaveBeenCalledWith("exercise-19");
   });
 });

@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
-import { Card } from "@/components/Card";
+import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { GroupedSeparator, GroupedSurface } from "@/components/GroupedSurface";
+import { ListRow } from "@/components/ListRow";
 import { Screen } from "@/components/Screen";
-import { TextButton } from "@/components/TextButton";
-import { TextInput } from "@/components/TextInput";
+import { SearchInput } from "@/components/SearchInput";
+import { SectionHeader } from "@/components/SectionHeader";
 import type { ProgressHome } from "@/features/progress/services/progressApplication";
 import { formatDisplayWeight } from "@/features/workouts/services/weightConversion";
 import { colors, spacing } from "@/theme";
@@ -45,35 +47,69 @@ export function ProgressScreen({ loadProgress, onOpenExercise }: ProgressScreenP
 
   return (
     <Screen contentContainerStyle={styles.container} scroll>
-      <AppText variant="screenTitle">Progress</AppText>
-      <View style={styles.section}>
-        <AppText variant="sectionHeading">Recent PRs</AppText>
-        {progress.recentRecords.length === 0 ? (
-          <AppText color="muted">Complete workouts to build your personal records.</AppText>
-        ) : progress.recentRecords.map(({ exercise, record }) => (
-          <Card key={`${record.type}-${record.setId}`}>
-            <AppText variant="exerciseName">{exercise.name}</AppText>
-            <AppText color="secondary">{recordLabel(record, progress.weightUnit)}</AppText>
-          </Card>
-        ))}
+      <View style={styles.header}>
+        <AppText variant="screenTitle">Progress</AppText>
+        <AppText color="secondary">Explore performance and personal records by exercise.</AppText>
       </View>
       <View style={styles.section}>
-        <AppText variant="sectionHeading">Exercise Progress</AppText>
-        <TextInput
+        <SectionHeader color="secondary" title="RECENT PRS" />
+        {progress.recentRecords.length === 0 ? (
+          <GroupedSurface>
+            <EmptyState
+              message="Complete workouts to build your personal-record history."
+              title="No personal records yet"
+            />
+          </GroupedSurface>
+        ) : (
+          <GroupedSurface>
+            {progress.recentRecords.map(({ exercise, record }, index) => (
+              <View key={`${record.type}-${record.setId}`}>
+                {index > 0 ? <GroupedSeparator /> : null}
+                <ListRow title={exercise.name} value={recordLabel(record, progress.weightUnit)} />
+              </View>
+            ))}
+          </GroupedSurface>
+        )}
+      </View>
+      <View style={styles.section}>
+        <SectionHeader color="secondary" title="EXERCISE PROGRESS" />
+        <SearchInput
           accessibilityLabel="Search exercises"
           onChangeText={setQuery}
           placeholder="Search exercises..."
           value={query}
         />
-        {filtered.length === 0 ? <AppText color="muted">No exercises found.</AppText> : null}
-        {filtered.map((exercise) => (
-          <Card key={exercise.id}>
-            <TextButton label={exercise.name} onPress={() => onOpenExercise(exercise.id)} />
-          </Card>
-        ))}
+        {filtered.length === 0 ? (
+          <GroupedSurface>
+            <EmptyState
+              message={query.trim() ? "Try a different exercise name." : "Exercises appear after your library is available."}
+              title={query.trim() ? "No matching exercises" : "No exercises yet"}
+            />
+          </GroupedSurface>
+        ) : (
+          <GroupedSurface>
+            {filtered.map((exercise, index) => (
+              <View key={exercise.id}>
+                {index > 0 ? <GroupedSeparator /> : null}
+                <ListRow
+                  onPress={() => onOpenExercise(exercise.id)}
+                  subtitle={muscleGroupLabel(exercise.primaryMuscleGroup)}
+                  title={exercise.name}
+                />
+              </View>
+            ))}
+          </GroupedSurface>
+        )}
       </View>
     </Screen>
   );
+}
+
+function muscleGroupLabel(value: string): string {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function recordLabel(
@@ -90,6 +126,7 @@ function recordLabel(
 
 const styles = StyleSheet.create({
   centered: { alignItems: "center", justifyContent: "center" },
-  container: { backgroundColor: colors.background.primary, gap: spacing.xl, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
-  section: { gap: spacing.md },
+  container: { backgroundColor: colors.background.primary, gap: spacing.xl, paddingBottom: spacing.xxxl + spacing.xl, paddingTop: spacing.xl },
+  header: { gap: spacing.sm },
+  section: { gap: spacing.sm },
 });

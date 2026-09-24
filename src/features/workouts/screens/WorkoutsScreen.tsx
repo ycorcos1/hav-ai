@@ -2,11 +2,13 @@ import { useEffect, useEffectEvent, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
-import { Card } from '@/components/Card';
+import { CompactButton } from '@/components/CompactButton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { PrimaryButton } from '@/components/PrimaryButton';
+import { GroupedSurface } from '@/components/GroupedSurface';
+import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
 import { SecondaryButton } from '@/components/SecondaryButton';
 import type { WorkoutTemplate } from '@/shared/contracts';
 import { colors, spacing } from '@/theme';
@@ -41,8 +43,22 @@ export function WorkoutsScreen({ loadTemplates, onCreate, onOpen, onOpenHistory 
 
   return (
     <Screen contentContainerStyle={styles.container} scroll>
-      <AppText variant="screenTitle">Workouts</AppText>
-      {onOpenHistory ? <SecondaryButton label="Workout History" onPress={onOpenHistory} /> : null}
+      <View style={styles.header}>
+        <AppText variant="screenTitle">Workouts</AppText>
+        <AppText color="secondary">Build reusable training plans and revisit completed sessions.</AppText>
+      </View>
+      {onOpenHistory ? (
+        <View style={styles.section}>
+          <SectionHeader color="secondary" title="TRAINING" />
+          <GroupedSurface>
+            <ListRow
+              onPress={onOpenHistory}
+              subtitle="Review completed sessions"
+              title="Workout History"
+            />
+          </GroupedSurface>
+        </View>
+      ) : null}
       {status === 'loading' ? (
         <View accessibilityLabel="Loading workouts" style={styles.feedback}>
           <ActivityIndicator color={colors.accent.primary} />
@@ -57,26 +73,38 @@ export function WorkoutsScreen({ loadTemplates, onCreate, onOpen, onOpenHistory 
         />
       ) : null}
       {status === 'ready' && templates.length === 0 ? (
-        <EmptyState
-          action={<PrimaryButton label="Create Workout" onPress={onCreate} />}
-          message="Create your first workout to start tracking progression."
-          title="No workouts yet"
-        />
+        <View style={styles.section}>
+          <SectionHeader color="secondary" title="WORKOUT TEMPLATES" />
+          <GroupedSurface>
+            <EmptyState
+              action={<CompactButton label="Create Workout" onPress={onCreate} tone="accent" />}
+              message="Create your first reusable workout to start tracking progression."
+              title="No workouts yet"
+            />
+          </GroupedSurface>
+        </View>
       ) : null}
       {status === 'ready' && templates.length > 0 ? (
-        <View style={styles.list}>
-          <PrimaryButton label="Create Workout" onPress={onCreate} />
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <SectionHeader color="secondary" title="WORKOUT TEMPLATES" />
+            <CompactButton label="Create Workout" onPress={onCreate} tone="quiet" />
+          </View>
           {templates.map((template) => (
-            <Card key={template.id} testID={`template-${template.id}`}>
-              <AppText variant="exerciseName">{template.name}</AppText>
-              <AppText color="secondary" variant="metadata">
-                {template.exercises.length} {template.exercises.length === 1 ? 'exercise' : 'exercises'}
-              </AppText>
+            <GroupedSurface key={template.id} testID={`template-${template.id}`}>
+              <ListRow
+                subtitle={`${template.exercises.length} ${template.exercises.length === 1 ? 'exercise' : 'exercises'}`}
+                title={template.name}
+              />
               <View style={styles.actions}>
-                <SecondaryButton label="Open Template" onPress={() => onOpen(template.id)} />
-                <PrimaryButton accessibilityHint="Workout starting is enabled in a later phase." disabled label="Start" />
+                <CompactButton label="Open Template" onPress={() => onOpen(template.id)} tone="quiet" />
+                <CompactButton
+                  accessibilityHint="Workout starting is available from Home."
+                  disabled
+                  label="Start"
+                />
               </View>
-            </Card>
+            </GroupedSurface>
           ))}
         </View>
       ) : null}
@@ -89,19 +117,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
     gap: spacing.lg,
-    paddingBottom: spacing.xxxl,
+    paddingBottom: spacing.xxxl + spacing.xl,
     paddingTop: spacing.xl,
+  },
+  header: {
+    gap: spacing.sm,
   },
   feedback: {
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.xl,
   },
-  list: {
-    gap: spacing.md,
+  section: {
+    gap: spacing.sm,
+  },
+  sectionHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   actions: {
+    flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.md,
+    justifyContent: 'flex-end',
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
 });

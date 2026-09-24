@@ -15,6 +15,7 @@ export type ScreenProps = {
   accessibilityLabel?: string;
   children: ReactNode;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  keyboardAware?: boolean;
   navigationAction?: {
     accessibilityLabel?: string;
     onBack: () => void;
@@ -28,6 +29,7 @@ export function Screen({
   accessibilityLabel,
   children,
   contentContainerStyle,
+  keyboardAware = false,
   navigationAction,
   scroll = false,
   style,
@@ -44,7 +46,9 @@ export function Screen({
       {scroll ? (
         <ScrollView
           accessibilityLabel={accessibilityLabel}
+          automaticallyAdjustKeyboardInsets={keyboardAware}
           contentContainerStyle={[styles.content, contentContainerStyle]}
+          keyboardShouldPersistTaps={keyboardAware ? 'handled' : 'never'}
           testID={testID}
         >
           {children}

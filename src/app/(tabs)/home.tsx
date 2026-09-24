@@ -13,6 +13,7 @@ export default function HomeRoute() {
     <HomeScreen
       discardActiveWorkout={discardCurrentUserActiveWorkout}
       loadHome={loadCurrentUserWorkoutHome}
+      onCreateTemplate={() => router.push('/template/new')}
       onOpenWorkout={(workoutId) => router.push(`/workout/${workoutId}`)}
       startWorkout={requestCurrentUserWorkoutStart}
     />

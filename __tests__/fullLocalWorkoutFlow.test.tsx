@@ -306,7 +306,7 @@ describe("full local workout flow", () => {
           startWorkout={requestCurrentUserWorkoutStart}
         />,
       );
-      expect(await homeScreen.findByText("Workout in Progress")).toBeOnTheScreen();
+      expect(await homeScreen.findByText("WORKOUT IN PROGRESS")).toBeOnTheScreen();
       await fireEvent.press(homeScreen.getByRole("button", { name: "Resume Workout" }));
       expect(resume).toHaveBeenCalledWith(workout.id);
       await homeScreen.unmount();
