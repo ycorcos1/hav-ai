@@ -302,6 +302,7 @@ describe("full local workout flow", () => {
         <HomeScreen
           discardActiveWorkout={jest.fn()}
           loadHome={loadCurrentUserWorkoutHome}
+          onOpenHistoryWorkout={jest.fn()}
           onOpenWorkout={resume}
           startWorkout={requestCurrentUserWorkoutStart}
         />,
@@ -360,6 +361,12 @@ describe("full local workout flow", () => {
         exerciseSummaries: [{ exerciseId: exercise.id, totalReps: 23 }],
       });
       expect(finished.recommendations).toHaveLength(1);
+
+      const completedHome = await loadCurrentUserWorkoutHome();
+      expect(completedHome.activeWorkout).toBeNull();
+      expect(completedHome.recentWorkouts).toEqual([
+        expect.objectContaining({ id: workout.id, status: "completed" }),
+      ]);
 
       const summary = await loadCurrentUserCompletedWorkoutSummary(workout.id);
       expect(summary).toMatchObject({

@@ -38,6 +38,7 @@ jest.mock("@/features/profile/services/profileCachePersistence", () => ({
 import {
   loadCurrentUserCompletedWorkoutSummary,
   loadCurrentUserActiveWorkoutExercise,
+  loadCurrentUserWorkoutHome,
   loadCurrentUserWorkoutOverview,
   updateCurrentUserActiveWorkoutNote,
 } from "@/features/workouts/services/workoutApplication";
@@ -107,6 +108,10 @@ function repositories() {
     get: jest.fn().mockResolvedValue({ weightUnit: "kg" }),
     upsert: jest.fn(),
   };
+  const workoutHistoryRepository = {
+    getLatestCompletedForExercise: jest.fn(),
+    listCompleted: jest.fn().mockResolvedValue({ items: [] }),
+  };
   return {
     exerciseHistoryRepository,
     exerciseRepository,
@@ -114,6 +119,7 @@ function repositories() {
     profileCacheRepository,
     recommendationRepository,
     templateRepository,
+    workoutHistoryRepository,
     workoutRepository,
   };
 }
@@ -137,6 +143,25 @@ describe("workout application overview", () => {
         }),
         upsert: jest.fn(),
       },
+    });
+  });
+
+  it("loads the three most recent completed workouts for Home from canonical history", async () => {
+    const dependencies = repositories();
+    const completed = { ...workout, status: "completed" as const, completedAt: time };
+    dependencies.workoutRepository.getActiveForUser.mockResolvedValue(null);
+    dependencies.templateRepository.listForUser.mockResolvedValue([]);
+    dependencies.workoutHistoryRepository.listCompleted.mockResolvedValue({ items: [completed] });
+    mockCreateWorkoutPersistence.mockResolvedValue(dependencies);
+
+    await expect(loadCurrentUserWorkoutHome()).resolves.toEqual({
+      activeWorkout: null,
+      recentWorkouts: [completed],
+      templates: [],
+    });
+    expect(dependencies.workoutHistoryRepository.listCompleted).toHaveBeenCalledWith({
+      limit: 3,
+      userId: "user-a",
     });
   });
 

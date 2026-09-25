@@ -232,6 +232,7 @@ describe("cached template offline start", () => {
         recommendationRepository: recommendations,
         templateRepository: templates,
         workoutRepository: workouts,
+        workoutHistoryRepository: workouts,
       });
 
       const networkService: NetworkStatusService = {
@@ -246,6 +247,7 @@ describe("cached template offline start", () => {
             <HomeScreen
               discardActiveWorkout={jest.fn()}
               loadHome={loadCurrentUserWorkoutHome}
+              onOpenHistoryWorkout={jest.fn()}
               onOpenWorkout={onOpenWorkout}
               startWorkout={requestCurrentUserWorkoutStart}
             />

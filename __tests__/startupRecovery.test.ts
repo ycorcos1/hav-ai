@@ -58,7 +58,11 @@ it("recovers the same workout and committed set after file reopen without cloud 
     mockGetSession.mockRejectedValue(new AuthServiceError("getSession", "network_error"));
     mockReadStorage.mockReturnValue(JSON.stringify({ user: { id: userId }, access_token: "fixture", refresh_token: "fixture", expires_at: 1 }));
     mockProfilePersistence.mockResolvedValue({ profileCacheRepository: new SQLiteLocalProfileCacheRepository(database) });
-    mockWorkoutPersistence.mockResolvedValue({ workoutRepository: repository, templateRepository: { listForUser: async () => [] } });
+    mockWorkoutPersistence.mockResolvedValue({
+      workoutHistoryRepository: repository,
+      workoutRepository: repository,
+      templateRepository: { listForUser: async () => [] },
+    });
     await expect(recoverLocalStartup({ authService: auth, profileRepository: remote })).resolves.toEqual({ status: "local-owner", onboardingComplete: true });
     const home = await loadCurrentUserWorkoutHome();
     expect(home.activeWorkout).toEqual({ ...workout, exercises: [{ ...workout.exercises[0], sets: [completed.set] }] });

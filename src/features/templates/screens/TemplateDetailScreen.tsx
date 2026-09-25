@@ -9,10 +9,13 @@ import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { TextButton } from "@/components/TextButton";
 import type { TemplateDetail } from "@/features/templates/services/templateApplication";
+import { useStartWorkoutFlow } from "@/features/workouts/hooks/useStartWorkoutFlow";
+import type { StartWorkoutResult } from "@/features/workouts/services/startWorkout";
 import type { WorkoutTemplate } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type TemplateDetailScreenProps = {
+  discardActiveWorkout: (workoutId: string) => Promise<void>;
   loadTemplate: () => Promise<TemplateDetail | null>;
   onArchive?: (id: string) => Promise<void>;
   onArchived?: () => void;
@@ -20,9 +23,12 @@ export type TemplateDetailScreenProps = {
   onDuplicate?: (id: string) => Promise<WorkoutTemplate>;
   onDuplicated?: (id: string) => void;
   onEdit?: (id: string) => void;
+  onOpenWorkout: (workoutId: string) => void;
+  startWorkout: (templateId: string) => Promise<StartWorkoutResult>;
 };
 
 export function TemplateDetailScreen({
+  discardActiveWorkout,
   loadTemplate,
   onArchive,
   onArchived,
@@ -30,6 +36,8 @@ export function TemplateDetailScreen({
   onDuplicate,
   onDuplicated,
   onEdit,
+  onOpenWorkout,
+  startWorkout,
 }: TemplateDetailScreenProps) {
   const [detail, setDetail] = useState<TemplateDetail | null>();
   const [failed, setFailed] = useState(false);
@@ -37,6 +45,11 @@ export function TemplateDetailScreen({
   const [duplicating, setDuplicating] = useState(false);
   const [archiveError, setArchiveError] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const {
+    start,
+    startError,
+    startingTemplateId,
+  } = useStartWorkoutFlow({ discardActiveWorkout, onOpenWorkout, startWorkout });
 
   useEffect(() => {
     let active = true;
@@ -109,7 +122,18 @@ export function TemplateDetailScreen({
           </Card>
         ))}
       </View>
-      {onEdit ? <PrimaryButton label="Edit Template" onPress={() => onEdit(detail.template.id)} /> : null}
+      <PrimaryButton
+        label={startingTemplateId === detail.template.id ? "Starting…" : "Start Workout"}
+        loading={startingTemplateId === detail.template.id}
+        onPress={() => { void start(detail.template.id); }}
+      />
+      {startError ? (
+        <ErrorState
+          message="Your workout could not be started. Nothing was replaced. Try again."
+          title="Unable to start workout"
+        />
+      ) : null}
+      {onEdit ? <SecondaryButton label="Edit Template" onPress={() => onEdit(detail.template.id)} /> : null}
       {onDuplicate ? (
         <SecondaryButton label="Duplicate Template" loading={duplicating} onPress={() => { void duplicate(); }} />
       ) : null}
@@ -126,7 +150,6 @@ export function TemplateDetailScreen({
           title="Unable to delete workout"
         />
       ) : null}
-      <PrimaryButton accessibilityHint="Workout starting is enabled in a later phase." disabled label="Start" />
     </Screen>
   );
 }

@@ -5,7 +5,13 @@ import { colors } from "@/theme";
 type HomeRouteProps = {
   onBack?: () => void;
   onCreateTemplate?: () => void;
+  onOpenHistoryWorkout: (id: string) => void;
   onOpenWorkout: (id: string) => void;
+};
+type TemplateDetailRouteProps = {
+  discardActiveWorkout: unknown;
+  onOpenWorkout: (id: string) => void;
+  startWorkout: unknown;
 };
 type WorkoutsRouteProps = {
   onCreate: () => void;
@@ -39,6 +45,7 @@ let mockTabActiveTintColor: unknown;
 let mockTabInactiveTintColor: unknown;
 let mockParams: Record<string, string> = {};
 let mockHomeProps: HomeRouteProps | undefined;
+let mockTemplateDetailProps: TemplateDetailRouteProps | undefined;
 let mockWorkoutsProps: WorkoutsRouteProps | undefined;
 let mockProgressProps: ProgressRouteProps | undefined;
 let mockWorkoutOverviewProps: WorkoutOverviewRouteProps | undefined;
@@ -75,6 +82,7 @@ jest.mock("expo-router", () => {
   };
   return {
     Tabs,
+    useFocusEffect: (callback: () => void | (() => void)) => React.useEffect(callback, [callback]),
     useLocalSearchParams: () => mockParams,
     useRouter: () => ({
       back: mockBack,
@@ -90,6 +98,12 @@ jest.mock("@/features/home/screens/HomeScreen", () => ({
 }));
 jest.mock("@/features/workouts/screens/WorkoutsScreen", () => ({
   WorkoutsScreen: (props: WorkoutsRouteProps) => { mockWorkoutsProps = props; return null; },
+}));
+jest.mock("@/features/templates/screens/TemplateDetailScreen", () => ({
+  TemplateDetailScreen: (props: TemplateDetailRouteProps) => {
+    mockTemplateDetailProps = props;
+    return null;
+  },
 }));
 jest.mock("@/features/progress/screens/ProgressScreen", () => ({
   ProgressScreen: (props: ProgressRouteProps) => { mockProgressProps = props; return null; },
@@ -163,6 +177,9 @@ jest.mock("@/features/workouts/services/workoutRecoveryContext", () => ({
   loadRecoveryWorkoutOverview: jest.fn(),
 }));
 jest.mock("@/features/templates/services/templateApplication", () => ({
+  archiveCurrentUserTemplate: jest.fn(),
+  duplicateCurrentUserTemplate: jest.fn(),
+  getCurrentUserTemplate: jest.fn(),
   listCurrentUserTemplates: jest.fn(),
 }));
 jest.mock("@/features/exercises/services/loadExerciseLibrary", () => ({
@@ -181,6 +198,7 @@ import CoachRoute from "@/app/(tabs)/coach";
 import HomeRoute from "@/app/(tabs)/home";
 import ProgressRoute from "@/app/(tabs)/progress";
 import WorkoutsRoute from "@/app/(tabs)/workouts";
+import TemplateDetailRoute from "@/app/template/[id]";
 import ExerciseProgressRoute from "@/app/progress/[id]";
 import ActiveWorkoutOverviewRoute from "@/app/workout/[id]";
 import ActiveExerciseLoggingRoute from "@/app/workout/[id]/exercise/[workoutExerciseId]";
@@ -221,7 +239,8 @@ describe("Expo Router navigation adapters", () => {
     expect(mockHomeProps?.onBack).toBeUndefined();
     mockHomeProps?.onCreateTemplate?.();
     mockHomeProps?.onOpenWorkout("workout-a");
-    expect(mockPush).toHaveBeenLastCalledWith("/workout/workout-a");
+    mockHomeProps?.onOpenHistoryWorkout("completed-a");
+    expect(mockPush).toHaveBeenLastCalledWith("/workout/history/completed-a");
 
     await render(<WorkoutsRoute />);
     mockWorkoutsProps?.onCreate();
@@ -230,6 +249,7 @@ describe("Expo Router navigation adapters", () => {
     expect(mockPush.mock.calls.map(([path]) => path)).toEqual([
       "/template/new",
       "/workout/workout-a",
+      "/workout/history/completed-a",
       "/template/new",
       "/template/template-a",
       "/workout/history",
@@ -239,6 +259,20 @@ describe("Expo Router navigation adapters", () => {
     mockProgressProps?.onOpenExercise("exercise-a");
     expect(mockPush).toHaveBeenLastCalledWith("/progress/exercise-a");
     await expect(render(<CoachRoute />)).resolves.toBeDefined();
+  });
+
+  it("connects template detail to the canonical start workflow and active workout route", async () => {
+    mockParams = { id: "template-a" };
+    await render(<TemplateDetailRoute />);
+
+    expect(mockTemplateDetailProps?.startWorkout).toBe(
+      require("@/features/workouts/services/workoutApplication").requestCurrentUserWorkoutStart,
+    );
+    expect(mockTemplateDetailProps?.discardActiveWorkout).toBe(
+      require("@/features/workouts/services/workoutApplication").discardCurrentUserActiveWorkout,
+    );
+    mockTemplateDetailProps?.onOpenWorkout("workout-from-template");
+    expect(mockPush).toHaveBeenLastCalledWith("/workout/workout-from-template");
   });
 
   it("connects active workout overview, exercise, Coach, and summary paths", async () => {

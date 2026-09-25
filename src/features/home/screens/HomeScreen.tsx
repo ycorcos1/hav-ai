@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
 import { Card } from "@/components/Card";
@@ -13,15 +13,19 @@ import { Screen } from "@/components/Screen";
 import { SectionHeader } from "@/components/SectionHeader";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { WorkoutElapsedTime } from "@/features/workouts/components/WorkoutElapsedTime";
+import { useStartWorkoutFlow } from "@/features/workouts/hooks/useStartWorkoutFlow";
 import type { StartWorkoutResult } from "@/features/workouts/services/startWorkout";
 import type { WorkoutHomeState } from "@/features/workouts/services/workoutApplication";
+import type { Workout } from "@/shared/contracts";
 import { colors, spacing } from "@/theme";
 
 export type HomeScreenProps = {
   discardActiveWorkout: (workoutId: string) => Promise<void>;
   loadHome: () => Promise<WorkoutHomeState>;
   onCreateTemplate?: () => void;
+  onOpenHistoryWorkout: (workoutId: string) => void;
   onOpenWorkout: (workoutId: string) => void;
+  refreshKey?: number;
   startWorkout: (templateId: string) => Promise<StartWorkoutResult>;
 };
 
@@ -29,14 +33,19 @@ export function HomeScreen({
   discardActiveWorkout,
   loadHome,
   onCreateTemplate,
+  onOpenHistoryWorkout,
   onOpenWorkout,
+  refreshKey = 0,
   startWorkout,
 }: HomeScreenProps) {
   const [state, setState] = useState<WorkoutHomeState>();
   const [loadError, setLoadError] = useState(false);
-  const [startError, setStartError] = useState(false);
-  const [startingTemplateId, setStartingTemplateId] = useState<string>();
   const [attempt, setAttempt] = useState(0);
+  const { start, startError, startingTemplateId } = useStartWorkoutFlow({
+    discardActiveWorkout,
+    onOpenWorkout,
+    startWorkout,
+  });
 
   useEffect(() => {
     let active = true;
@@ -45,52 +54,7 @@ export function HomeScreen({
       () => { if (active) setLoadError(true); },
     );
     return () => { active = false; };
-  }, [attempt, loadHome]);
-
-  async function executeStart(templateId: string): Promise<StartWorkoutResult | undefined> {
-    if (startingTemplateId) return;
-    setStartError(false);
-    setStartingTemplateId(templateId);
-    try {
-      const result = await startWorkout(templateId);
-      if (result.status === "started") onOpenWorkout(result.workout.id);
-      return result;
-    } catch {
-      setStartError(true);
-      return undefined;
-    } finally {
-      setStartingTemplateId(undefined);
-    }
-  }
-
-  function presentActiveWorkoutChoices(
-    result: Extract<StartWorkoutResult, { status: "active_workout_exists" }>,
-    templateId: string,
-  ): void {
-    showActiveWorkoutChoices(result, {
-        discard: async () => {
-          try {
-            await discardActiveWorkout(result.activeWorkout.id);
-            const retryResult = await executeStart(templateId);
-            if (retryResult?.status === "active_workout_exists") {
-              presentActiveWorkoutChoices(retryResult, templateId);
-            }
-          } catch {
-            setStartError(true);
-            setStartingTemplateId(undefined);
-          }
-        },
-        resume: () => onOpenWorkout(result.activeWorkout.id),
-      },
-    );
-  }
-
-  async function start(templateId: string): Promise<void> {
-    const result = await executeStart(templateId);
-    if (result?.status === "active_workout_exists") {
-      presentActiveWorkoutChoices(result, templateId);
-    }
-  }
+  }, [attempt, loadHome, refreshKey]);
 
   if (loadError) return (
     <Screen contentContainerStyle={styles.centered}>
@@ -131,6 +95,10 @@ export function HomeScreen({
           </View>
           <PrimaryButton label="Resume Workout" onPress={() => onOpenWorkout(state.activeWorkout!.id)} />
         </Card>
+        <RecentTraining
+          onOpenWorkout={onOpenHistoryWorkout}
+          workouts={state.recentWorkouts}
+        />
       </Screen>
     );
   }
@@ -178,37 +146,70 @@ export function HomeScreen({
         )}
       </View>
       {startError ? <ErrorState message="Your workout could not be started. Nothing was replaced. Try again." title="Unable to start workout" /> : null}
-      <View style={styles.section}>
-        <SectionHeader color="secondary" title="RECENT TRAINING" />
+      <RecentTraining onOpenWorkout={onOpenHistoryWorkout} workouts={state.recentWorkouts} />
+    </Screen>
+  );
+}
+
+function RecentTraining({
+  onOpenWorkout,
+  workouts,
+}: {
+  onOpenWorkout: (workoutId: string) => void;
+  workouts: Workout[];
+}) {
+  const recent = [...workouts]
+    .filter((workout) => workout.status === "completed" && workout.completedAt)
+    .sort((left, right) => (
+      right.completedAt!.localeCompare(left.completedAt!) || right.id.localeCompare(left.id)
+    ))
+    .slice(0, 3);
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader color="secondary" title="RECENT TRAINING" />
+      {recent.length === 0 ? (
         <GroupedSurface>
           <EmptyState
             message="Completed workouts will appear here as your training history grows."
             title="No completed sessions yet"
           />
         </GroupedSurface>
-      </View>
-    </Screen>
+      ) : (
+        <GroupedSurface>
+          {recent.map((workout, index) => (
+            <View key={workout.id}>
+              {index > 0 ? <GroupedSeparator /> : null}
+              <ListRow
+                accessibilityLabel={`View ${workout.name} workout history`}
+                onPress={() => onOpenWorkout(workout.id)}
+                subtitle={recentWorkoutSummary(workout)}
+                title={workout.name}
+              />
+            </View>
+          ))}
+        </GroupedSurface>
+      )}
+    </View>
   );
 }
 
-function showActiveWorkoutChoices(
-  result: Extract<StartWorkoutResult, { status: "active_workout_exists" }>,
-  actions: { discard: () => Promise<void>; resume: () => void },
-): void {
-  Alert.alert("Workout in progress", `${result.activeWorkout.name} is already active.`, [
-    { text: "Cancel", style: "cancel" },
-    { text: "Resume", onPress: actions.resume },
-    {
-      text: "Discard", style: "destructive", onPress: () => Alert.alert(
-        "Discard current workout?",
-        "Unsaved active workout data will be discarded.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Discard Workout", style: "destructive", onPress: () => { void actions.discard(); } },
-        ],
-      ),
-    },
-  ]);
+function recentWorkoutSummary(workout: Workout): string {
+  const completedAt = workout.completedAt!;
+  const completed = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(completedAt));
+  const durationSeconds = Math.max(0, Math.floor(
+    (new Date(completedAt).getTime() - new Date(workout.startedAt).getTime()) / 1000,
+  ));
+  const hours = Math.floor(durationSeconds / 3600);
+  const minutes = Math.floor((durationSeconds % 3600) / 60);
+  const duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  const setCount = workout.exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
+  const exerciseLabel = `${workout.exercises.length} ${workout.exercises.length === 1 ? "exercise" : "exercises"}`;
+  const setLabel = `${setCount} ${setCount === 1 ? "set" : "sets"}`;
+  return `${completed} · ${duration} · ${exerciseLabel} · ${setLabel}`;
 }
 
 const styles = StyleSheet.create({

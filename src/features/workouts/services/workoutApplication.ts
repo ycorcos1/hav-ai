@@ -49,6 +49,7 @@ import { getCachedWorkoutProfile } from "./workoutProfilePreferences";
 
 export type WorkoutHomeState = {
   activeWorkout: Workout | null;
+  recentWorkouts: Workout[];
   templates: WorkoutTemplate[];
 };
 
@@ -92,11 +93,16 @@ export type WorkoutHistoryDetail = {
 
 export async function loadCurrentUserWorkoutHome(): Promise<WorkoutHomeState> {
   const { persistence, userId } = await persistenceForCurrentUser();
-  const [activeWorkout, templates] = await Promise.all([
+  const [activeWorkout, templates, history] = await Promise.all([
     persistence.workoutRepository.getActiveForUser(userId),
     persistence.templateRepository.listForUser(userId),
+    persistence.workoutHistoryRepository.listCompleted({ limit: 3, userId }),
   ]);
-  return { activeWorkout, templates: templates.filter((template) => !template.isArchived) };
+  return {
+    activeWorkout,
+    recentWorkouts: history.items,
+    templates: templates.filter((template) => !template.isArchived),
+  };
 }
 
 export async function requestCurrentUserWorkoutStart(templateId: UUID): Promise<StartWorkoutResult> {

@@ -17,6 +17,36 @@ const workout: Workout = {
   id: "workout-1", userId: "user-a", sourceTemplateId: template.id, name: template.name,
   status: "active", startedAt: time, exercises: [], createdAt: time, updatedAt: time,
 };
+const completedWorkout: Workout = {
+  ...workout,
+  id: "completed-1",
+  name: "Upper Body",
+  status: "completed",
+  completedAt: "2026-09-01T00:05:00.000Z",
+  exercises: [{
+    id: "completed-exercise-1",
+    userId: "user-a",
+    workoutId: "completed-1",
+    exerciseId: "exercise-1",
+    position: 0,
+    sets: [{
+      id: "completed-set-1",
+      userId: "user-a",
+      workoutId: "completed-1",
+      workoutExerciseId: "completed-exercise-1",
+      exerciseId: "exercise-1",
+      position: 0,
+      setType: "working",
+      reps: 8,
+      completedAt: "2026-09-01T00:04:00.000Z",
+      createdAt: time,
+      updatedAt: time,
+    }],
+    createdAt: time,
+    updatedAt: time,
+  }],
+  updatedAt: "2026-09-01T00:05:00.000Z",
+};
 
 describe("HomeScreen no-active state", () => {
   afterEach(() => {
@@ -29,7 +59,8 @@ describe("HomeScreen no-active state", () => {
     const rendered = await render(
       <HomeScreen
         discardActiveWorkout={jest.fn()}
-        loadHome={async () => ({ activeWorkout: null, templates: [template] })}
+        loadHome={async () => ({ activeWorkout: null, recentWorkouts: [], templates: [template] })}
+        onOpenHistoryWorkout={jest.fn()}
         onOpenWorkout={onOpenWorkout}
         startWorkout={startWorkout}
       />,
@@ -53,8 +84,9 @@ describe("HomeScreen no-active state", () => {
     const rendered = await render(
       <HomeScreen
         discardActiveWorkout={jest.fn()}
-        loadHome={async () => ({ activeWorkout: null, templates: [] })}
+        loadHome={async () => ({ activeWorkout: null, recentWorkouts: [], templates: [] })}
         onCreateTemplate={onCreateTemplate}
+        onOpenHistoryWorkout={jest.fn()}
         onOpenWorkout={jest.fn()}
         startWorkout={jest.fn()}
       />,
@@ -70,7 +102,8 @@ describe("HomeScreen no-active state", () => {
     const rendered = await render(
       <HomeScreen
         discardActiveWorkout={jest.fn()}
-        loadHome={async () => ({ activeWorkout: null, templates: [template] })}
+        loadHome={async () => ({ activeWorkout: null, recentWorkouts: [], templates: [template] })}
+        onOpenHistoryWorkout={jest.fn()}
         onOpenWorkout={onOpenWorkout}
         startWorkout={async () => { throw new Error("private SQLite details"); }}
       />,
@@ -98,7 +131,8 @@ describe("HomeScreen no-active state", () => {
     const rendered = await render(
       <HomeScreen
         discardActiveWorkout={discardActiveWorkout}
-        loadHome={async () => ({ activeWorkout: null, templates: [template] })}
+        loadHome={async () => ({ activeWorkout: null, recentWorkouts: [], templates: [template] })}
+        onOpenHistoryWorkout={jest.fn()}
         onOpenWorkout={onOpenWorkout}
         startWorkout={startWorkout}
       />,
@@ -117,6 +151,75 @@ describe("HomeScreen no-active state", () => {
     await waitFor(() => expect(discardActiveWorkout).toHaveBeenCalledWith(activeWorkout.id));
     await waitFor(() => expect(startWorkout).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(onOpenWorkout).toHaveBeenCalledWith(workout.id));
+  });
+
+  it("shows a completed workout and opens its existing history detail", async () => {
+    const onOpenHistoryWorkout = jest.fn();
+    const rendered = await render(
+      <HomeScreen
+        discardActiveWorkout={jest.fn()}
+        loadHome={async () => ({
+          activeWorkout: null,
+          recentWorkouts: [completedWorkout],
+          templates: [],
+        })}
+        onOpenHistoryWorkout={onOpenHistoryWorkout}
+        onOpenWorkout={jest.fn()}
+        startWorkout={jest.fn()}
+      />,
+    );
+
+    expect(await rendered.findByText("Upper Body")).toBeTruthy();
+    expect(rendered.getByText(/5m · 1 exercise · 1 set/)).toBeTruthy();
+    await fireEvent.press(rendered.getByRole("button", { name: "View Upper Body workout history" }));
+    expect(onOpenHistoryWorkout).toHaveBeenCalledWith(completedWorkout.id);
+  });
+
+  it("shows at most the three newest completed workouts", async () => {
+    const workouts = [
+      { ...completedWorkout, id: "completed-2", name: "Second", completedAt: "2026-09-02T00:05:00.000Z" },
+      { ...completedWorkout, id: "completed-4", name: "Newest", completedAt: "2026-09-04T00:05:00.000Z" },
+      { ...completedWorkout, id: "completed-1", name: "Oldest", completedAt: "2026-09-01T00:05:00.000Z" },
+      { ...completedWorkout, id: "completed-3", name: "Third", completedAt: "2026-09-03T00:05:00.000Z" },
+    ];
+    const rendered = await render(
+      <HomeScreen
+        discardActiveWorkout={jest.fn()}
+        loadHome={async () => ({ activeWorkout: null, recentWorkouts: workouts, templates: [] })}
+        onOpenHistoryWorkout={jest.fn()}
+        onOpenWorkout={jest.fn()}
+        startWorkout={jest.fn()}
+      />,
+    );
+
+    await rendered.findByText("Newest");
+    expect(rendered.getAllByRole("button", { name: /workout history/ }).map((row) => row.props.accessibilityLabel))
+      .toEqual([
+        "View Newest workout history",
+        "View Third workout history",
+        "View Second workout history",
+      ]);
+    expect(rendered.queryByText("Oldest")).toBeNull();
+  });
+
+  it("reloads recent training after workout completion refreshes Home", async () => {
+    const loadHome = jest.fn()
+      .mockResolvedValueOnce({ activeWorkout: null, recentWorkouts: [], templates: [] })
+      .mockResolvedValueOnce({ activeWorkout: null, recentWorkouts: [completedWorkout], templates: [] });
+    const props = {
+      discardActiveWorkout: jest.fn(),
+      loadHome,
+      onOpenHistoryWorkout: jest.fn(),
+      onOpenWorkout: jest.fn(),
+      startWorkout: jest.fn(),
+    };
+    const rendered = await render(<HomeScreen {...props} refreshKey={0} />);
+    expect(await rendered.findByText("No completed sessions yet")).toBeTruthy();
+
+    await rendered.rerender(<HomeScreen {...props} refreshKey={1} />);
+
+    expect(await rendered.findByText("Upper Body")).toBeTruthy();
+    expect(loadHome).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -167,11 +270,12 @@ describe("HomeScreen active-workout state", () => {
         },
       ],
     };
-    const loadHome = jest.fn().mockResolvedValue({ activeWorkout, templates: [template] });
+    const loadHome = jest.fn().mockResolvedValue({ activeWorkout, recentWorkouts: [], templates: [template] });
     const rendered = await render(
       <HomeScreen
         discardActiveWorkout={jest.fn()}
         loadHome={loadHome}
+        onOpenHistoryWorkout={jest.fn()}
         onOpenWorkout={onOpenWorkout}
         startWorkout={jest.fn()}
       />,
@@ -189,10 +293,11 @@ describe("HomeScreen active-workout state", () => {
   });
 
   it("restores the same active state when Home remounts", async () => {
-    const loadHome = jest.fn().mockResolvedValue({ activeWorkout: workout, templates: [] });
+    const loadHome = jest.fn().mockResolvedValue({ activeWorkout: workout, recentWorkouts: [], templates: [] });
     const props = {
       discardActiveWorkout: jest.fn(),
       loadHome,
+      onOpenHistoryWorkout: jest.fn(),
       onOpenWorkout: jest.fn(),
       startWorkout: jest.fn(),
     };
