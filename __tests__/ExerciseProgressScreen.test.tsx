@@ -89,4 +89,17 @@ describe("ExerciseProgressScreen", () => {
     expect(screen.queryByRole("button", { name: "Show Graph" })).not.toBeOnTheScreen();
     expect(screen.getAllByText("Not enough data").length).toBeGreaterThan(0);
   });
+
+  it("does not offer an empty chart for a single trend point", async () => {
+    await render(
+      <ExerciseProgressScreen loadProgress={async () => ({
+        ...progress,
+        metrics: { ...progress.metrics, trend: progress.metrics.trend.slice(0, 1) },
+      })} />,
+    );
+
+    expect(await screen.findByText("Train this exercise a few more times to build a meaningful trend."))
+      .toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Show Graph" })).not.toBeOnTheScreen();
+  });
 });

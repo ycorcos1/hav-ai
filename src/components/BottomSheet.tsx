@@ -4,6 +4,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
   type ModalProps,
@@ -92,7 +93,13 @@ export function BottomSheet({
                 ) : null}
               </View>
             ) : null}
-            <View style={styles.content}>{children}</View>
+            <ScrollView
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {children}
+            </ScrollView>
           </SafeAreaView>
         </KeyboardAvoidingView>
       </View>
@@ -116,6 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.elevated,
     borderTopLeftRadius: radius.bottomSheet,
     borderTopRightRadius: radius.bottomSheet,
+    maxHeight: '90%',
     paddingBottom: spacing.lg,
     paddingHorizontal: spacing.screenHorizontal,
     paddingTop: spacing.sm,
@@ -127,6 +135,7 @@ const styles = StyleSheet.create({
     minHeight: spacing.xxxl,
   },
   content: {
+    flexGrow: 1,
     gap: spacing.lg,
     paddingBottom: spacing.sm,
     paddingTop: spacing.sm,

@@ -3,9 +3,9 @@ import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
 import { ErrorState } from '@/components/ErrorState';
+import { FilterChip } from '@/components/FilterChip';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import { SecondaryButton } from '@/components/SecondaryButton';
 import { TextInput } from '@/components/TextInput';
 import type { EquipmentType, Exercise, MeasurementType, MuscleGroup } from '@/shared/contracts';
 import { spacing } from '@/theme';
@@ -90,7 +90,21 @@ export function CustomExerciseScreen({ existingExercise, onBack, onSaved, reposi
       <AppText variant="screenTitle">{existingExercise ? 'Edit Custom Exercise' : 'Create Custom Exercise'}</AppText>
       <TextInput label="Name" onChangeText={setName} value={name} />
       <Choice label="Primary muscle" options={muscles} value={primaryMuscleGroup} onSelect={setPrimaryMuscleGroup} />
-      <View style={styles.choice}><AppText color="secondary" variant="metadata">Secondary muscles (optional)</AppText><View style={styles.options}>{muscles.filter((muscle) => muscle !== primaryMuscleGroup).map((muscle) => <SecondaryButton key={muscle} label={format(muscle)} onPress={() => setSecondaryMuscleGroups((current) => current.includes(muscle) ? current.filter((item) => item !== muscle) : [...current, muscle])} />)}</View><AppText>{secondaryMuscleGroups.map(format).join(', ') || 'None'}</AppText></View>
+      <View style={styles.choice}>
+        <AppText color="secondary" variant="metadata">Secondary muscles (optional)</AppText>
+        <View style={styles.options}>
+          {muscles.filter((muscle) => muscle !== primaryMuscleGroup).map((muscle) => (
+            <FilterChip
+              key={muscle}
+              label={format(muscle)}
+              onPress={() => setSecondaryMuscleGroups((current) => current.includes(muscle)
+                ? current.filter((item) => item !== muscle)
+                : [...current, muscle])}
+              selected={secondaryMuscleGroups.includes(muscle)}
+            />
+          ))}
+        </View>
+      </View>
       <Choice label="Equipment" options={equipment} value={equipmentType} onSelect={setEquipmentType} />
       <Choice label="Measurement type" options={measurements} value={measurementType} onSelect={setMeasurementType} />
       {error ? <ErrorState message={error} title="Check your exercise" /> : null}
@@ -100,9 +114,27 @@ export function CustomExerciseScreen({ existingExercise, onBack, onSaved, reposi
 }
 
 function Choice<T extends string>({ label, onSelect, options, value }: { label: string; onSelect: (value: T) => void; options: T[]; value: T }) {
-  return <View style={styles.choice}><AppText color="secondary" variant="metadata">{label}</AppText><View style={styles.options}>{options.map((option) => <PrimaryButton key={option} label={format(option)} onPress={() => onSelect(option)} />)}</View><AppText>{format(value)}</AppText></View>;
+  return (
+    <View style={styles.choice}>
+      <AppText color="secondary" variant="metadata">{label}</AppText>
+      <View accessibilityRole="radiogroup" style={styles.options}>
+        {options.map((option) => (
+          <FilterChip
+            key={option}
+            label={format(option)}
+            onPress={() => onSelect(option)}
+            selected={value === option}
+          />
+        ))}
+      </View>
+    </View>
+  );
 }
 
 function format(value: string): string { return value.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' '); }
 
-const styles = StyleSheet.create({ content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl }, choice: { gap: spacing.sm }, options: { gap: spacing.sm } });
+const styles = StyleSheet.create({
+  content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
+  choice: { gap: spacing.sm },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+});

@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/AppText";
 import { BottomSheet } from "@/components/BottomSheet";
 import { Card } from "@/components/Card";
+import { CompactButton } from "@/components/CompactButton";
 import { ErrorState } from "@/components/ErrorState";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
@@ -340,7 +341,11 @@ export function ActiveExerciseLoggingScreen({
   return (
     <Screen contentContainerStyle={styles.content} navigationAction={{ onBack: onOverview }} scroll>
       <WorkoutOfflineBanner />
-      {onAskCoach ? <SecondaryButton label="Ask Coach" onPress={onAskCoach} /> : null}
+      {onAskCoach ? (
+        <View style={styles.utilityAction}>
+          <CompactButton label="Ask Coach" onPress={onAskCoach} tone="quiet" />
+        </View>
+      ) : null}
       <AppText color="secondary" variant="metadata">{workout.name}</AppText>
       <AppText variant="screenTitle">{exercise?.name ?? "Exercise unavailable"}</AppText>
       {exercisePreference?.notes ? (
@@ -693,6 +698,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   switchingControls: { gap: spacing.sm },
   targetCard: { borderLeftColor: colors.accent.primary, borderLeftWidth: 3, gap: spacing.sm },
+  utilityAction: { alignItems: "flex-start" },
   undoMessage: {
     alignItems: "center",
     flexDirection: "row",

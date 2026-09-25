@@ -19,10 +19,10 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <View {...viewProps} style={[styles.container, style]}>
-      <AppText accessibilityRole="header" variant="exerciseName">
+      <AppText accessibilityRole="header" style={styles.copy} variant="exerciseName">
         {title}
       </AppText>
-      {message ? <AppText color="secondary">{message}</AppText> : null}
+      {message ? <AppText color="secondary" style={styles.copy}>{message}</AppText> : null}
       {action ? <View style={styles.action}>{action}</View> : null}
     </View>
   );
@@ -36,5 +36,8 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: spacing.sm,
+  },
+  copy: {
+    textAlign: 'center',
   },
 });

@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "@/components/AppText";
 import { BottomSheet } from "@/components/BottomSheet";
 import { Card } from "@/components/Card";
+import { CompactButton } from "@/components/CompactButton";
 import { ErrorState } from "@/components/ErrorState";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
@@ -282,37 +283,41 @@ export function ActiveWorkoutOverviewScreen({
                 accessibilityRole="button"
                 onPress={() => onOpenExercise(workoutExercise.id)}
               >
-              <AppText variant="exerciseName">{exercise?.name ?? "Exercise unavailable"}</AppText>
-              {overview.lastActiveWorkoutExerciseId === workoutExercise.id ? (
-                <AppText color="secondary" variant="metadata">Last active</AppText>
-              ) : null}
-              <AppText color={isExerciseComplete(workoutExercise) ? "primary" : "secondary"}>
-                {exerciseProgressLabel(workoutExercise)}
-              </AppText>
+                <AppText variant="exerciseName">{exercise?.name ?? "Exercise unavailable"}</AppText>
+                {overview.lastActiveWorkoutExerciseId === workoutExercise.id ? (
+                  <AppText color="secondary" variant="metadata">Last active</AppText>
+                ) : null}
+                <AppText color={isExerciseComplete(workoutExercise) ? "primary" : "secondary"}>
+                  {exerciseProgressLabel(workoutExercise)}
+                </AppText>
               </Pressable>
-              {moveExercise ? (
+              {moveExercise || removeExercise ? (
                 <View style={styles.exerciseActions}>
-                  <SecondaryButton
-                    accessibilityLabel={`Move ${name} up`}
-                    disabled={mutatingExercise || index === 0}
-                    label="Move Up"
-                    onPress={() => { void moveWorkoutExercise(workoutExercise.id, "up"); }}
-                  />
-                  <SecondaryButton
-                    accessibilityLabel={`Move ${name} down`}
-                    disabled={mutatingExercise || index === overview.exercises.length - 1}
-                    label="Move Down"
-                    onPress={() => { void moveWorkoutExercise(workoutExercise.id, "down"); }}
-                  />
+                  {moveExercise ? (
+                    <>
+                      <CompactButton
+                        accessibilityLabel={`Move ${name} up`}
+                        disabled={mutatingExercise || index === 0}
+                        label="Move Up"
+                        onPress={() => { void moveWorkoutExercise(workoutExercise.id, "up"); }}
+                      />
+                      <CompactButton
+                        accessibilityLabel={`Move ${name} down`}
+                        disabled={mutatingExercise || index === overview.exercises.length - 1}
+                        label="Move Down"
+                        onPress={() => { void moveWorkoutExercise(workoutExercise.id, "down"); }}
+                      />
+                    </>
+                  ) : null}
+                  {removeExercise ? (
+                    <CompactButton
+                      accessibilityLabel={`Remove ${name}`}
+                      disabled={mutatingExercise}
+                      label="Remove Exercise"
+                      onPress={() => requestExerciseRemoval(entry)}
+                    />
+                  ) : null}
                 </View>
-              ) : null}
-              {removeExercise ? (
-                <SecondaryButton
-                  accessibilityLabel={`Remove ${name}`}
-                  disabled={mutatingExercise}
-                  label="Remove Exercise"
-                  onPress={() => requestExerciseRemoval(entry)}
-                />
               ) : null}
             </Card>
           );
@@ -328,7 +333,7 @@ export function ActiveWorkoutOverviewScreen({
           Unable to change this workout. Your saved session was not changed.
         </AppText>
       ) : null}
-      <SecondaryButton label="Finish Workout" loading={finishing} onPress={requestFinish} />
+      <PrimaryButton label="Finish Workout" loading={finishing} onPress={requestFinish} />
       {finishFailed && !finishConfirmationVisible ? (
         <AppText accessibilityRole="alert" style={styles.noteError} variant="metadata">
           Unable to finish the workout. Your local workout is still available.
@@ -470,7 +475,7 @@ function exerciseProgressLabel(exercise: ActiveWorkoutOverview["exercises"][numb
 const styles = StyleSheet.create({
   centered: { alignItems: "center", justifyContent: "center" },
   content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
-  exerciseActions: { flexDirection: "row", gap: spacing.sm },
+  exerciseActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   exerciseCard: { gap: spacing.sm },
   header: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between" },
   heading: { flex: 1, gap: spacing.xs },

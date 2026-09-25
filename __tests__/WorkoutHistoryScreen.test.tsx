@@ -44,9 +44,8 @@ describe("WorkoutHistoryScreen", () => {
     );
 
     expect(await screen.findByText("Upper Body")).toBeOnTheScreen();
-    expect(screen.getByText("Sep 3, 2026")).toBeOnTheScreen();
-    expect(screen.getByText("1h 5m · 1 exercise")).toBeOnTheScreen();
-    await user.press(screen.getByRole("button", { name: "View Workout" }));
+    expect(screen.getByText("Sep 3, 2026 · 1h 5m · 1 exercise")).toBeOnTheScreen();
+    await user.press(screen.getByRole("button", { name: "View Upper Body" }));
     expect(onOpenWorkout).toHaveBeenCalledWith("workout-new");
     await user.press(screen.getByRole("button", { name: "Load More" }));
     expect(await screen.findByText("Lower Body")).toBeOnTheScreen();

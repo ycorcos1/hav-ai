@@ -6,6 +6,7 @@ import { AppText } from '@/components/AppText';
 import { FilterChip } from '@/components/FilterChip';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { useRootRoutingRefresh } from '@/features/routing/components/RootRoutingRefreshContext';
 import type { ProfileRepository } from '@/lib/supabase/repositories';
 import type { PrimaryGoal, WeightUnit } from '@/shared/contracts';
 import { spacing } from '@/theme';
@@ -16,6 +17,7 @@ type OnboardingScreenProps = {
 
 export function OnboardingScreen({ profileRepository }: OnboardingScreenProps) {
   const router = useRouter();
+  const refreshRootRouting = useRootRoutingRefresh();
   const [weightUnit, setWeightUnit] = useState<WeightUnit>();
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +39,7 @@ export function OnboardingScreen({ profileRepository }: OnboardingScreenProps) {
         defaultRestDurationSeconds: 120,
         onboardingCompleted: true,
       });
+      refreshRootRouting();
       router.replace('/');
     } catch {
       setErrorMessage('Unable to save your setup. Check your connection and try again.');

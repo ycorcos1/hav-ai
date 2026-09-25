@@ -7,6 +7,7 @@ jest.mock('expo-router', () => ({
 }));
 
 import { OnboardingScreen } from '@/features/onboarding/screens/OnboardingScreen';
+import { RootRoutingRefreshProvider } from '@/features/routing/components/RootRoutingRefreshContext';
 import type { ProfileRepository } from '@/lib/supabase/repositories';
 
 function createProfileRepository(): jest.Mocked<ProfileRepository> {
@@ -66,8 +67,13 @@ describe('OnboardingScreen', () => {
 
   it('persists the selected profile values and returns to root routing', async () => {
     const profileRepository = createProfileRepository();
+    const refreshRootRouting = jest.fn();
     profileRepository.updateOwnProfile.mockResolvedValue({} as never);
-    const screen = await render(<OnboardingScreen profileRepository={profileRepository} />);
+    const screen = await render(
+      <RootRoutingRefreshProvider refresh={refreshRootRouting}>
+        <OnboardingScreen profileRepository={profileRepository} />
+      </RootRoutingRefreshProvider>,
+    );
     await selectRequiredChoices(screen);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Start Training' }));
@@ -80,6 +86,7 @@ describe('OnboardingScreen', () => {
       defaultRestDurationSeconds: 120,
       onboardingCompleted: true,
     });
+    expect(refreshRootRouting).toHaveBeenCalledTimes(1);
     expect(mockReplace).toHaveBeenCalledWith('/');
   });
 

@@ -27,7 +27,7 @@ export function ErrorState({
       >
         {title}
       </AppText>
-      <AppText color="secondary">{message}</AppText>
+      <AppText color="secondary" style={styles.copy}>{message}</AppText>
       {action ? <View style={styles.action}>{action}</View> : null}
     </View>
   );
@@ -41,6 +41,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.semantic.error,
+    textAlign: 'center',
+  },
+  copy: {
+    textAlign: 'center',
   },
   action: {
     marginTop: spacing.sm,

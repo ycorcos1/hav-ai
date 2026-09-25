@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
 import { Card } from "@/components/Card";
+import { CompactButton } from "@/components/CompactButton";
 import { ErrorState } from "@/components/ErrorState";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Screen } from "@/components/Screen";
@@ -97,30 +98,34 @@ export function NewTemplateScreen({
               {selection.targetSets} sets · {selection.targetMinReps}-{selection.targetMaxReps} reps
             </AppText>
             {selection.notes ? <AppText color="muted" variant="metadata">{selection.notes}</AppText> : null}
-            {onEditExercise ? <SecondaryButton label="Edit Exercise" onPress={() => onEditExercise(index)} /> : null}
-            {onMoveExercise ? (
-              <View style={styles.rowActions}>
-                <SecondaryButton
+            <View style={styles.rowActions}>
+              {onEditExercise ? (
+                <CompactButton label="Edit Exercise" onPress={() => onEditExercise(index)} tone="quiet" />
+              ) : null}
+              {onMoveExercise ? (
+                <>
+                  <CompactButton
                   accessibilityLabel={`Move ${selection.exercise.name} up`}
                   disabled={index === 0}
                   label="Move Up"
                   onPress={() => onMoveExercise(index, "up")}
-                />
-                <SecondaryButton
+                  />
+                  <CompactButton
                   accessibilityLabel={`Move ${selection.exercise.name} down`}
                   disabled={index === exercises.length - 1}
                   label="Move Down"
                   onPress={() => onMoveExercise(index, "down")}
-                />
-              </View>
-            ) : null}
-            {onRemoveExercise ? (
-              <SecondaryButton
+                  />
+                </>
+              ) : null}
+              {onRemoveExercise ? (
+                <CompactButton
                 accessibilityLabel={`Remove ${selection.exercise.name}`}
                 label="Remove Exercise"
                 onPress={() => onRemoveExercise(index)}
-              />
-            ) : null}
+                />
+              ) : null}
+            </View>
           </Card>
         ))}
       </View>
@@ -138,5 +143,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
   },
   list: { gap: spacing.sm },
-  rowActions: { gap: spacing.sm, marginTop: spacing.sm },
+  rowActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
 });

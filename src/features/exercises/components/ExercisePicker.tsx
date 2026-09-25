@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
-import { AppText } from "@/components/AppText";
-import { Card } from "@/components/Card";
+import { CompactButton } from "@/components/CompactButton";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterChip } from "@/components/FilterChip";
-import { SecondaryButton } from "@/components/SecondaryButton";
+import { GroupedSeparator, GroupedSurface } from "@/components/GroupedSurface";
+import { ListRow } from "@/components/ListRow";
 import { SearchInput } from "@/components/SearchInput";
 import type { Exercise } from "@/shared/contracts";
 import { spacing } from "@/theme";
@@ -70,26 +70,46 @@ export function ExercisePicker({
       {visibleExercises.length === 0 ? (
         <EmptyState message="Try a different search or muscle group." title="No exercises found" />
       ) : (
-        <View style={styles.list}>
-          {visibleExercises.map((exercise) => (
-            <Card key={exercise.id} testID={`exercise-${exercise.id}`}>
-              <AppText variant="exerciseName">{exercise.name}</AppText>
-              <AppText color="secondary" variant="metadata">
-                {exerciseMuscleLabel(exercise.primaryMuscleGroup)} · {formatEquipment(exercise.equipmentType)}
-              </AppText>
-              {onViewDetails ? <SecondaryButton label="View details" onPress={() => onViewDetails(exercise)} /> : null}
-              {onSelect ? <SecondaryButton accessibilityLabel={`Select ${exercise.name}`} label="Select" onPress={() => onSelect(exercise)} /> : null}
-              {onToggleFavorite ? (
-                <SecondaryButton
-                  accessibilityLabel={`${favoriteIds.has(exercise.id) ? "Unfavorite" : "Favorite"} ${exercise.name}`}
-                  accessibilityState={{ selected: favoriteIds.has(exercise.id) }}
-                  label={favoriteIds.has(exercise.id) ? "Unfavorite" : "Favorite"}
-                  onPress={() => onToggleFavorite(exercise, !favoriteIds.has(exercise.id))}
-                />
-              ) : null}
-            </Card>
+        <GroupedSurface>
+          {visibleExercises.map((exercise, index) => (
+            <View key={exercise.id} testID={`exercise-${exercise.id}`}>
+              {index > 0 ? <GroupedSeparator /> : null}
+              <ListRow
+                subtitle={`${exerciseMuscleLabel(exercise.primaryMuscleGroup)} · ${formatEquipment(exercise.equipmentType)}`}
+                title={exercise.name}
+                trailing={(
+                  <View style={styles.actions}>
+                    {onViewDetails ? (
+                      <CompactButton
+                        accessibilityLabel={`View details for ${exercise.name}`}
+                        label="Details"
+                        onPress={() => onViewDetails(exercise)}
+                        tone="quiet"
+                      />
+                    ) : null}
+                    {onSelect ? (
+                      <CompactButton
+                        accessibilityLabel={`Select ${exercise.name}`}
+                        label="Select"
+                        onPress={() => onSelect(exercise)}
+                        tone="accent"
+                      />
+                    ) : null}
+                    {onToggleFavorite ? (
+                      <CompactButton
+                        accessibilityLabel={`${favoriteIds.has(exercise.id) ? "Unfavorite" : "Favorite"} ${exercise.name}`}
+                        accessibilityState={{ selected: favoriteIds.has(exercise.id) }}
+                        label={favoriteIds.has(exercise.id) ? "Saved" : "Favorite"}
+                        onPress={() => onToggleFavorite(exercise, !favoriteIds.has(exercise.id))}
+                        tone={favoriteIds.has(exercise.id) ? "quiet" : "neutral"}
+                      />
+                    ) : null}
+                  </View>
+                )}
+              />
+            </View>
           ))}
-        </View>
+        </GroupedSurface>
       )}
     </View>
   );
@@ -100,7 +120,7 @@ function formatEquipment(equipment: Exercise["equipmentType"]): string {
 }
 
 const styles = StyleSheet.create({
+  actions: { flexDirection: "row", gap: spacing.xs },
   content: { gap: spacing.lg },
   filters: { gap: spacing.sm, paddingRight: spacing.lg },
-  list: { gap: spacing.sm },
 });

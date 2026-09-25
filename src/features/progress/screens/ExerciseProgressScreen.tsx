@@ -59,13 +59,13 @@ export function ExerciseProgressScreen({ loadProgress, onBack }: ExerciseProgres
       {insufficient ? (
         <AppText color="muted">Train this exercise a few more times to build a meaningful trend.</AppText>
       ) : null}
-      {metrics.trend.length > 0 ? (
+      {!insufficient ? (
         <SecondaryButton
           label={graphVisible ? "Hide Graph" : "Show Graph"}
           onPress={() => setGraphVisible((visible) => !visible)}
         />
       ) : null}
-      {graphVisible ? (
+      {graphVisible && !insufficient ? (
         <StrengthTrendChart limited={networkStatus === "offline"} points={metrics.trend} />
       ) : null}
       <View style={styles.metrics}>

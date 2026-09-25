@@ -12,6 +12,8 @@ import {
 import { useRootRoutingState, type RootRoutingDependencies } from '@/features/routing/useRootRoutingState';
 import { colors } from '@/theme';
 
+import { RootRoutingRefreshProvider } from './RootRoutingRefreshContext';
+
 type RootRouteGuardProps = RootRoutingDependencies & {
   children?: ReactNode;
   segments: readonly string[];
@@ -45,7 +47,13 @@ export function RootRouteGuard({
     );
   }
 
-  if (route.status === 'allow') return children;
+  if (route.status === 'allow') {
+    return (
+      <RootRoutingRefreshProvider refresh={retry}>
+        {children}
+      </RootRoutingRefreshProvider>
+    );
+  }
 
   return <Redirect href={route.href} />;
 }

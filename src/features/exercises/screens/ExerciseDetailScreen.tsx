@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/AppText';
+import { CompactButton } from '@/components/CompactButton';
 import { ErrorState } from '@/components/ErrorState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import { SecondaryButton } from '@/components/SecondaryButton';
 import { TextInput } from '@/components/TextInput';
 import { TextButton } from '@/components/TextButton';
 import type { Exercise } from '@/shared/contracts';
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export type ExerciseDetailScreenProps = {
   exerciseId: string;
@@ -62,10 +62,10 @@ export function ExerciseDetailScreen({
 
   if (error || exercise === null) {
     return (
-      <Screen navigationAction={onBack ? { onBack } : undefined}>
+      <Screen contentContainerStyle={!error ? styles.loading : undefined} navigationAction={onBack ? { onBack } : undefined}>
         {error ? (
           <ErrorState message="This exercise could not be loaded." title="Unable to load exercise" />
-        ) : <AppText>Loading exercise...</AppText>}
+        ) : <ActivityIndicator accessibilityLabel="Loading exercise" color={colors.accent.primary} />}
       </Screen>
     );
   }
@@ -86,7 +86,14 @@ export function ExerciseDetailScreen({
       <AppText color="secondary" variant="sectionHeading">History</AppText>
       <AppText color="muted">History will appear after this exercise is used.</AppText>
       {updatePreference ? <View style={styles.preferences}>
-        <SecondaryButton accessibilityState={{ selected: favorite }} label={favorite ? 'Unfavorite exercise' : 'Favorite exercise'} onPress={() => { const next = !favorite; void savePreference({ isFavorite: next }).then(() => setFavorite(next), () => undefined); }} />
+        <View style={styles.preferenceAction}>
+          <CompactButton
+            accessibilityState={{ selected: favorite }}
+            label={favorite ? 'Unfavorite exercise' : 'Favorite exercise'}
+            onPress={() => { const next = !favorite; void savePreference({ isFavorite: next }).then(() => setFavorite(next), () => undefined); }}
+            tone={favorite ? 'quiet' : 'neutral'}
+          />
+        </View>
         <TextInput label="Personal exercise note" multiline onChangeText={setNotes} value={notes} onEndEditing={() => savePreference({ notes: notes || null })} />
         <TextInput label="Rest override in seconds (optional)" keyboardType="number-pad" onChangeText={setRestDuration} value={restDuration} onEndEditing={() => savePreference({ restDurationSeconds: restDuration ? Number(restDuration) : null })} />
         <AppText color="muted" variant="metadata">Blank rest override uses your profile default.</AppText>
@@ -103,7 +110,7 @@ export function ExerciseDetailScreen({
             ])}
           />
         </View>
-      ) : <SecondaryButton disabled label="System exercise · Read only" />}
+      ) : <AppText color="muted" style={styles.readOnly} variant="metadata">SYSTEM EXERCISE · READ ONLY</AppText>}
     </Screen>
   );
 }
@@ -120,5 +127,8 @@ const styles = StyleSheet.create({
   content: { gap: spacing.lg, paddingBottom: spacing.xxxl, paddingTop: spacing.xl },
   details: { gap: spacing.md },
   actions: { gap: spacing.md, marginTop: spacing.lg },
+  loading: { alignItems: 'center', justifyContent: 'center' },
+  preferenceAction: { alignItems: 'flex-start' },
   preferences: { gap: spacing.md, marginTop: spacing.lg },
+  readOnly: { marginTop: spacing.sm },
 });

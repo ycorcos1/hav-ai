@@ -2,9 +2,10 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { AppText } from "@/components/AppText";
-import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { GroupedSeparator, GroupedSurface } from "@/components/GroupedSurface";
+import { ListRow } from "@/components/ListRow";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { Screen } from "@/components/Screen";
 import { SecondaryButton } from "@/components/SecondaryButton";
@@ -81,16 +82,19 @@ export function WorkoutHistoryScreen({ loadPage, onBack, onOpenWorkout }: Workou
       ) : null}
       {status === "ready" ? (
         <View style={styles.list}>
-          {items.map((workout) => (
-            <Card key={workout.id} testID={`history-${workout.id}`}>
-              <AppText variant="exerciseName">{workout.name}</AppText>
-              <AppText color="secondary" variant="metadata">{formatDate(workout.completedAt!)}</AppText>
-              <AppText color="secondary">
-                {formatDuration(workout)} · {workout.exercises.length} {workout.exercises.length === 1 ? "exercise" : "exercises"}
-              </AppText>
-              <SecondaryButton label="View Workout" onPress={() => onOpenWorkout(workout.id)} />
-            </Card>
-          ))}
+          <GroupedSurface>
+            {items.map((workout, index) => (
+              <View key={workout.id} testID={`history-${workout.id}`}>
+                {index > 0 ? <GroupedSeparator /> : null}
+                <ListRow
+                  accessibilityLabel={`View ${workout.name}`}
+                  onPress={() => onOpenWorkout(workout.id)}
+                  subtitle={`${formatDate(workout.completedAt!)} · ${formatDuration(workout)} · ${workout.exercises.length} ${workout.exercises.length === 1 ? "exercise" : "exercises"}`}
+                  title={workout.name}
+                />
+              </View>
+            ))}
+          </GroupedSurface>
           {nextCursor ? (
             <SecondaryButton label="Load More" loading={loadingMore} onPress={() => void loadMore()} />
           ) : null}
